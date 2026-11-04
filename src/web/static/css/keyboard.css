@@ -1,0 +1,13 @@
+/* Habillage « hi-fi verte » de simple-keyboard (keyboard.js) : grosses touches pour l'écran 800×480 */
+.hg-theme-default.tkb{background:transparent;padding:0;font-family:inherit;border-radius:0}
+.tkb .hg-row:not(:last-child){margin-bottom:5px}
+.tkb .hg-row .hg-button:not(:last-child){margin-right:5px}
+.tkb .hg-button{height:54px;padding:0;font-size:22px;color:var(--g);background:var(--panel);border:1px solid var(--edge);border-radius:8px;box-shadow:none}
+.tkb .hg-button.hg-standardBtn{width:auto}
+.tkb .hg-button.hg-activeButton,.tkb .hg-button:active{background:var(--on);border-color:var(--g);transform:scale(.94)}
+.tkb .hg-button.switch{flex-grow:1.5;font-size:16px}
+.tkb .hg-button.on{background:var(--g);color:#031004}
+.tkb .hg-button.del{flex-grow:2.5;font-size:28px;background:var(--on);border-color:var(--g)}
+.tkb .hg-button.paste{flex-grow:1.3;font-size:15px}
+.tkb .hg-button.space{flex-grow:4;font-size:16px}
+.tkb .hg-button.ok{flex-grow:1.8;font-size:18px;background:var(--g);color:#031004;border-color:var(--g);font-weight:bold}

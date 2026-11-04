@@ -1,0 +1,87 @@
+# Versions du site (page « Versions », #/versions), la plus récente EN PREMIER.
+# À compléter à CHAQUE modification du site, AVANT de déployer (deploy/pc/push.sh le rappelle). Écrit pour les personnes
+# qui utilisent le site, pas pour les développeurs. Nouveauté visible : mineure (1.5 → 1.6) ; grand changement : majeure
+# (1.x → 2.0) ; correction de bug : TOUJOURS le troisième niveau (1.5 → 1.5.1, 1.5.2…).
+#   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
+#   date : jour de la mise en ligne.
+
+- version: "1.6"
+  date: 2026-10-31
+  title: "Mot de passe oublié"
+  changes:
+    - "Sur la page de connexion, un lien « Mot de passe oublié ? » explique quoi faire : demander à l'administrateur de réinitialiser le mot de passe dans Subsonic, puis se reconnecter."
+
+- version: "1.5.1"
+  date: 2026-10-31
+  title: "Images de la pochette et de l'artiste"
+  changes:
+    - "Les pochettes proposées par Last.fm s'affichent enfin dans la fenêtre « Changer la jaquette » (elles restaient vides)."
+    - "La photo de l'artiste, tirée de Wikipédia, s'affiche de nouveau sur la page de l'artiste."
+
+- version: "1.5"
+  date: 2026-10-31
+  title: "Changer la pochette d'un album"
+  changes:
+    - "Sur la page d'un album, un crayon apparaît sur la pochette (au survol) pour les comptes qui ont le droit d'envoyer de la musique. Il ouvre « Changer la jaquette » : cherchez la pochette sur Last.fm (artiste et album modifiables) et cliquez sur celle que vous voulez, ou collez l'adresse d'une image."
+    - "La pochette choisie est enregistrée dans le dossier de l'album (cover.jpg) ; l'ancienne est gardée à côté en cover.jpg.bak."
+
+- version: "1.4"
+  date: 2026-10-30
+  title: "Lire juste après et page album refaite"
+  changes:
+    - "Dans les listes de morceaux (album, artiste, playlist), un nouveau bouton ⏭ sur chaque ligne place le titre juste après celui en cours de lecture, sans toucher au reste de la file. Il se défait avec « Annuler » dans la file d'attente."
+    - "La page d'un album change de look : le haut prend la couleur de la pochette, un grand bouton ▶ lance l'album, et les autres actions (aléatoire, favori, télécharger) deviennent des icônes. Le menu ⋯ regroupe « Lire l'album juste après », « Ajouter à la file » et « Partager dans le salon »."
+    - "Les albums en plusieurs disques affichent « Disque 1 », « Disque 2 »… dans la liste des titres."
+
+- version: "1.3"
+  date: 2026-10-28
+  title: "Import Apple Music et vidéos refusées"
+  changes:
+    - "Import d'un export de toute la bibliothèque Apple Music : le site demande maintenant quelle playlist importer, au lieu de prendre la première."
+    - "Vidéo YouTube refusée par son propriétaire : une seule autre version est essayée, puis on passe au titre suivant. Fini les cascades de messages d'échec, et une erreur qui ne vient pas de la vidéo ne la cache plus pour tout le monde."
+
+- version: "1.2"
+  date: 2026-10-27
+  title: "Vos playlists d'ailleurs"
+  changes:
+    - "Nouvelle page Importer une playlist (bouton ⬇ dans l'onglet Playlists) : collez un lien Deezer ou envoyez l'export d'une playlist Spotify ou Apple Music. Chaque titre est retrouvé dans la bibliothèque, ce qui manque est cherché sur YouTube, et vous vérifiez tout avant de créer la playlist."
+    - "Un guide pas à pas explique comment sortir sa playlist de Deezer, Spotify, Apple Music (Mac, PC ou iPhone) et des autres plateformes."
+    - "Les recherches YouTube sont environ deux fois plus rapides."
+
+- version: "1.1"
+  date: 2026-10-27
+  title: "On suit les mises à jour"
+  changes:
+    - "Nouvelle page Versions : ce qui a changé sur le site, version par version. Le numéro de version est affiché à côté du titre du site, avec une pastille quand une version arrive que vous n'avez pas encore vue."
+    - "Un seul dossier par artiste, même quand les noms diffèrent par un espace ou un point : « A.A.Williams » rejoint « A.A. Williams » au lieu de créer un deuxième artiste."
+
+- version: "1.0"
+  date: 2026-10-27
+  title: "Le site est en ligne"
+  changes:
+    - "Mise en ligne sur music2.foos.fr, avec votre compte Subsonic habituel."
+    - "Page Mon compte : votre photo (envoyée, copiée de Gravatar ou reprise de Subsonic), vos droits, le lien vers vos réglages Subsonic (Last.fm, mot de passe)."
+    - "Page Nouveautés : tout ce que le site fait en plus de Subsonic, expliqué."
+    - "Recherche YouTube par YouTube Music : plus de quota quotidien à partager."
+    - "Les albums en attente dans Incoming sont enfin rangés chez leur artiste (environ 85 d'un coup)."
+
+- version: "0.2"
+  date: 2026-10-26
+  title: "La bibliothèque par dossiers, l'actualité"
+  changes:
+    - "La barre des artistes, les pages artiste et album suivent les dossiers de la bibliothèque, et le raccourci Compilations est en haut de la barre."
+    - "Page Actualité : les articles des webzines, avec « Dans la presse » sur la page d'un artiste."
+    - "Favoris d'ailleurs (YouTube, SoundCloud), ajoutés d'un cœur ou en collant un lien ; ces titres peuvent aller dans les playlists."
+    - "Envoi d'un zip : chaque album part tout seul chez son artiste."
+
+- version: "0.1"
+  date: 2026-10-25
+  title: "Première version"
+  changes:
+    - "Connexion avec son compte Subsonic, barre des artistes, accueil, pages Albums, artiste et album, recherche, favoris."
+    - "Étoiles et cœurs écrits dans Subsonic, commentaires sous chaque album."
+    - "Le salon en direct, « Écouté en ce moment », les écoutes envoyées à Subsonic et Last.fm."
+    - "Mix en un clic, créateur de mix, radio d'un artiste, artistes similaires, titres populaires."
+    - "Playlists : glisser-déposer, communautaires, partagées."
+    - "Lecteur avec file d'attente, paroles synchronisées, titres YouTube et Jamendo quand la bibliothèque ne les a pas."
+    - "Envoi de fichiers dans la bibliothèque."

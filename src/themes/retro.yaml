@@ -1,0 +1,31 @@
+# Thème « rétro » : hi-fi années 80, vert phosphore sur noir.
+# Pour un nouveau thème : copier ce fichier (ex. themes/clair.yaml), changer les valeurs, puis THEME=clair dans le .env.
+# Une valeur absente reprend celle du thème rétro.
+name: Rétro hi-fi
+
+colors:
+  background: "#040a04"      # fond
+  panel: "#0b1a0d"           # façade des boutons
+  panel_pressed: "#14301a"   # bouton pressé
+  edge: "#1f6b2f"            # liseré
+  text: "#39ff6e"            # texte principal (phosphore)
+  text_soft: "#9be8ae"       # texte secondaire
+  text_dim: "#2f9a4c"        # texte discret
+  warning: "#ffd23f"
+  danger: "#7f1d1d"
+  saver_background: "#000000"
+
+equalizer:
+  off: "#0a2410"
+  # couleur de chaque segment, du bas vers le haut
+  segments: ["#39ff6e", "#39ff6e", "#39ff6e", "#39ff6e", "#39ff6e", "#ffd23f", "#ff4b3a", "#ff4b3a"]
+  columns: 20
+
+fonts:
+  mono: "DejaVu Sans Mono"
+  sans: "DejaVu Sans"
+  uppercase_buttons: true
+
+# Réservé à la page web (variables CSS --theme-*), utilisé quand la page lira le thème
+web:
+  accent: "#39ff6e"

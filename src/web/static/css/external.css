@@ -1,0 +1,11 @@
+/* Lecteur YouTube intégré (écran du Pi) : petite fenêtre flottante, ou à la place de la pochette en plein écran */
+#ytbox{position:fixed;right:10px;bottom:84px;width:200px;height:200px;z-index:45;background:#000;border:1px solid var(--edge);border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.7)}
+#ytbox.big{right:auto;bottom:auto;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.7)}
+#ytbox iframe{width:100%;height:100%;border:0;display:block}
+/* Clavier ouvert : la fenêtre vidéo passe en haut à droite pour ne pas cacher les touches */
+body:has(#app.kbopen) #ytbox:not(.big){bottom:auto;top:56px}
+/* Lecture sur la vraie page YouTube : fond assombri pendant que la fenêtre est ouverte */
+#ytveil{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
+.ytvbox{display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;max-width:94%;padding:10px 16px;background:var(--bg2);border:1px solid var(--g);border-radius:14px}
+.ytvbox b{font-size:15px}.ytvbox span{color:var(--soft);font-size:13px}.ytvbox em{font-style:normal;color:var(--warn);font-size:13px;min-height:16px}
+.ytvbtns{display:flex;gap:10px}.ytvbtns button{height:40px;padding:0 18px;border-radius:20px;font-size:14px}

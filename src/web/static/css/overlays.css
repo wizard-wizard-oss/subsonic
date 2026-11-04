@@ -1,0 +1,20 @@
+/* Clavier tactile, notifications, feuille d'actions, saisie de texte, connexion */
+.kbopen nav,.kbopen #bar{display:none}
+#kbbar{display:flex;justify-content:flex-end;gap:8px;padding:0 2px 3px}
+#kbphone{height:28px;padding:0 12px;font-size:11px;border-radius:15px;color:var(--dim);border-color:var(--panel);background:transparent;margin-right:auto}
+#kbclose{height:28px;padding:0 16px;font-size:12px;border-radius:15px}
+.kbd{display:flex;flex-direction:column;gap:3px}
+.kbd .kr{display:flex;gap:3px}
+#toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--g);border-radius:18px;padding:8px 16px;font-size:13px;z-index:80;max-width:90%;text-align:center}
+#sheet{position:fixed;inset:0;z-index:60}
+#sheetbg{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+#sheetbox{position:absolute;left:0;right:0;bottom:0;max-height:78%;display:flex;flex-direction:column;background:var(--bg2);border-top:1px solid var(--g);border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.6)}
+#sheettitle{padding:12px 16px 8px;color:var(--soft);font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sheetlist{overflow-y:auto;touch-action:pan-y;padding-bottom:8px}
+.si{display:flex;align-items:center;gap:14px;width:100%;height:52px;padding:0 18px;border:0;border-bottom:1px solid #0f2a14;background:transparent;font-size:15px;text-align:left;border-radius:0}
+.si svg{color:var(--g);flex:0 0 22px}
+#ask{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center}
+#askbox{width:94%;max-width:760px;background:var(--bg2);border:1px solid var(--g);border-radius:14px;padding:10px;box-shadow:var(--glow)}
+#asktitle{padding:2px 6px 6px;color:var(--soft);font-size:13px;font-weight:bold}
+#askin{margin:0 4px 8px;padding:8px 12px;min-height:40px;border:1px solid var(--edge);border-radius:20px;background:var(--panel);font-size:18px}
+#lg_err{min-height:18px;color:var(--warn);font-size:13px;text-align:center}

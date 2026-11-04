@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musique</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{V}}">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{V}}">
+<link rel="stylesheet" href="/static/css/base.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/layout.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/views.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/chat.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/player.css?v={{V}}">
+</head>
+<body>
+<!-- Connexion -->
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="on">
+    <h1 data-t="auth.title"></h1>
+    <p data-t="auth.intro"></p>
+    <label><span data-t="auth.username"></span><input name="username" autocomplete="username" required></label>
+    <label><span data-t="auth.password"></span><input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="login-error" id="login-error" role="alert"></p>
+    <button type="submit" class="primary" data-t="auth.submit"></button>
+    <button type="button" class="link-button login-forgot" id="login-forgot" aria-expanded="false" aria-controls="login-forgot-help" data-t="auth.forgot"></button>
+    <p class="login-forgot-help" id="login-forgot-help" hidden data-t="auth.forgot_help"></p>
+  </form>
+</section>
+
+<!-- Application -->
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <button class="icon-button" id="toggle-sidebar" data-t-title="nav.artists" aria-label="Artistes" data-icon="list"></button>
+    <a class="brand" href="#/" data-t="title"></a>
+    <a class="version-tag" id="version-tag" href="#/versions" hidden></a>
+    <nav class="topnav">
+      <a href="#/" data-t="nav.home"></a>
+      <a href="#/albums/newest" data-t="nav.albums"></a>
+      <a href="#/favorites" data-t="nav.favorites"></a>
+      <a href="#/mix" data-t="nav.mix"></a>
+      <a href="#/news" data-t="nav.news"></a>
+      <a href="#/whatsnew" data-t="nav.whatsnew"></a>
+      <a href="#/upload" id="nav-upload" data-t="nav.upload" hidden></a>
+    </nav>
+    <input id="search" class="search" type="search" data-t-placeholder="nav.search" autocomplete="off">
+    <div class="topbar-right">
+      <button class="icon-button" id="open-shortcuts" data-t-title="nav.shortcuts" data-icon="help"></button>
+      <button class="icon-button" id="open-settings" data-t-title="nav.settings" data-icon="settings"></button>
+      <button class="chat-toggle" id="toggle-chat"><span data-t="nav.chat"></span><b class="badge" id="chat-badge" hidden></b></button>
+      <a class="me" id="me" href="#/account" data-t-title="nav.account"></a>
+      <button class="link-button" id="logout" data-t="auth.logout"></button>
+    </div>
+  </header>
+
+  <div class="sidebar-edge" id="sidebar-edge"></div>
+  <aside class="sidebar" id="sidebar" aria-label="Artistes et playlists">
+    <div class="sidebar-tabs" role="tablist">
+      <button class="sidebar-tab active" id="tab-artists" role="tab" type="button" data-t="nav.artists"></button>
+      <button class="sidebar-tab" id="tab-playlists" role="tab" type="button" data-t="playlist.tab"></button>
+    </div>
+    <div class="sidebar-panel" id="panel-artists">
+      <nav class="artist-shortcuts" id="artist-shortcuts" hidden></nav>
+      <input class="sidebar-filter" id="artist-filter" type="search" data-t-placeholder="nav.filter" autocomplete="off">
+      <div class="letters" id="letters"></div>
+      <div class="artist-list" id="artist-list"></div>
+    </div>
+    <div class="sidebar-panel" id="panel-playlists" hidden>
+      <div class="playlist-tools">
+        <input class="sidebar-filter" id="playlist-filter" type="search" data-t-placeholder="playlist.filter" autocomplete="off">
+        <button class="icon-button" id="playlist-new" type="button" data-t-title="playlist.new" data-icon="plus"></button>
+        <a class="icon-button" id="playlist-import" href="#/import" data-t-title="playlist.import" data-icon="download"></a>
+      </div>
+      <div class="artist-list" id="playlist-list"></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main" tabindex="-1"></main>
+
+  <aside class="chat-panel" id="chat-panel" aria-label="Salon">
+    <section class="listening" id="listening" aria-label="Écouté en ce moment" hidden>
+      <h3 class="listening-title" data-t="listening.title"></h3>
+      <div class="listening-list" id="listening-list"></div>
+    </section>
+  </aside>
+  <aside class="lyrics-panel" id="lyrics-panel" aria-label="Paroles"></aside>
+
+  <div class="video-window" id="video-window"><div id="video-frame"></div></div>
+  <footer class="player" id="player"></footer>
+</div>
+
+<div id="dialog-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="/static/js/core.js?v={{V}}"></script>
+<script src="/static/js/icons.js?v={{V}}"></script>
+<script src="/static/js/avatars.js?v={{V}}"></script>
+<script src="/static/js/format.js?v={{V}}"></script>
+<script src="/static/js/events.js?v={{V}}"></script>
+<script src="/static/js/engine.js?v={{V}}"></script>
+<script src="/static/js/player.js?v={{V}}"></script>
+<script src="/static/js/queue.js?v={{V}}"></script>
+<script src="/static/js/ext.js?v={{V}}"></script>
+<script src="/static/js/dnd.js?v={{V}}"></script>
+<script src="/static/js/sidebar.js?v={{V}}"></script>
+<script src="/static/js/stars.js?v={{V}}"></script>
+<script src="/static/js/chat.js?v={{V}}"></script>
+<script src="/static/js/lyrics.js?v={{V}}"></script>
+<script src="/static/js/views.js?v={{V}}"></script>
+<script src="/static/js/mix.js?v={{V}}"></script>
+<script src="/static/js/playlists.js?v={{V}}"></script>
+<script src="/static/js/listening.js?v={{V}}"></script>
+<script src="/static/js/upload.js?v={{V}}"></script>
+<script src="/static/js/import.js?v={{V}}"></script>
+<script src="/static/js/news.js?v={{V}}"></script>
+<script src="/static/js/whatsnew.js?v={{V}}"></script>
+<script src="/static/js/versions.js?v={{V}}"></script>
+<script src="/static/js/account.js?v={{V}}"></script>
+<script src="/static/js/dialogs.js?v={{V}}"></script>
+<script src="/static/js/cover.js?v={{V}}"></script>
+<script src="/static/js/app.js?v={{V}}"></script>
+</body>
+</html>

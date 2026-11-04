@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd84a"/>
+      <stop offset="1" stop-color="#ffb21e"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 3.5)">
+  <!-- périscope -->
+  <rect x="17" y="6" width="6" height="16" rx="3" fill="#4fb477"/>
+  <!-- tourelle -->
+  <rect x="14" y="17" width="24" height="12" rx="6" fill="url(#hull)" stroke="#f28a12" stroke-width="2.5"/>
+  <!-- gouvernail -->
+  <path d="M10 33 L3 26 L3 48 L10 42 Z" fill="#ffb21e" stroke="#f28a12" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- coque -->
+  <path d="M8 38 C8 29 16 25 28 25 C42 25 50 31 50 38 C50 45 42 51 28 51 C16 51 8 47 8 38 Z"
+        fill="url(#hull)" stroke="#f28a12" stroke-width="2.5"/>
+  <!-- hublots -->
+  <g fill="#fff6d6" stroke="#f28a12" stroke-width="2">
+    <circle cx="17" cy="38" r="3.6"/>
+    <circle cx="27" cy="38" r="3.6"/>
+    <circle cx="37" cy="38" r="3.6"/>
+  </g>
+  <!-- ondes -->
+  <g fill="none" stroke="#9aa3ad" stroke-width="3" stroke-linecap="round">
+    <path d="M54 32 Q57 38 54 44"/>
+    <path d="M59 27 Q64 38 59 49"/>
+  </g>
+  </g>
+</svg>

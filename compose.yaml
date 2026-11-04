@@ -1,0 +1,101 @@
+# Édition PC en conteneurs (images dans docker/). Réglages : .env à côté de ce fichier (modèle : .env.example).
+#   docker compose up -d web                  le site, sur 127.0.0.1:${WEB_HOST_PORT:-8200}
+#   docker compose run --rm tests             tous les tests (unitaires + parcours jsdom)
+#   docker compose --profile demo up demo     démonstration sans vrai Subsonic, port 8300 (alice / secret)
+# Devant le site : en prod Apache ou nginx en HTTPS (deploy/pc/) ; en test local Traefik (compose.traefik.yaml).
+# Édition Pi, pour l'essayer sur le poste de développement (page web seulement : ni son, ni menu tactile, ni Bluetooth,
+# ni AirPlay, ni écran) ; installée par deploy.sh comme sur le Pi :
+#   docker compose --profile pi up pi             Subsonic du .env (SUBSONIC_URL, PI_SUBSONIC_USER, PI_SUBSONIC_PASS), port 8399
+#   docker compose --profile pi-demo up pi-demo   faux Subsonic de démonstration, port 8499
+name: pimedia
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      args:                                         # le site tourne sous l'utilisateur de l'hôte qui possède la musique
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    image: pimedia-web
+    restart: unless-stopped
+    mem_limit: ${WEB_MEM_LIMIT:-512m}               # au-delà, le conteneur est arrêté et relancé, pas toute la machine
+    environment:
+      PI_MEDIA_WEB_SUBSONIC_URL: ${SUBSONIC_URL:-}
+      PI_MEDIA_WEB_SUBSONIC_PUBLIC_URL: ${SUBSONIC_PUBLIC_URL:-}   # liens vers Subsonic (Last.fm) ; vide : SUBSONIC_URL
+      PI_MEDIA_WEB_SECURE_COOKIE: ${WEB_SECURE_COOKIE:-true}
+      PI_MEDIA_WEB_TRUST_PROXY: ${WEB_TRUST_PROXY:-true}          # le port n'est ouvert qu'à la machine : tout passe par le proxy
+      PI_MEDIA_WEB_EXT_JAMENDO_ID: ${EXT_JAMENDO_ID:-}           # musique d'ailleurs : vide = source désactivée
+      PI_MEDIA_WEB_EXT_YOUTUBE_KEY: ${EXT_YOUTUBE_KEY:-}
+      PI_MEDIA_WEB_EXT_YOUTUBE_REGION: ${EXT_YOUTUBE_REGION:-FR}
+      PI_MEDIA_WEB_LASTFM_API_KEY: ${LASTFM_API_KEY:-}          # recherche de pochettes (changer la pochette d'un album)
+      PI_MEDIA_WEB_MUSIC_DIR: /music                            # envoi de fichiers et rangement dans la bibliothèque
+      PI_MEDIA_WEB_INCOMING_NAME: ${INCOMING_NAME:-Incoming}
+      PI_MEDIA_WEB_INCOMING_WAIT_HOURS: ${INCOMING_WAIT_HOURS:-1}
+      PI_MEDIA_WEB_SHORTCUT_FOLDERS: ${SHORTCUT_FOLDERS:-Compilations}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"         # Subsonic sur la même machine, hors Docker
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-8200}:8200"     # seulement la machine : le proxy HTTPS s'y branche
+    volumes:
+      - web-data:/data
+      - ${MUSIC_DIR:-./datas/Music}:/music           # musique de Subsonic (chemin du .env) ; en local : datas/Music
+
+  tests:
+    build: {context: ., dockerfile: docker/tests/Dockerfile}
+    image: pimedia-tests
+    profiles: [tests]
+
+  demo:
+    image: pimedia-tests
+    build: {context: ., dockerfile: docker/tests/Dockerfile}
+    profiles: [demo]
+    environment:
+      PI_MEDIA_DEMO_BIND: 0.0.0.0
+      PI_MEDIA_DEMO_PORT: "8200"
+    command: ["python3", "-m", "tests.demo_webapp", "31536000"]
+    ports:
+      - "127.0.0.1:${DEMO_HOST_PORT:-8300}:8200"
+
+  pi:
+    build: {context: ., dockerfile: docker/pi/Dockerfile}
+    image: pimedia-pi
+    profiles: [pi]
+    environment:                                    # vide = celui du .env du Pi (deploy.sh --configure dans le conteneur)
+      PI_MEDIA_SUBSONIC_URL: ${PI_SUBSONIC_URL:-${SUBSONIC_URL:-}}
+      PI_MEDIA_SUBSONIC_USER: ${PI_SUBSONIC_USER:-}
+      PI_MEDIA_SUBSONIC_PASS: ${PI_SUBSONIC_PASS:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"         # Subsonic sur la même machine, hors Docker
+    ports:
+      - "127.0.0.1:${PI_HOST_PORT:-8399}:8099"
+    volumes:
+      - pi-data:/home/pi/.local/share/pi-media     # versions installées et données, gardées d'un démarrage à l'autre
+
+  pi-demo:
+    build: {context: ., dockerfile: docker/pi/Dockerfile}
+    image: pimedia-pi
+    profiles: [pi-demo]
+    depends_on: [pi-subsonic]
+    environment:
+      PI_MEDIA_SUBSONIC_URL: http://pi-subsonic:4040
+      PI_MEDIA_SUBSONIC_USER: alice
+      PI_MEDIA_SUBSONIC_PASS: secret
+    ports:
+      - "127.0.0.1:${PI_DEMO_HOST_PORT:-8499}:8099"
+    volumes:
+      - pi-demo-data:/home/pi/.local/share/pi-media  # séparé de pi-data : jamais de mélange entre les deux bibliothèques
+
+  pi-subsonic:                                      # faux Subsonic de démonstration (bibliothèque inventée)
+    image: pimedia-tests
+    build: {context: ., dockerfile: docker/tests/Dockerfile}
+    profiles: [pi-demo]
+    environment:
+      PI_MEDIA_DEMO_BIND: 0.0.0.0
+      PI_MEDIA_DEMO_PORT: "4040"
+    command: ["python3", "-m", "tests.demo_subsonic"]
+
+volumes:
+  web-data:
+  pi-data:
+  pi-demo-data:

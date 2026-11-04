@@ -1,0 +1,13 @@
+[Unit]
+Description=Pi Media Station : relais Subsonic, interface tactile, podcasts, lecture haute fidélité
+After=pipewire.service pipewire-pulse.service network-online.target
+
+[Service]
+# %h : dossier personnel. Code dans current/ (lien vers la version installée), données à côté.
+Environment=PI_MEDIA_DATA=%h/.local/share/pi-media
+ExecStart=/usr/bin/python3 %h/.local/share/pi-media/current/subsonic-web.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

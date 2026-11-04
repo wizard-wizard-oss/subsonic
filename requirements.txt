@@ -1,0 +1,3 @@
+# Dépendances Python de l'édition PC (le reste est la bibliothèque standard).
+PyYAML==6.0.2
+ytmusicapi==1.10.3          # recherche YouTube sans quota (non officielle ; repli : API officielle)

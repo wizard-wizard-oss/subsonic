@@ -1,0 +1,53 @@
+# Test en local derrière Traefik (déjà lancé à part, réseau Docker « proxy », HTTPS sur l'entrée « websecure »).
+# Ajouté automatiquement par le .env de test : COMPOSE_FILE=compose.yaml:compose.traefik.yaml
+#   site :          https://${WEB_DOMAIN:-pimedia.localhost}
+#   démonstration : https://demo.${WEB_DOMAIN:-pimedia.localhost}   (docker compose --profile demo up -d demo)
+#   édition Pi :    https://pi.${WEB_DOMAIN:-pimedia.localhost}     (docker compose --profile pi up -d pi)
+#   Pi, démo :      https://pi-demo.${WEB_DOMAIN:-pimedia.localhost} (docker compose --profile pi-demo up -d pi-demo)
+# En prod, pas de Traefik : Apache ou nginx renvoie vers 127.0.0.1:${WEB_HOST_PORT} (deploy/pc/).
+
+services:
+  web:
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.pimedia-web.rule: Host(`${WEB_DOMAIN:-pimedia.localhost}`)
+      traefik.http.routers.pimedia-web.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.pimedia-web.tls: "true"
+      traefik.http.services.pimedia-web.loadbalancer.server.port: "8200"
+
+  demo:
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.pimedia-demo.rule: Host(`demo.${WEB_DOMAIN:-pimedia.localhost}`)
+      traefik.http.routers.pimedia-demo.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.pimedia-demo.tls: "true"
+      traefik.http.services.pimedia-demo.loadbalancer.server.port: "8200"
+
+  pi:
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.pimedia-pi.rule: Host(`pi.${WEB_DOMAIN:-pimedia.localhost}`)
+      traefik.http.routers.pimedia-pi.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.pimedia-pi.tls: "true"
+      traefik.http.services.pimedia-pi.loadbalancer.server.port: "8099"
+
+  pi-demo:
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy}
+      traefik.http.routers.pimedia-pi-demo.rule: Host(`pi-demo.${WEB_DOMAIN:-pimedia.localhost}`)
+      traefik.http.routers.pimedia-pi-demo.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.pimedia-pi-demo.tls: "true"
+      traefik.http.services.pimedia-pi-demo.loadbalancer.server.port: "8099"
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy}

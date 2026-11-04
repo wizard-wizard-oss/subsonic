@@ -1,0 +1,14 @@
+# Subsonic dans un conteneur Docker sur la même machine : le site rejoint son réseau et l'appelle par son nom,
+# sans que Subsonic ait besoin d'ouvrir un port à l'hôte.
+# Ajouté par le .env du serveur : COMPOSE_FILE=compose.yaml:compose.subsonic.yaml
+#   SUBSONIC_NETWORK : le réseau Docker où se trouve le conteneur Subsonic (à créer une fois, voir docs/DEPLOIEMENT.md)
+#   SUBSONIC_URL     : http://<nom du conteneur Subsonic>:4040 (port DANS le conteneur, pas celui publié sur l'hôte)
+
+services:
+  web:
+    networks: [default, subsonic]
+
+networks:
+  subsonic:
+    external: true
+    name: ${SUBSONIC_NETWORK:-subsonic}

@@ -1,0 +1,119 @@
+/* Thème : toutes les couleurs sont des variables. Un autre thème = redéfinir ces variables
+   (body[data-theme="…"]), sans toucher au reste des feuilles de style. */
+:root {
+  --bg: #121417;
+  --bg-raised: #1a1d22;
+  --bg-sunken: #0d0f12;
+  --bg-hover: #232830;
+  --line: #2a2f37;
+  --text: #e8eaed;
+  --text-soft: #a7adb7;
+  --text-dim: #737b87;
+  --accent: #4fb477;
+  --accent-strong: #63cf8c;
+  --accent-text: #08130c;
+  --star: #f5c04a;
+  --danger: #e2574c;
+  --mention-bg: rgba(245, 192, 74, 0.12);
+  --mention-line: #f5c04a;
+  --radius: 8px;
+  --sidebar-width: 240px;
+  --chat-width: 360px;
+  --topbar: 56px;
+  --playerbar: 76px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f7f9; --bg-raised: #ffffff; --bg-sunken: #eceef2; --bg-hover: #e8ebf0; --line: #dadde3;
+    --text: #1d2127; --text-soft: #4f5763; --text-dim: #7c8490; --accent: #2f8f57; --accent-strong: #237446;
+    --accent-text: #ffffff; --star: #d99a06; --mention-bg: rgba(217, 154, 6, 0.12);
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
+body[data-density="compact"] { font-size: 13px; }
+[hidden] { display: none !important; }
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--accent-strong); }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+h1 { font-size: 28px; }
+h2 { font-size: 17px; }
+.muted { color: var(--text-dim); }
+kbd { background: var(--bg-sunken); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font: 12px var(--font); }
+code { background: var(--bg-sunken); border-radius: 4px; padding: 0 4px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button, a.button {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit;
+  background: var(--bg-hover); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 6px 12px; cursor: pointer;
+}
+button:hover, a.button:hover { border-color: var(--text-dim); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+button.primary:hover { background: var(--accent-strong); }
+button.danger { color: var(--danger); }
+button.primary.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.icon-button { background: transparent; border-color: transparent; padding: 4px 8px; font-size: 16px; color: var(--text-soft); }
+.icon-button:hover { background: var(--bg-hover); color: var(--text); }
+.link-button { background: none; border: none; padding: 2px 4px; color: var(--text-soft); }
+.link-button:hover { color: var(--accent-strong); }
+input, select, textarea {
+  background: var(--bg-sunken); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px;
+}
+
+img.cover { display: block; object-fit: cover; border-radius: 6px; background: var(--bg-sunken); flex: none; }
+img.cover.empty { background: linear-gradient(135deg, var(--bg-hover), var(--bg-sunken)); }
+
+/* connexion */
+.login { min-height: 100%; display: grid; place-items: center; padding: 16px; }
+.login-card {
+  width: min(380px, 100%); background: var(--bg-raised); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px; display: grid; gap: 14px;
+}
+.login-card label { display: grid; gap: 6px; color: var(--text-soft); }
+.login-error { color: var(--danger); min-height: 1.4em; margin: 0; }
+.login-forgot { justify-self: center; }
+.login-forgot-help { margin: 0; color: var(--text-soft); font-size: 0.9em; }
+
+/* messages furtifs */
+.toasts { position: fixed; left: 50%; bottom: calc(var(--playerbar) + 16px); transform: translateX(-50%); display: grid; gap: 8px; z-index: 60; }
+.toast {
+  background: var(--bg-raised); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+  padding: 9px 16px; border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); transition: opacity 0.4s;
+}
+.toast.error { border-left-color: var(--danger); }
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast-action { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.toast.leaving { opacity: 0; }
+
+/* fenêtres */
+.veil { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.dialog { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 14px; width: min(480px, 100%); padding: 18px 22px 22px; }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+.settings { display: grid; gap: 12px; }
+.setting { display: grid; grid-template-columns: 1fr 210px; align-items: center; gap: 12px; color: var(--text-soft); }
+.setting.rights { display: block; border-top: 1px solid var(--line); padding-top: 12px; }
+.setting.rights h3 { font-size: 14px; margin: 0 0 6px; color: var(--text); }
+.rights-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.rights-list .mark { display: inline-block; width: 18px; }
+.rights-list .yes .mark { color: var(--accent); }
+.rights-list .no { color: var(--text-dim); }
+.setting.check { grid-template-columns: auto 1fr; }
+.settings-account { justify-self: end; }
+.shortcuts { width: 100%; border-collapse: collapse; }
+.shortcuts td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.shortcuts td:first-child { width: 90px; }
+
+/* icônes SVG */
+.icon { display: inline-block; flex: none; vertical-align: -3px; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.heart .icon { vertical-align: middle; }

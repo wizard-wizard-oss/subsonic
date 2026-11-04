@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#040a04">
+<title>Subsonic</title>
+<link rel="stylesheet" href="/static/css/base.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/components.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/player.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/overlays.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/search.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/history.css?v={{V}}">
+<link rel="stylesheet" href="/static/vendor/simple-keyboard/simple-keyboard.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/keyboard.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/external.css?v={{V}}">
+</head>
+<body>
+<div id="app">
+  <nav>
+    <button data-t="home">Accueil</button>
+    <button data-t="albums">Albums</button>
+    <button data-t="artists">Artistes</button>
+    <button data-t="fav">Favoris</button>
+    <button data-t="playlists">Playlists</button>
+    <button data-t="radios">Radios</button>
+    <button data-t="search">Recherche</button>
+    <button id="quit" hidden>Menu</button>
+  </nav>
+  <div id="top" hidden><button id="back"></button><div id="title"></div></div>
+  <div id="main"></div>
+  <div id="kbwrap" hidden><div id="kbbar"><button id="kbclose">Fermer le clavier &#9662;</button></div><div class="kbd" id="kb"></div></div>
+  <div id="bar">
+    <div class="prog" id="prog"><u><i></i></u></div>
+    <div class="in">
+      <div id="np"><img id="npimg" alt=""><div class="t"><b id="nptitle">&mdash;</b><small id="npsub">Choisissez de la musique</small></div></div>
+      <div id="ctl">
+        <button class="ib" id="npshuf"></button>
+        <button class="ib" id="prev"></button>
+        <button class="ib big" id="pp"></button>
+        <button class="ib" id="next"></button>
+        <button class="ib" id="nplist"></button>
+        <button class="ib" id="npheart"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="full" hidden>
+  <div id="fbg"></div>
+  <button class="ib" id="fclose"></button>
+  <div id="fbody">
+    <img id="fcover" alt="">
+    <div id="finfo">
+      <div id="ftitle"></div>
+      <div id="fartist"></div>
+      <div id="falbum"></div>
+      <div id="fprog"><span id="ftcur">0:00</span><div class="prog" id="fbar"><u><i></i></u></div><span id="ftdur">0:00</span></div>
+      <div id="fctl">
+        <button class="ib" id="fshuf"></button>
+        <button class="ib" id="fprev"></button>
+        <button class="ib big" id="fpp"></button>
+        <button class="ib" id="fnext"></button>
+        <button class="ib" id="frep"></button>
+      </div>
+      <div id="fextra">
+        <button id="fheart"></button>
+        <button id="fplaylist"></button>
+        <button id="fradio"></button>
+        <button id="flbtn"></button>
+        <button id="fibtn"></button>
+        <button id="fvbtn" hidden></button>
+        <button id="fqbtn"></button>
+      </div>
+    </div>
+  </div>
+  <div id="fqueue" hidden></div>
+  <div id="flyr" hidden></div>
+  <div id="fanec" hidden><img alt=""><b></b><span></span></div>
+  <div id="finf" hidden></div>
+  <div id="fvol" hidden><button id="fvm"></button><div id="fvv">--</div><button id="fvp"></button></div>
+</div>
+<div id="sheet" hidden><div id="sheetbg"></div><div id="sheetbox"><div id="sheettitle"></div><div id="sheetlist"></div></div></div>
+<div id="ask" hidden><div id="askbox"><div id="asktitle"></div><div id="askin"></div><div class="kbd" id="askkb"></div>
+  <div class="actions"><button id="askcancel">Annuler</button><button id="askok" class="primary">Valider</button></div></div></div>
+<div id="ytbox" hidden><div id="ytplayer"></div></div>
+<div id="toast" hidden></div>
+<script src="/static/js/core.js?v={{V}}" defer></script>
+<script src="/static/js/icons.js?v={{V}}" defer></script>
+<script src="/static/js/engine.js?v={{V}}" defer></script>
+<script src="/static/js/nav.js?v={{V}}" defer></script>
+<script src="/static/js/touchscroll.js?v={{V}}" defer></script>
+<script src="/static/vendor/simple-keyboard/simple-keyboard.js?v={{V}}" defer></script>
+<script src="/static/js/keyboard.js?v={{V}}" defer></script>
+<script src="/static/js/dialogs.js?v={{V}}" defer></script>
+<script src="/static/js/components.js?v={{V}}" defer></script>
+<script src="/static/js/menus.js?v={{V}}" defer></script>
+<script src="/static/js/mixes.js?v={{V}}" defer></script>
+<script src="/static/js/similar.js?v={{V}}" defer></script>
+<script src="/static/js/mixbuilder.js?v={{V}}" defer></script>
+<script src="/static/js/tabs.js?v={{V}}" defer></script>
+<script src="/static/js/history.js?v={{V}}" defer></script>
+<script src="/static/vendor/qrcode-generator/qrcode.js?v={{V}}" defer></script>
+<script src="/static/js/remote.js?v={{V}}" defer></script>
+<script src="/static/js/search.js?v={{V}}" defer></script>
+<script src="/static/js/player.js?v={{V}}" defer></script>
+<script src="/static/js/playerui.js?v={{V}}" defer></script>
+<script src="/static/js/lyrics.js?v={{V}}" defer></script>
+<script src="/static/js/controls.js?v={{V}}" defer></script>
+<script src="/static/js/ext.js?v={{V}}" defer></script>
+<script src="/static/js/guest.js?v={{V}}" defer></script>
+<script src="/static/js/hifi.js?v={{V}}" defer></script>
+<script src="/static/js/queue.js?v={{V}}" defer></script>
+<script src="/static/js/ytpopup.js?v={{V}}" defer></script>
+<script src="/static/js/pi.js?v={{V}}" defer></script>
+<script src="/static/js/boot.js?v={{V}}" defer></script>
+</body>
+</html>

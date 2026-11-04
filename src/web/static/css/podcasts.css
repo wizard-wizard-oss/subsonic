@@ -1,0 +1,106 @@
+/* Page Podcasts : pochettes, rangées, thèmes, épisodes, lecteur, clavier */
+.ph{padding:14px 12px 6px;color:var(--soft);font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px}
+.pmsg{padding:24px 16px;color:var(--warn);line-height:1.6}
+.phint{margin:8px 12px;padding:8px 12px;border:1px dashed var(--edge);border-radius:10px;color:var(--soft);font-size:12px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--on);border:1px solid var(--g);border-radius:20px;padding:10px 18px;font-size:13px;z-index:60;box-shadow:var(--glow);max-width:90vw}
+.ib{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0;flex:0 0 auto}
+.ib.big{width:58px;height:58px;background:var(--g);color:#031004;border-color:var(--g)}
+
+/* pochettes */
+.art{position:relative;width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,hsl(var(--h),55%,22%),hsl(calc(var(--h) + 40),60%,9%));color:hsl(var(--h),80%,75%);font-size:42px;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.art img{width:100%;height:100%;object-fit:cover;display:block}
+.art.small{width:46px;height:46px;flex:0 0 46px;font-size:20px;border-radius:6px;box-shadow:none}
+.art.big{width:150px;height:150px;flex:0 0 150px}
+
+/* rangées et grilles */
+.pshelf{display:flex;gap:12px;overflow-x:auto;touch-action:pan-x;padding:2px 12px 8px;scrollbar-width:none}
+.pshelf::-webkit-scrollbar{display:none}
+.pcard{position:relative;flex:0 0 132px;width:132px;padding:0;border:0;background:transparent;text-align:left;color:var(--g)}
+.pcard b{display:block;margin-top:6px;font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pcard small{display:block;color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard:active .art{box-shadow:var(--glow)}
+.pcard .badge{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--g);color:#031004;display:flex;align-items:center;justify-content:center}
+.pcard.resume{flex-basis:150px;width:150px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px 12px;padding:10px 12px}
+.pgrid .pcard{width:auto;flex:none}
+.mini{height:4px;background:#0f2a14;border-radius:2px;margin-top:5px;overflow:hidden}
+.mini i{display:block;height:100%;background:var(--g)}
+
+/* thèmes */
+.ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:6px 12px 12px}
+.ptile{height:84px;border-radius:12px;border:0;display:flex;align-items:flex-end;padding:10px 12px;text-align:left;font-size:17px;font-weight:bold;color:#fff;
+  background:linear-gradient(140deg,hsl(var(--h),60%,30%),hsl(calc(var(--h) + 35),65%,12%));box-shadow:0 4px 14px rgba(0,0,0,.5);text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.ptile:active{box-shadow:var(--glow);filter:brightness(1.2)}
+
+/* fiche d'un podcast */
+.phero{display:flex;gap:16px;padding:12px;align-items:flex-start}
+.pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pinfo b{font-size:19px;line-height:1.2}
+.pinfo small{color:var(--dim);font-size:12px}
+.pinfo p{margin:2px 0;color:var(--soft);font-size:12.5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pactions{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+.pactions button{height:40px;padding:0 18px;font-size:14px;font-weight:bold;border-radius:20px;display:flex;align-items:center;gap:8px}
+.pactions button.primary{background:var(--g);color:#031004;border-color:var(--g)}
+.pep{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #0f2a14}
+.pep:active{background:var(--on)}
+.pep .go{width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0}
+.pep .t{flex:1;min-width:0}
+.pep .t b{display:block;font-size:14px;line-height:1.25}
+.pep .t small{color:var(--dim);font-size:11.5px}
+.pep .t p{margin:3px 0 0;color:var(--soft);font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pep.done{opacity:.5}
+.pep.cur .t b{color:var(--warn)}
+
+/* recherche, réglages */
+.pfield{margin:10px 12px 4px;min-height:46px;padding:12px 14px;border:1px solid var(--edge);border-radius:10px;background:var(--bg2);font-size:16px;word-break:break-all}
+.pfield[data-empty="1"]::before{content:attr(data-placeholder);color:var(--dim)}
+.pfield[data-empty="1"].on::before{content:""}
+.pfield.on{border-color:var(--g);box-shadow:var(--glow)}
+.pform{padding:4px 0 12px}
+.pform p{margin:6px 12px;color:var(--soft);font-size:12.5px;line-height:1.5}
+.psource{display:flex;align-items:center;gap:10px;margin:6px 12px;padding:10px 12px;border:1px solid #0f2a14;border-radius:10px}
+.psource i{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:0 0 auto}
+.psource.on i{background:var(--g);box-shadow:var(--glow)}
+.psource small{flex:1;color:var(--dim);font-size:12px}
+.psource em{font-style:normal;font-size:12px;color:var(--soft)}
+
+/* clavier */
+#kbwrap{flex:0 0 auto;padding:4px;border-top:1px solid var(--edge);background:var(--bg)}
+#kbbar{display:flex;justify-content:flex-end;padding:0 0 4px}
+#kbbar button{height:30px;padding:0 14px;font-size:12px;border-radius:15px}
+#app.kbopen #bar{display:none}
+
+/* barre du lecteur */
+#bar{flex:0 0 auto;background:linear-gradient(#07130a,#030803);border-top:1px solid var(--edge)}
+.pprog{height:14px;display:flex;align-items:center;cursor:pointer;touch-action:none}
+.pprog u{display:block;width:100%;height:4px;background:#0f2a14;text-decoration:none}
+.pprog i{display:block;height:100%;width:0;background:var(--g);box-shadow:var(--glow)}
+#bar .bin{display:flex;align-items:center;gap:10px;padding:2px 10px 8px}
+#bnp{flex:1;min-width:0;display:flex;align-items:center;gap:10px;cursor:pointer}
+#bnp img{width:44px;height:44px;border-radius:6px;object-fit:cover;background:#0a2410}
+#bnp .t{min-width:0;display:flex;flex-direction:column}
+#bnp b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bnp small{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bctl{display:flex;align-items:center;gap:6px}
+
+/* lecteur plein écran */
+#np{position:fixed;inset:0;z-index:30;background:var(--bg);overflow:hidden}
+#npbg{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(28px) brightness(.35);transform:scale(1.1)}
+#npclose{position:absolute;top:8px;left:8px;z-index:2;background:rgba(3,10,4,.7)}
+#npbody{position:relative;height:100%;display:flex;align-items:center;gap:26px;padding:20px 28px}
+#npimg{width:min(300px,56vh);height:min(300px,56vh);object-fit:cover;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.7);flex:0 0 auto;background:#0a2410}
+#npinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+#nptitle{font-size:21px;font-weight:bold;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#npsub{color:var(--soft);font-size:14px}
+#npprog{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--soft)}
+#npprog .pprog{flex:1}
+#npctl{display:flex;justify-content:center;gap:16px;align-items:center}
+#npextra{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#npextra button{height:38px;padding:0 14px;border-radius:19px;font-size:13px}
+#npdesc{color:var(--soft);font-size:12px;line-height:1.5;max-height:4.5em;overflow:hidden}
+.pchip{margin:8px 12px 0;padding:8px 14px;border-radius:999px;border:1px solid var(--edge);background:transparent;color:var(--soft);font:inherit;font-size:13px}
+.pchip.on{border-color:var(--accent,#5fd35f);color:var(--accent,#5fd35f)}
+/* Croix « retirer de Reprendre l'écoute » : assez grande pour le doigt */
+.pcard.resume{cursor:pointer}
+.pcard .forget{position:absolute;top:4px;right:4px;width:36px;height:36px;padding:0;border-radius:50%;background:rgba(3,10,4,.82);border:1px solid var(--edge);color:var(--soft);font-size:16px;line-height:1}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#040a04">
+<title>Podcasts</title>
+<link rel="stylesheet" href="/static/css/base.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/podcasts.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/history.css?v={{V}}">
+<link rel="stylesheet" href="/static/vendor/simple-keyboard/simple-keyboard.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/keyboard.css?v={{V}}">
+</head>
+<body>
+<div id="app">
+  <nav>
+    <button data-t="home">Accueil</button>
+    <button data-t="themes">Thèmes</button>
+    <button data-t="search">Recherche</button>
+    <button data-t="mine">Ma liste</button>
+    <button data-t="settings">Réglages</button>
+    <button id="quit">Menu</button>
+  </nav>
+  <div id="top" hidden><button id="back"></button><div id="title"></div></div>
+  <div id="main"></div>
+  <div id="kbwrap" hidden>
+    <div id="kbbar"><button id="kbclose">Fermer le clavier &#9662;</button></div>
+    <div class="pkb" id="kb"></div>
+  </div>
+  <div id="bar" hidden>
+    <div class="pprog" id="bprog"><u><i></i></u></div>
+    <div class="bin">
+      <div id="bnp"><img id="bimg" alt=""><div class="t"><b id="btitle"></b><small id="bsub"></small></div></div>
+      <div id="bctl">
+        <button class="ib" id="bback" aria-label="Reculer de 15 secondes"></button>
+        <button class="ib big" id="bpp" aria-label="Lecture"></button>
+        <button class="ib" id="bfwd" aria-label="Avancer de 30 secondes"></button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="np" hidden>
+  <div id="npbg"></div>
+  <button class="ib" id="npclose" aria-label="Fermer"></button>
+  <div id="npbody">
+    <img id="npimg" alt="">
+    <div id="npinfo">
+      <div id="nptitle"></div>
+      <div id="npsub"></div>
+      <div id="npprog"><span id="npcur">0:00</span><div class="pprog" id="npbar"><u><i></i></u></div><span id="npdur">0:00</span></div>
+      <div id="npctl">
+        <button class="ib" id="npback"></button>
+        <button class="ib big" id="nppp"></button>
+        <button class="ib" id="npfwd"></button>
+      </div>
+      <div id="npextra">
+        <button id="npspeed">1×</button>
+        <button id="npsleep">Minuteur</button>
+        <button id="npdone">Marquer écouté</button>
+      </div>
+      <div id="npdesc"></div>
+    </div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+<script src="/static/js/pod-core.js?v={{V}}" defer></script>
+<script src="/static/vendor/simple-keyboard/simple-keyboard.js?v={{V}}" defer></script>
+<script src="/static/js/keyboard.js?v={{V}}" defer></script>
+<script src="/static/js/pod-keyboard.js?v={{V}}" defer></script>
+<script src="/static/js/pod-views.js?v={{V}}" defer></script>
+<script src="/static/js/pod-player.js?v={{V}}" defer></script>
+<script src="/static/js/history.js?v={{V}}" defer></script>
+<script src="/static/js/pod-pages.js?v={{V}}" defer></script>
+<script src="/static/js/pod-app.js?v={{V}}" defer></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Édition PC (site multi-utilisateurs) en service systemd utilisateur.
+# Sans Docker. Copier dans ~/.config/systemd/user/, adapter le chemin du code, puis :
+#   systemctl --user daemon-reload && systemctl --user enable --now pimedia-web
+# Réglages : ~/.local/share/pimedia-web/.env  (SUBSONIC_URL=…, WEB_PORT=8200, WEB_SECURE_COOKIE=true derrière HTTPS)
+[Unit]
+Description=Pi Media - édition PC (site multi-utilisateurs)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/pimedia-web/src/pimedia-web.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

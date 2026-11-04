@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pi Media Station</title>
+<style>
+:root{--bg:#040a04;--panel:#0b1a0d;--edge:#1f6b2f;--g:#39ff6e;--soft:#9be8ae;--dim:#2f9a4c}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--g);font-family:-apple-system,system-ui,sans-serif;padding:18px 16px 40px}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+h2{font-size:15px;font-weight:600;margin:22px 0 8px;color:var(--soft)}
+p{color:var(--soft);font-size:14px;margin:0 0 14px;line-height:1.4}
+input{width:100%;height:54px;padding:0 16px;font-size:19px;border-radius:14px;border:1px solid var(--edge);background:var(--panel);color:var(--g);outline:none}
+input:focus{border-color:var(--g)}
+button{height:44px;padding:0 14px;font-size:15px;border-radius:12px;border:1px solid var(--edge);background:var(--panel);color:var(--g)}
+#sug{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+#sug button{border-radius:22px}
+.song{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #0f2a14}
+.song .t{flex:1;min-width:0}
+.song b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song small{display:block;font-size:13px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song button{flex:0 0 auto;height:40px;font-size:13px;padding:0 10px}
+.song button.next{border-color:var(--g)}
+.q{padding:6px 0;font-size:14px;border-bottom:1px solid #0f2a14}
+.q small{color:var(--dim)}
+.q.now{color:var(--g);font-weight:600}
+.row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.row button{flex:1}
+.row button.next{border-color:var(--g)}
+label.file{flex:1;display:flex;align-items:center;justify-content:center;height:44px;border-radius:12px;border:1px solid var(--g);background:var(--panel);font-size:15px}
+label.file input{display:none}
+select{height:44px;border-radius:12px;border:1px solid var(--edge);background:var(--panel);color:var(--g);font-size:15px;padding:0 8px}
+#link{margin-top:4px;font-size:16px;height:48px}
+#state{position:sticky;bottom:10px;margin-top:16px;font-size:14px;color:var(--soft);min-height:20px;background:var(--bg)}
+#state.err{color:#ffd23f}
+</style>
+</head>
+<body>
+<h1>Pi Media Station</h1>
+<p>Cherchez un titre et ajoutez-le à la file du Pi. Le texte s’affiche aussi dans la recherche de l’écran.</p>
+<input id="q" type="search" autocomplete="off" autocapitalize="off" enterkeyhint="search" placeholder="Artiste, album, titre…" autofocus>
+<div id="sug"></div>
+<div id="songs"></div>
+<h2>Un lien ou un fichier</h2>
+<p>Partagez un titre depuis YouTube, Deezer, Apple Music ou Spotify (« Copier le lien »), collez-le ici : le Pi le cherche dans la bibliothèque, puis sur YouTube. Ou envoyez un fichier audio de votre téléphone.</p>
+<input id="link" type="url" autocomplete="off" autocapitalize="off" placeholder="https://…" enterkeyhint="go">
+<div class="row">
+  <button id="linkNext" class="next" type="button">Lien : après ce titre</button>
+  <button id="linkEnd" type="button">Lien : à la fin</button>
+</div>
+<div class="row">
+  <label class="file"><input id="file" type="file" accept="audio/*,.flac,.m4a,.opus,.ogg,.wav,.aiff">Envoyer un fichier</label>
+  <select id="fileMode"><option value="next">après ce titre</option><option value="end">à la fin</option></select>
+</div>
+<h2>File d’attente</h2>
+<div id="queue"><p>Chargement…</p></div>
+<div id="state"></div>
+<script src="/tel.js"></script>
+</body>
+</html>

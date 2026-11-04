@@ -1,0 +1,19 @@
+/* Variables, réinitialisation, structure de la page, navigation */
+:root{--bg:#040a04;--bg2:#07130a;--panel:#0b1a0d;--on:#14301a;--edge:#1f6b2f;--g:#39ff6e;--soft:#9be8ae;--dim:#2f9a4c;--warn:#ffd23f;--f:"DejaVu Sans Mono",monospace;--glow:0 0 14px rgba(57,255,110,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--g);font:15px var(--f);overflow:hidden}
+button{font-family:var(--f);color:var(--g);background:var(--panel);border:1px solid var(--edge);cursor:pointer;transition:background .15s,box-shadow .15s}
+button:active{background:var(--on);box-shadow:var(--glow)}
+svg{display:block;pointer-events:none}
+#app{display:flex;flex-direction:column;height:100vh;background:radial-gradient(120% 80% at 50% -10%,#0d2a14 0%,var(--bg) 60%)}
+nav{display:flex;gap:3px;padding:4px;flex:0 0 auto}
+nav button{flex:1;height:36px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;border-radius:18px;border-color:transparent;background:transparent;color:var(--soft);padding:0 2px}
+nav button.on{background:var(--on);color:var(--g);border-color:var(--edge);box-shadow:var(--glow)}
+#top{display:flex;align-items:center;gap:8px;padding:0 8px 4px;flex:0 0 auto}
+#back{height:34px;width:44px;border-radius:17px;display:flex;align-items:center;justify-content:center}
+#title{flex:1;color:var(--soft);font-size:15px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#main{flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;padding-bottom:8px}
+#main.in{animation:up .22s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#kbwrap{flex:0 0 auto;padding:4px;border-top:1px solid var(--edge);background:var(--bg)}

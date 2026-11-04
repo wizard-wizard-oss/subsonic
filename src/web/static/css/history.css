@@ -1,0 +1,7 @@
+/* Historique des recherches (écran du Pi) */
+.hist{margin:6px 12px}
+.histhead{color:var(--soft);font-size:13px;font-weight:bold;padding:4px 2px 6px}
+.histitem{display:flex;gap:6px;margin-bottom:6px}
+.histitem .histtext{flex:1;min-width:0;height:42px;text-align:left;padding:0 14px;font-size:16px;border-radius:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.histitem .histdel{flex:0 0 42px;height:42px;padding:0;border-radius:21px;font-size:16px;color:var(--soft)}
+.histclear{margin-top:4px;height:34px;padding:0 16px;font-size:13px;border-radius:17px;color:var(--soft)}
