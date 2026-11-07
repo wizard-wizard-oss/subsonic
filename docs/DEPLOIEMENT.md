@@ -60,6 +60,8 @@ bash deploy/pc/push.sh utilisateur@serveur
 ```
 Le script copie le code (sans toucher au `.env` du serveur ni aux données), puis relance
 `docker compose up -d --build web`. Les migrations de la base s'appliquent toutes seules au démarrage.
+Les dossiers `.git`, `.idea` et `.vscode` sont exclus : les métadonnées du dépôt et de l'éditeur ne sont pas déployées
+et les éventuelles configurations déjà présentes sur le serveur sont préservées.
 La reconstruction installe aussi les nouvelles dépendances de `requirements.txt` (ex. `ytmusicapi`, 27/10/2026).
 
 ### Vérifier, lire le journal

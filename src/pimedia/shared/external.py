@@ -2,11 +2,31 @@
 (MusicBrainz, Wikipédia). Rien ici ne dépend du Pi ni du site : chaque édition garde ses résultats à sa façon."""
 import json
 import re
+import threading
 import time
 import urllib.parse
 import urllib.request
 
 USER_AGENT = "PiMediaStation/1.0 (lecteur personnel)"
+
+
+class MusicBrainzPacer:
+    """Un départ de requête par seconde pour tout le processus (paroles, anecdotes et exploration)."""
+    def __init__(self, clock=time.monotonic, sleep=time.sleep):
+        self.clock, self.sleep = clock, sleep
+        self.lock = threading.Lock()
+        self.last = None
+
+    def wait(self):
+        with self.lock:
+            if self.last is not None:
+                delay = 1.05 - (self.clock() - self.last)
+                if delay > 0:
+                    self.sleep(delay)
+            self.last = self.clock()
+
+
+MUSICBRAINZ_PACER = MusicBrainzPacer()
 
 TITLE_NOISE = r"remaster|live|version|edit|mix|feat|ft\.|radio|mono|stereo|bonus|deluxe|acoustic"
 MUSIC_WORDS = r"chant|music|band|group|rap|dj|compos|singer|duo|trio|artist|musici|pianist|guitar"
@@ -47,6 +67,8 @@ def distinct_pairs(pairs):
 # ---------- accès HTTP ----------
 class JsonFetcher:
     def get(self, url, timeout=8):
+        if urllib.parse.urlsplit(url).hostname == "musicbrainz.org":
+            MUSICBRAINZ_PACER.wait()
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8", "replace"))

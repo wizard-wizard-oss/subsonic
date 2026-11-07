@@ -14,6 +14,7 @@ from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 DECADES = (1960, 1970, 1980, 1990, 2000, 2010, 2020)
 SIZES = (30, 60, 100)
+DEPTHS = (1, 2, 3, 4)
 PARALLEL = 4            # appels Subsonic simultanés : on ménage le serveur
 
 
@@ -74,12 +75,16 @@ class MixOptions:
     seed_artist_name: str = ""
     size: int = 60
     favorites_first: bool = False
-    wide: bool = True                                # proches de proches (jusqu'à 4 niveaux)
+    depth: int = 4                                   # limite des niveaux d'artistes proches
     chronological: bool = False
 
     @classmethod
     def parse(cls, data):
         if not isinstance(data, dict):
+            raise MixError("mix.invalid")
+        # Les anciennes pages en cache envoient encore wide (1 ou 4 niveaux).
+        depth = data.get("depth", 1 if data.get("wide") is False else 4)
+        if type(depth) is not int or depth not in DEPTHS:
             raise MixError("mix.invalid")
         options = cls(
             genres=[str(g)[:60] for g in as_list(data.get("genres"))][:12],
@@ -87,7 +92,7 @@ class MixOptions:
             seed_artist_id=str(data.get("seedArtistId") or "")[:100],
             seed_artist_name=str(data.get("seedArtistName") or "")[:200],
             size=data.get("size") if data.get("size") in SIZES else 60,
-            favorites_first=bool(data.get("favoritesFirst")), wide=data.get("wide", True) is not False,
+            favorites_first=bool(data.get("favoritesFirst")), depth=depth,
             chronological=bool(data.get("chronological")))
         return options
 
@@ -238,7 +243,7 @@ class Mixes:
             if options.seed_artist_name:
                 seed += [s for s in self._songs(user, "getTopSongs", [("artist", options.seed_artist_name), ("count", 15)],
                                                 "topSongs", "song") if options.in_decades(s)]
-            wide = self.similar_wide(user, options.seed_artist_id, 4 if options.wide else 1, 5, 30)
+            wide = self.similar_wide(user, options.seed_artist_id, options.depth, 5, 30)
             near = [s for s in wide[1] if options.in_decades(s)]
             far = [s for s in wide[2] + wide[3] + wide[4] if options.in_decades(s)]
         favorites = []

@@ -20,7 +20,7 @@ MAX_UNZIPPED_BYTES = 4000 * 1024 * 1024          # garde-fou contre un zip qui g
 CHUNK = 65536
 NOT_AUTHORIZED = 50
 BAD_CREDENTIALS = 40
-UNSAFE = re.compile(r"[^\w .,'()&+\-]")
+UNSAFE = re.compile(r'[\x00-\x1f\x7f<>:"|?*]')
 
 
 class UploadError(ValueError):
@@ -28,9 +28,20 @@ class UploadError(ValueError):
 
 
 def safe_name(text, fallback):
-    """Un seul nom de fichier ou de dossier : ni chemin, ni caractère spécial, ni point en tête."""
+    """Garde l'orthographe, les accents et la ponctuation ; retire chemins, contrôles et caractères interdits."""
     name = UNSAFE.sub("_", os.path.basename((text or "").replace("\\", "/"))).strip(" .")
     return name[:150] or fallback
+
+
+def zip_name(member):
+    """Certains ZIP contiennent de l'UTF-8 sans le déclarer : zipfile les a alors lus en CP437.
+    Rétablit l'UTF-8 s'il est valide, sinon conserve le nom CP437 d'origine."""
+    if not member.flag_bits & 0x800:
+        try:
+            return member.filename.encode("cp437").decode("utf-8")
+        except UnicodeError:
+            pass
+    return member.filename
 
 
 def incoming_dir(music_dir, incoming_name):
@@ -185,13 +196,13 @@ class Uploads:
 
     @staticmethod
     def _wanted(member):
-        parts = member.filename.replace("\\", "/").split("/")
+        parts = zip_name(member).replace("\\", "/").split("/")
         if parts[0] == "__MACOSX" or parts[-1].startswith("."):          # restes du Finder de macOS
             return False
         return extension_of(parts[-1]) in EXTENSIONS + IMAGES
 
     def _extract(self, source, member, destination):
-        parts = [safe_name(p, "_") for p in member.filename.replace("\\", "/").split("/") if p not in ("", ".", "..")]
+        parts = [safe_name(p, "_") for p in zip_name(member).replace("\\", "/").split("/") if p not in ("", ".", "..")]
         folder = destination
         for part in parts[:-1]:
             folder = os.path.join(folder, part)

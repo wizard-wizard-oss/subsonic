@@ -23,6 +23,7 @@ from .controllers.library import LibraryController
 from .controllers.extmusic import ExtMusicController
 from .controllers.imports import ImportController
 from .controllers.facts import FactsController
+from .controllers.exploration import ExplorationController
 from .controllers.listening import ListeningController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
@@ -36,6 +37,8 @@ from .extmusic import KEPT_SECONDS, ExternalMusic, ExtMusicError, SearchMemory
 from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
+from .exploration import Exploration, ExplorationUnavailable, MusicMetadata
+from .storage.exploration import ExplorationRepository
 from .folders import FolderNotFound, Folders
 from .library import Library
 from .listening import Listening
@@ -85,6 +88,8 @@ IMPORT_CREATE_LIMIT = 1024 * 1024
 
 def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
+    if isinstance(error, ExplorationUnavailable):
+        return Reply.error(503, "explore.unavailable")
     if isinstance(error, Unauthorized):
         return Reply.error(401, "auth.required")
     if isinstance(error, MissingRight):
@@ -131,6 +136,7 @@ class WebApplication:
         self.ratings = Ratings(self.subsonic)
         self.library = Library(self.subsonic, self.ratings, self.messages)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
+        self.exploration = Exploration(MusicMetadata(ExplorationRepository(self.db)), self.folders, self.library)
         self.artist_indexes = ArtistIndexes(self.subsonic, ArtistIndexRepository(self.db), self.users, self.hub,
                                             hidden=(self.config.incoming_name,),
                                             shortcuts=[n.strip() for n in self.config.shortcut_folders.split(",") if n.strip()])
@@ -182,6 +188,7 @@ class WebApplication:
         profile = ProfileController(self.avatars, self.radios, self.config.subsonic_public_url)
         lyrics = LyricsController(self.lyrics)
         facts = FactsController(self.facts)
+        exploration = ExplorationController(self.exploration)
         extmusic = ExtMusicController(self.extmusic, self.ext_favorites)
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
@@ -197,6 +204,11 @@ class WebApplication:
         router.add("POST", "/api/login", auth.login)
         router.add("POST", "/api/logout", auth.logout)
         router.add("GET", "/api/me", read(auth.me))
+        router.add("GET", "/api/explore/album", read(exploration.album))
+        router.add("GET", "/api/explore/profile", read(exploration.profile))
+        router.add("GET", "/api/explore/artists", read(exploration.artists))
+        router.add("GET", "/api/explore/connections", read(exploration.connections))
+        router.add("GET", "/api/explore/local", read(exploration.local))
         router.add("POST", "/api/preferences", write(auth.save_preferences))
 
         for path, handler in (("/api/home", library.home), ("/api/artists", library.artists),

@@ -16,6 +16,10 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - Tables et colonnes en anglais, migrations numérotées (`schema.py`), jamais modifier une migration publiée.
 - Entités en dataclasses avec `to_api()` ; pas de dictionnaires qui traînent entre les couches.
 - Secrets dans `.env` (hors code, hors archive) ; jamais de mot de passe en base (jeton Subsonic seulement).
+- Chemins d'installation, adresses du serveur et identifiants personnels : configuration, environnement ou arguments
+  de commande. Aucun chemin personnel codé en dur, y compris dans un script de diagnostic temporaire. Les chemins
+  internes au projet se calculent depuis son emplacement ; un dossier personnel se résout avec le système.
+  Les exemples de commande utilisent des noms génériques.
 
 ## Interface
 - Textes en français dans `i18n/fr.yaml`, clés en anglais ; aucun texte en dur dans le code.
@@ -34,5 +38,7 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - Un changement de déploiement met à jour `docs/DEPLOIEMENT.md`.
 - **Toute modification du site met à jour la version**, à chaque fois, avant le déploiement : une entrée datée en tête de
   `src/i18n/versions.yaml` (page « Versions », écrite pour les utilisateurs ; voir `docs/features/versions.md`).
-  Nouveauté visible : version **mineure** (1.5 → 1.6) ; grand changement : **majeure** (1.x → 2.0) ; **correction de bug :
-  toujours le troisième niveau** (1.5 → 1.5.1, puis 1.5.2…). Rien ne part en production sans cette entrée.
+  **Évolution, finition visuelle ou correction de la même fonctionnalité : troisième niveau** (1.7.1, 1.7.2,
+  1.7.3…). Décision utilisateur du 07/11/2026 : ne pas passer à 1.8 pour les évolutions des labels, membres et
+  collaborations. Réserver la version **mineure** à une fonctionnalité distincte ou à un lot significatif, et la
+  **majeure** à un grand changement. Rien ne part en production sans cette entrée.

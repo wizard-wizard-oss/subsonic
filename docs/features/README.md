@@ -15,11 +15,12 @@ faux Subsonic, mpv et jsdom).
 | [comptes-et-droits](comptes-et-droits.md) | connexion Subsonic, sessions, droits, réglages, page « Mon compte », photos (Gravatar) | oui | en partie (photos : Chromium) |
 | [barre-gauche](barre-gauche.md) | artistes + playlists, modes | oui | oui (liste d'artistes) |
 | [bibliotheque](bibliotheque.md) | accueil, artiste, album, albums, recherche, favoris | oui | en partie |
+| [labels-et-collaborations](labels-et-collaborations.md) | crédits, labels, membres et leurs autres groupes / projets depuis l'album ou l'artiste (MusicBrainz) | oui | API oui (ABBA, Vitalic, Kyuss), interface jsdom |
 | [notes-et-commentaires](notes-et-commentaires.md) | étoiles, cœur, commentaires d'album | oui | en partie |
 | [salon](salon.md) | discussion temps réel | oui | oui (Traefik) |
 | [lecteur](lecteur.md) | lecteur, file, raccourcis | oui | jsdom seulement |
 | [paroles](paroles.md) | LRCLIB / lyrics.ovh | oui | oui (LRCLIB) |
-| [mix-et-radios](mix-et-radios.md) | mix, créateur, radio d'artiste | oui (sauf radio d'un titre) | serveur oui |
+| [mix-et-radios](mix-et-radios.md) | mix, créateur, radio d'artiste et d'un titre | oui | serveur oui ; radio d'un titre : jsdom |
 | [playlists](playlists.md) | playlists, communautaires, glisser-déposer | oui | non |
 | [import-playlists](import-playlists.md) | importer une playlist Deezer, Spotify, Apple Music (+ guide) | oui | lien Deezer oui ; bibliothèque non |
 | [ecoute-en-cours](ecoute-en-cours.md) | scrobble, « Écouté en ce moment » | oui | non |

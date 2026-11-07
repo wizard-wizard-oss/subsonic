@@ -1,6 +1,6 @@
 "use strict";
 /* Page Mix (#/mix, #/mix/<artiste>) : mix rapides, et créateur de mix comme sur le Pi (artiste de départ, styles,
-   époques, nombre de titres, favoris d'abord, proches de proches, chronologique). Les titres sont choisis par le
+   époques, nombre de titres, favoris d'abord, profondeur des artistes proches, chronologique). Les titres sont choisis par le
    serveur du site (/api/mix/build) ; on les écoute tout de suite ou on les garde en playlist Subsonic. */
 
 Views.mix = (() => {
@@ -8,6 +8,7 @@ Views.mix = (() => {
   const QUICK = [["random", "shuffle"], ["favorites", "heart"], ["discover", "play"], ["newest", "plus"]];
   const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
   const SIZES = [30, 60, 100];
+  const DEPTHS = [1, 2, 3, 4];
 
   /** Pastille qui s'allume et s'éteint. */
   function toggleChip(label, on, onchange, extra) {
@@ -30,7 +31,7 @@ Views.mix = (() => {
 
   return {
     async render(main, route) {
-      this.options = {genres: [], decades: [], size: 60, favoritesFirst: false, wide: true, chronological: false,
+      this.options = {genres: [], decades: [], size: 60, favoritesFirst: false, depth: 4, chronological: false,
                       seedArtistId: "", seedArtistName: ""};
       this.seedBox = el("div.mix-seed");
       this.genreBox = el("div.chips.mix-genres", {}, el("span.muted", {text: "…"}));
@@ -43,6 +44,8 @@ Views.mix = (() => {
         Views.heading(t("mix.builder")),
         el("p.muted", {text: t("mix.builder_help")}),
         el("h3.mix-label", {text: t("mix.seed")}), this.seedBox,
+        el("h3.mix-label", {id: "mix-depth-label", text: t("mix.depth")}),
+        el("p.muted", {id: "mix-depth-help", text: t("mix.depth_help")}), this.depthChips(),
         el("h3.mix-label", {text: t("mix.genres")}), this.genreBox,
         el("h3.mix-label", {text: t("mix.decades")}),
         el("div.chips.mix-decades", {}, DECADES.map(year => toggleChip(t("mix.decade", {decade: String(year).slice(2)}), false,
@@ -51,7 +54,6 @@ Views.mix = (() => {
         this.sizeChips(),
         el("div.chips.mix-flags", {},
           toggleChip(t("mix.favorites_first"), false, () => (this.options.favoritesFirst = !this.options.favoritesFirst)),
-          toggleChip(t("mix.wide"), true, () => (this.options.wide = !this.options.wide)),
           toggleChip(t("mix.chronological"), false, () => (this.options.chronological = !this.options.chronological))),
         el("div.mix-actions", {},
           App.setIcon(el("button.primary.mix-play", {type: "button", onclick: () => this.build(false)}), "play", 16, false, t("mix.play")),
@@ -74,6 +76,22 @@ Views.mix = (() => {
         text: App.plural("album.tracks", size), onclick: () => {
           this.options.size = size;
           chips.forEach((chip, i) => chip.classList.toggle("on", SIZES[i] === size));
+        }}));
+      App.append(box, chips);
+      return box;
+    },
+
+    depthChips() {
+      const box = el("div.chips.mix-depths", {role: "group", "aria-labelledby": "mix-depth-label",
+                                            "aria-describedby": "mix-depth-help"});
+      const chips = DEPTHS.map(depth => el("button.chip.toggle" + (depth === this.options.depth ? ".on" : ""),
+        {type: "button", dataset: {depth}, text: App.plural("mix.depth_levels", depth),
+         "aria-pressed": String(depth === this.options.depth), onclick: () => {
+          this.options.depth = depth;
+          chips.forEach((chip, i) => {
+            chip.classList.toggle("on", DEPTHS[i] === depth);
+            chip.setAttribute("aria-pressed", String(DEPTHS[i] === depth));
+          });
         }}));
       App.append(box, chips);
       return box;

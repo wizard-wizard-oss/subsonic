@@ -42,6 +42,10 @@ const Versions = (() => {
     if (!releases) {
       try { releases = (await App.api.get("/api/versions")).releases; } catch (e) { return []; }
     }
+    // Une livraison peut être renumérotée : un ancien numéro retiré ne doit pas masquer les prochaines pastilles.
+    const lastSeen = seen();
+    if (releases.length && lastSeen && !releases.some(item => item.version === lastSeen) &&
+        newer(lastSeen, releases[0].version)) remember(releases[0].version);
     showTag();
     return releases;
   }

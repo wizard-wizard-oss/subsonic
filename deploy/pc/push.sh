@@ -18,11 +18,11 @@ LATEST_VERSION="$(sed -n 's/^- version: "\(.*\)"$/\1/p' "$VERSIONS" | head -1)"
 LATEST_DATE="$(sed -n 's/^  date: \([0-9-]*\)$/\1/p' "$VERSIONS" | head -1)"
 echo "==> Version $LATEST_VERSION du $LATEST_DATE (src/i18n/versions.yaml)"
 if [ "$LATEST_DATE" != "$(date +%F)" ]; then
-  echo "    Rappel : toute mise à jour change la version (nouveauté : mineure ; correction de bug : 3e niveau, 1.5.1). Ajouter d'abord une entrée en tête de ce fichier."
+  echo "    Rappel : toute mise à jour change la version (évolution ou correction : 3e niveau ; fonctionnalité distincte : mineure). Ajouter d'abord une entrée en tête de ce fichier."
 fi
 
 echo "==> Copie du code vers $TARGET:$REMOTE_DIR"
-rsync -az --delete --exclude .env --exclude datas --exclude dist --exclude archive --exclude tests --exclude __pycache__ \
+rsync -az --delete --exclude .git --exclude .idea --exclude .vscode --exclude .env --exclude datas --exclude dist --exclude archive --exclude tests --exclude __pycache__ \
       --exclude .DS_Store --exclude '*.db*' "$PROJECT/" "$TARGET:$REMOTE_DIR/"
 
 echo "==> Reconstruction et redémarrage"

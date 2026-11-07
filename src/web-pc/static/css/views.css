@@ -8,8 +8,14 @@ section:first-child > .section-head { margin-top: 0; }
 
 .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 20px 18px; }
 .album-grid.small { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px 12px; }
-.album-card { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 6px; margin: -6px; border-radius: 10px; }
+.album-card { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 6px; margin: -6px; border-radius: 10px; }
 .album-card:hover { background: var(--bg-hover); color: inherit; }
+.album-link, .album-link:hover { display: flex; flex-direction: column; gap: 3px; min-width: 0; color: inherit; }
+.album-card .album-card-play { position: absolute; top: 12px; left: 12px; width: 30px; height: 30px;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+.album-card:hover .album-card-play, .album-card:focus-within .album-card-play { opacity: 1; pointer-events: auto; }
+@media (hover: none) { .album-card .album-card-play { opacity: 1; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) { .album-card .album-card-play { transition: none; } }
 .album-card img.cover { width: 100%; height: auto; aspect-ratio: 1; margin-bottom: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); }
 .album-name, .album-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .album-artist, .album-year { color: var(--text-soft); font-size: 13px; }
@@ -277,3 +283,60 @@ tr.song[draggable="true"], .album-card[draggable="true"] { cursor: grab; }
 .import-choose { max-width: 760px; }
 .import-playlists { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: 100%; }
 .import-playlists button { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; }
+/* Labels, éditions et collaborations : longues listes lisibles au clavier et sur une petite fenêtre. */
+.album-exploration { margin: 28px 0; padding: 24px; border: 1px solid var(--line); border-radius: 18px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 5%, var(--bg-raised)), var(--bg-raised)); }
+.explore-body h3 { margin: 20px 0 10px; font-size: 15px; }
+.explore-picker { display: flex; flex-direction: column; gap: 8px; }
+.explore-edition { width: 100%; max-width: 100%; }
+.explore-people, .explore-works { padding: 0; list-style: none; }
+.explore-people { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.explore-people li { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
+.explore-link { color: var(--accent-strong); font-weight: 600; }
+.explore-source { color: var(--text-soft); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+.explore-work { padding: 14px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.explore-work strong, .explore-work span, .explore-local a { display: block; }
+.explore-work-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.explore-local { display: grid; gap: 6px; margin-top: 8px; }
+.explore-connections { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.explore-people.explore-member-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: start; gap: 18px; margin-top: 20px; }
+.explore-people li.explore-member-card { --member-pad: 20px; --member-avatar: 44px; position: relative;
+  display: grid; grid-template-columns: var(--member-avatar) minmax(0, 1fr); gap: 7px 14px; padding: var(--member-pad);
+  border: 1px solid var(--line); border-radius: 16px; background: var(--bg-raised);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--bg-sunken) 35%, transparent);
+  transition: border-color .16s ease, transform .16s ease; }
+.explore-people li.explore-member-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.explore-member-card > .explore-link { grid-column: 2; display: flex; align-items: center; min-height: var(--member-avatar);
+  color: var(--text); font-size: 17px; line-height: 1.3; letter-spacing: -.02em; }
+.explore-member-card > .explore-link:hover { color: var(--accent-strong); }
+.explore-member-card > .explore-link::before { content: attr(data-initials); position: absolute;
+  left: var(--member-pad); top: var(--member-pad); width: var(--member-avatar); height: var(--member-avatar);
+  display: grid; place-items: center; border-radius: 50%; font-size: 14px; font-weight: 750; letter-spacing: .03em;
+  color: var(--accent-strong); background: color-mix(in srgb, var(--accent) 14%, var(--bg-raised));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.explore-member-card > .muted { grid-column: 2; color: var(--text-soft); font-size: 12px; line-height: 1.55; }
+.explore-member-card > .explore-member-projects { grid-column: 1 / -1; display: flex; justify-content: space-between;
+  margin-top: 10px; padding: 10px 12px; text-align: left; border-radius: 9px; color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-sunken)); }
+.explore-member-projects::after { content: "+"; font-size: 18px; line-height: 1; }
+.explore-member-projects[aria-expanded="true"]::after { content: "−"; }
+.explore-member-card > .explore-member-links { grid-column: 1 / -1; border-top: 1px solid var(--line);
+  margin-top: 4px; padding-top: 12px; }
+.explore-member-links .explore-people, .explore-connections-content > .explore-people:not(.explore-member-cards) {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.explore-member-links .explore-people > li, .explore-connections-content > .explore-people:not(.explore-member-cards) > li {
+  flex: 1 1 145px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg-sunken); }
+.explore-member-links .explore-link { font-size: 13px; line-height: 1.4; }
+.explore-member-links .muted { font-size: 11px; line-height: 1.5; }
+.explore-body > .explore-people > li { padding: 12px 14px; border-radius: 12px; background: var(--bg-sunken); }
+.explore-picker select { min-height: 44px; border-radius: 10px; }
+@media (max-width: 600px) {
+  .album-exploration { padding: 16px; border-radius: 14px; }
+  .explore-people li.explore-member-card { --member-pad: 16px; --member-avatar: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explore-people li.explore-member-card { transition: none; }
+  .explore-people li.explore-member-card:hover { transform: none; }
+}

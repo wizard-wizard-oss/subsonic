@@ -56,6 +56,10 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
    déplacement vers `shared/` sera fait.
 
 ## Couches dans chaque édition
+L'exploration des labels et collaborations (07/11/2026) est propre au site (`webapp/exploration*`, dépôt et contrôleur).
+Elle réutilise `shared/external.JsonFetcher` ; ses appels MusicBrainz, comme ceux des anecdotes des deux éditions,
+partagent désormais un régulateur par processus (1,05 seconde entre départs). Aucun module n'a changé de zone.
+
 Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement), assemblés à **un seul endroit**
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 

@@ -4,6 +4,7 @@ import io
 import os
 import stat
 import zipfile
+from urllib.parse import quote
 
 from pimedia.webapp.layout import MusicTree
 from pimedia.webapp.uploads import MAX_FILE_BYTES, Uploads, UploadError, incoming_dir, safe_name
@@ -18,6 +19,19 @@ def make_zip(entries):
     with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, content in entries.items():
             archive.writestr(name, content)
+    return data.getvalue()
+
+
+def make_legacy_zip(entries, encoding):
+    """ZIP sans marqueur UTF-8, avec des noms réellement encodés dans l'encodage demandé."""
+    class LegacyZipInfo(zipfile.ZipInfo):
+        def _encodeFilenameFlags(self):
+            return self.filename.encode(encoding), self.flag_bits & ~0x800
+
+    data = io.BytesIO()
+    with zipfile.ZipFile(data, "w") as archive:
+        for name, content in entries.items():
+            archive.writestr(LegacyZipInfo(name), content)
     return data.getvalue()
 
 
@@ -60,6 +74,12 @@ class UploadHttpTest(WebAppTestCase):
         self.send("a.mp3")
         self.assertEqual(self.send("a.mp3").json()["waiting"], ["a (2).mp3"])
         self.assertEqual(self.send("a.mp3").json()["waiting"], ["a (3).mp3"])
+
+    def test_lone_file_keeps_accents_and_punctuation(self):
+        name = "Nán Fiero & Mon$rock [Live] !.flac"
+        response = self.send(quote(name))
+        self.assertEqual((response.status, response.json()["waiting"]), (200, [name]))
+        self.assertEqual(files_under(self.incoming), [name])
 
     def test_path_tricks_stay_in_the_folder(self):
         self.assertEqual(self.send("..%2F..%2Fx.mp3").json()["waiting"], ["x.mp3"])
@@ -158,6 +178,42 @@ class UploadZipTest(UploadHttpTest):
         self.assertEqual(response.json()["placed"], ["DJ Naze/Nouveau", "Dälek/Precipice"])
         self.assertEqual(sorted(os.listdir(self.music)), ["DJ Naze", "Dälek", "Incoming"])
 
+    def test_zip_preserves_artist_album_and_track_names(self):
+        album = "BigDaddyChop, Mon$rock & Nán Fiero/Médalla [Deluxe]"
+        track = album + "/01 Été ! #$;.flac"
+        response = self.send("a.zip", make_zip({track: AUDIO}))
+        self.assertEqual((response.status, response.json()["placed"], response.json()["waiting"]),
+                         (200, [album], []))
+        self.assertEqual(files_under(self.music), [track])
+
+    def test_utf8_zip_without_flag_preserves_decomposed_accents(self):
+        album = "BigDaddyChop, Mon$rock & Na\u0301n Fiero/Me\u0301dalla"
+        track = album + "/01 E\u0301te\u0301.flac"
+        body = make_legacy_zip({track: AUDIO}, "utf-8")
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            member = archive.infolist()[0]
+            self.assertFalse(member.flag_bits & 0x800)
+            self.assertIn("Na╠ün Fiero", member.filename)       # devenait « Na_ün Fiero » avant la correction
+        response = self.send("a.zip", body)
+        self.assertEqual((response.status, response.json()["placed"]), (200, [album]))
+        self.assertEqual(files_under(self.music), [track])
+        with open(os.path.join(self.music, track), "rb") as saved:
+            self.assertEqual(saved.read(), AUDIO)
+
+    def test_cp437_zip_keeps_its_original_accents(self):
+        album = "Dälek/Été"
+        track = album + "/01 Ça.flac"
+        response = self.send("a.zip", make_legacy_zip({track: AUDIO}, "cp437"))
+        self.assertEqual((response.status, response.json()["placed"]), (200, [album]))
+        self.assertEqual(files_under(self.music), [track])
+
+    def test_decomposed_artist_matches_without_renaming_existing_folder(self):
+        self.existing("Nán Fiero", "Ancien", "01.flac")
+        response = self.send("a.zip", make_legacy_zip({"Na\u0301n Fiero/Nouveau/01.flac": AUDIO}, "utf-8"))
+        self.assertEqual(response.json()["placed"], ["Nán Fiero/Nouveau"])
+        self.assertEqual(sorted(os.listdir(self.music)), ["Incoming", "Nán Fiero"])
+        self.assertEqual(files_under(self.music), ["Nán Fiero/Ancien/01.flac", "Nán Fiero/Nouveau/01.flac"])
+
     def test_extra_folders_around_the_artist_are_dropped(self):
         response = self.send("a.zip", make_zip({"Mes envois/Converge/Jane Doe/01.flac": AUDIO,
                                                 "Mes envois/Converge/Jane Doe/cover.jpg": b"jpg"}))
@@ -230,3 +286,11 @@ class UploadUnitTest(WebAppTestCase):
         self.assertEqual(safe_name("a<b>:c*.flac", "x"), "a_b__c_.flac")
         self.assertEqual(safe_name("", "user"), "user")
         self.assertEqual(self.uploads.save(self.user, io.BytesIO(AUDIO), len(AUDIO), "a.flac")["waiting"], ["a.flac"])
+
+    def test_names_keep_punctuation_and_both_unicode_forms(self):
+        for name in ("Mon$rock", "Nán Fiero", "Na\u0301n Fiero", "Mon\u0308rock", "Médalla [Deluxe] ! #;=", "!!!"):
+            with self.subTest(name=name):
+                self.assertEqual(safe_name(name, "x"), name)
+
+    def test_control_characters_are_removed(self):
+        self.assertEqual(safe_name("a\x00\n\x7f.flac", "x"), "a___.flac")

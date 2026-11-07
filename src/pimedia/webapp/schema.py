@@ -247,4 +247,12 @@ MIGRATIONS = [
     DROP INDEX playlist_ext_tracks_by_place;
     CREATE INDEX playlist_ext_tracks_by_place ON playlist_ext_tracks (playlist_id, after_songs, place, id)
     """,
+    # 15 : métadonnées publiques MusicBrainz (éditions, labels, crédits), jamais de résultats Subsonic partagés.
+    """
+    CREATE TABLE music_metadata (
+        cache_key TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        fetched_at INTEGER NOT NULL
+    )
+    """,
 ]

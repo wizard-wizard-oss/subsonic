@@ -7,7 +7,7 @@ import unittest
 import urllib.error
 
 from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
-from pimedia.webapp.mixes import MixOptions, genre_key, spread_artists
+from pimedia.webapp.mixes import MixError, MixOptions, genre_key, spread_artists
 from tests.fake_subsonic import PNG
 from tests.webapp_support import FakeInfoSites, FakeLyricsSites, WebAppTestCase
 
@@ -33,6 +33,20 @@ class MixRulesTest(unittest.TestCase):
                                     "seedArtistId": "ar1", "chronological": 1})
         self.assertEqual((len(options.genres), options.decades, options.size, options.chronological),
                          (12, [1980], 60, True))
+
+    def test_depth_defaults_and_legacy_options(self):
+        self.assertEqual(MixOptions.parse({}).depth, 4)
+        self.assertEqual(MixOptions.parse({"wide": True}).depth, 4)
+        self.assertEqual(MixOptions.parse({"wide": False}).depth, 1)
+        self.assertEqual(MixOptions.parse({"wide": False, "depth": 3}).depth, 3)
+
+    def test_depth_accepts_only_one_to_four_whole_levels(self):
+        for depth in range(1, 5):
+            with self.subTest(depth=depth):
+                self.assertEqual(MixOptions.parse({"depth": depth}).depth, depth)
+        for depth in (0, -1, 5, 1000, "2", None, True, False, 2.0, [], {}):
+            with self.subTest(depth=depth), self.assertRaisesRegex(MixError, "mix.invalid"):
+                MixOptions.parse({"depth": depth})
 
 
 class GravatarTest(unittest.TestCase):
@@ -98,6 +112,43 @@ class MixHttpTest(WebAppTestCase):
         empty = bob.post_json("/api/mix/build", {"genres": ["pop"], "decades": [2020]})
         self.assertEqual((empty.status, empty.json()["error"]), (400, "mix.empty"))
         self.assertEqual(bob.post_json("/api/mix/build", {}, csrf=False).status, 403)
+
+    def test_mix_builder_stops_at_the_chosen_depth(self):
+        # Une chaîne de cinq artistes : chaque niveau a son titre, sans hasard ni titres proches en parallèle.
+        visited = []
+
+        def neighbours(h, p):
+            level = int(p["id"].split("-")[1])
+            visited.append(level)
+            h.reply_json({"artistInfo2": {"similarArtist": [
+                {"id": "artist-%s" % (level + 1), "name": "Artist %s" % (level + 1)}]}})
+
+        def top_songs(h, p):
+            level = int(p["artist"].split()[1])
+            h.reply_json({"topSongs": {"song": [
+                {"id": "song-%s" % level, "title": "Level %s" % level, "artist": p["artist"]}]}})
+
+        self.subsonic.api_getArtistInfo2 = neighbours
+        self.subsonic.api_getTopSongs = top_songs
+        self.subsonic.api_getRandomSongs = lambda h, p: h.reply_json({"randomSongs": {}})
+        self.subsonic.api_getSimilarSongs2 = lambda h, p: h.reply_json({"similarSongs2": {}})
+        bob = self.client("bob", "pw2")
+        for depth in range(1, 5):
+            with self.subTest(depth=depth):
+                visited.clear()
+                response = bob.post_json("/api/mix/build", {"seedArtistId": "artist-0", "depth": depth})
+                self.assertEqual(response.status, 200)
+                self.assertEqual({s["id"] for s in response.json()["songs"]},
+                                 {"song-%s" % level for level in range(1, depth + 1)})
+                self.assertEqual(visited, list(range(depth)))
+
+    def test_mix_builder_rejects_invalid_depth_before_querying_subsonic(self):
+        bob = self.client("bob", "pw2")
+        for depth in (0, 5, "2", True, 2.5, None, [], {}):
+            with self.subTest(depth=depth):
+                response = bob.post_json("/api/mix/build", {"seedArtistId": "ar1", "depth": depth})
+                self.assertEqual((response.status, response.json()["error"]), (400, "mix.invalid"))
+        self.assertEqual(self.subsonic.calls["getArtistInfo2"], 0)
 
 
 class TopSongsHttpTest(WebAppTestCase):

@@ -156,6 +156,7 @@ class MusicApp {
   static parse(hash) {
     const [, view, ...rest] = (hash || "#/").replace(/^#/, "").split("/");
     const id = decodeURIComponent(rest.join("/") || "");
+    if (view === "explore") return {view, kind: rest[0], id: rest[1] || ""};
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||

@@ -19,16 +19,39 @@ const Views = (() => {
       if (album.plays) meta.appendChild(el("span.play-count", {text: playCount(album.plays)}));
       if (album.comments) meta.appendChild(el("span.comment-count", {title: App.plural("album.comments_count", album.comments)},
                                               App.icon("chat", 12), " " + album.comments));
-      const card = el("a.album-card", {href: "#/album/" + encodeURIComponent(album.id), title: album.name},
-        App.cover(album.coverId, 180, album.name),
-        el("strong.album-name", {text: album.name}),
-        options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
-        album.year ? el("span.album-year", {text: album.year}) : null,
-        meta);
+      const play = App.can("stream") ? App.setIcon(el("button.play-big.album-card-play", {
+        type: "button", title: App.t("album.play_named", {name: album.name}),
+        "aria-label": App.t("album.play_named", {name: album.name}),
+        onclick: e => { e.stopPropagation(); playAlbum(album, e.currentTarget); }}), "play", 16) : null;
+      const card = el("div.album-card", {},
+        el("a.album-link", {href: "#/album/" + encodeURIComponent(album.id), title: album.name},
+          App.cover(album.coverId, 180, album.name),
+          el("strong.album-name", {text: album.name}),
+          options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
+          album.year ? el("span.album-year", {text: album.year}) : null,
+          meta), play);
       if (App.can("playlist")) Dnd.source(card, {albumId: album.id, label: album.name});      // vers une playlist
       grid.appendChild(card);
     }
     return grid;
+  }
+
+  /** La flèche lit l'album sans navigation ; le lien de la carte ouvre toujours sa fiche. */
+  async function playAlbum(album, button) {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    try {
+      const data = await App.api.get("/api/album", {id: album.id});
+      const songs = data.songs.map(song => Object.assign({}, song, {coverId: song.coverId || data.coverId}));
+      if (!songs.length) { App.toast(App.t("mix.empty"), "error"); return; }
+      App.player.playList(songs, 0);
+    } catch (error) {
+      App.toast(App.errorText(error), "error");
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 
   /** « Écouté 18 719 fois », comme dans Subsonic. */
@@ -85,6 +108,10 @@ const Views = (() => {
            App.can("download") && !song.ext ? el("a.link-button.song-download", {                // droit Subsonic « télécharger »
              href: "/api/download?" + new URLSearchParams({song: song.id}), download: "", title: App.t("album.download_song"),
              ondblclick: e => e.stopPropagation()}, App.icon("download", 16)) : null,
+           App.can("stream") && !song.ext ? el("button.link-button.song-radio", {
+             type: "button", title: App.t("album.song_radio"), "aria-label": App.t("album.song_radio"),
+             onclick: e => { e.stopPropagation(); playSongRadio(song, e.currentTarget); },
+             ondblclick: e => e.stopPropagation()}, App.icon("radio", 16)) : null,
            el("button.link-button.song-play-next", {type: "button", title: App.t("album.play_next"),
                                      onclick: e => { e.stopPropagation(); App.player.playNext([song]); App.toast("→ " + song.title); }},
               App.icon("next", 16)),
@@ -109,6 +136,24 @@ const Views = (() => {
     const table = el("table.songs", {}, body);
     table.destroy = off;
     return table;
+  }
+
+  /** Le serveur choisit les titres proches ; une erreur laisse la file et la lecture actuelles en place. */
+  async function playSongRadio(song, button) {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    App.toast(App.t("mix.building"));
+    try {
+      const {songs} = await App.api.get("/api/radio/song", {id: song.id});
+      App.player.playList(songs, 0);
+      App.toast(App.plural("album.tracks", songs.length));
+    } catch (error) {
+      App.toast(App.errorText(error), "error");
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 
   /** Ligne déplaçable dans son tableau : glissée (dépôt au-dessus ou au-dessous de la ligne visée, selon la moitié
@@ -215,6 +260,7 @@ const Views = (() => {
         App.append(main, [
           el("header.page-head", {}, el("h1", {text: data.name}), heart),
           actions,
+          AlbumExploration.artistPanel(data.name, route),
           bio,
           popular,
           heading(App.t("artist.albums")), albumGrid(data.albums, {hideArtist: true}),
@@ -369,6 +415,7 @@ const Views = (() => {
             el("div.album-rating", {}, el("span.label", {text: App.t("album.your_rating")}), stars.element))),
         albumActions(data, songs, heart),
         this.table,
+        AlbumExploration.panel(data.folderId || data.id, route),
         el("section.comments", {}, heading(App.t("album.comments")), this.thread.element)]);
       this.thread.load();
     },

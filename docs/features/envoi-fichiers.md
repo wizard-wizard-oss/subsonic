@@ -25,6 +25,9 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 - **Rien n'est jamais écrasé** : un album déjà présent chez l'artiste (même nom, aux mêmes détails près) n'est
   pas rangé, il attend dans Incoming.
 - Aucun nom n'est corrigé automatiquement (pas de majuscule ajoutée, pas d'accent retiré).
+- Les noms de dossiers restent ceux d'origine : les accents et la ponctuation (`Mon$rock`, `[Deluxe]`, `!!!`) sont
+  conservés. La simplification des noms sert uniquement à retrouver un artiste ou un album déjà présent ; elle ne
+  renomme jamais le dossier existant.
 - **Compilations** : le dossier `Compilations` se range comme un artiste (`Compilations/Album/titre`) : un zip
   `Compilations/Mon album/…` rejoint le dossier existant. Il a un raccourci en haut de la barre (`barre-gauche.md`).
 
@@ -39,7 +42,10 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 4. Le serveur reçoit le corps brut (`POST /api/upload?name=`) dans un fichier caché d'Incoming (`.nom.part`).
 5. **Zip** : décompressé dans un dossier caché d'Incoming. Seuls les fichiers audio et les images jpg/png sont gardés (pas
    `__MACOSX`, `.DS_Store`, textes, playlists…). Noms nettoyés : rien ne peut sortir d'Incoming (`../`, chemins absolus,
-   `C:\`). 4 Go décompressés au plus, 300 Mo par titre. Zip abîmé, chiffré, ou sans aucun titre : refusé, rien ne reste.
+   `C:\`). Seuls les caractères de contrôle et les caractères interdits (`<>:"|?*`) sont remplacés ; accents et
+   ponctuation sont gardés. Les noms UTF-8 sont aussi reconnus dans les ZIP qui ont oublié leur marqueur d'encodage,
+   sans perdre les accents combinés ; les anciens noms CP437 restent pris en charge. 4 Go décompressés au plus,
+   300 Mo par titre. Zip abîmé, chiffré, ou sans aucun titre : refusé, rien ne reste.
 6. **Rangement immédiat** : chaque dossier qui contient des titres est un album (le dossier au-dessus pour un dossier de
    disque) ; le dossier qui contient l'album est l'artiste. Si la nomenclature est respectée, l'album est déplacé d'un coup
    dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié), le dossier de l'artiste étant créé s'il n'existe pas.
@@ -104,13 +110,16 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
 - `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, majuscules), jamais d'écrasement,
   rattrapage d'Incoming et son délai.
 - `tests/test_webapp_upload.py` : envoi HTTP, droits, refus, zip (rangement immédiat, dossiers en trop, cas laissés dans
-  Incoming, chemins piégés, zip abîmé), scan.
+  Incoming, chemins piégés, zip abîmé), scan ; conservation des accents et de la ponctuation, UTF-8 sans marqueur,
+  accents combinés, anciens ZIP CP437 et rapprochement sans renommer un dossier existant.
 - `tests/e2e_webapp.js` : page, refus, titres seuls « à ranger », zip rangé chez l'artiste, barre du lot, scan.
 
 ## N'existe pas / pas vérifié
-- **Pas mis en route sur le serveur** (utilisateur `music`, `.env`, proxy : voir `docs/DEPLOIEMENT.md`).
-- Pas vérifié : droits d'écriture sur le vrai disque, `startScan` sur le vrai Subsonic, un zip de 2 Go derrière le vrai
-  proxy.
+- En service sur `music2.foos.fr` ; correctif 1.7.5 déployé et vérifié le 07/11/2026 : santé HTTP 200, ZIP UTF-8 sans
+  marqueur extrait avec accents et ponctuation conservés dans un dossier temporaire du conteneur de production.
+- Vérifié sur le vrai disque : renommage du dossier `BigDaddyChop, Mon_rock & Na_ün Fiero` en
+  `BigDaddyChop, Mon$rock & Nán Fiero`, deux albums et 22 fichiers conservés à l'identique, `startScan` lancé.
+- Pas vérifié : un zip de 2 Go derrière le vrai proxy.
 - Tests lancés sur macOS et dans Docker (Linux) ; sur macOS le disque ignore les majuscules (« converge » et « Converge »
   sont le même dossier), pas sur le serveur.
 - Pas de progression réelle du traitement côté serveur (barre animée seulement) ; pas de reprise d'un envoi coupé.

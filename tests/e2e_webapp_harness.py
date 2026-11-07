@@ -5,10 +5,12 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 
 from pimedia.webapp.app import WebApplication
 from pimedia.webapp.covers import LastFmAlbums
 from tests.fake_subsonic import FakeSubsonicFull
+from tests.fake_musicbrainz import FakeMusicBrainz
 from tests.support import PROJECT, youtube_music_down
 from tests.test_podcasts import FakeHttp
 from tests.test_webapp_covers import FakeDownloader, FakeLastFm
@@ -40,6 +42,10 @@ def main():
     app = WebApplication(PROJECT, environ=dict(KEYS, PI_MEDIA_WEB_SUBSONIC_URL=fake.url, PI_MEDIA_WEB_MUSIC_DIR=music),
                          data_dir=tempfile.mkdtemp(prefix="pmw-e2e-"))
     app.lyrics.finder.fetcher = FakeLyricsSites()
+    app.exploration.metadata.fetcher = FakeMusicBrainz()
+    app.exploration.metadata.sleep = lambda seconds: None
+    app.exploration.metadata.fetcher.failures = [urllib.error.HTTPError(
+        "https://musicbrainz.org", 503, "busy", {}, None)]
     use_fake_info_sites(app)
     app.avatars.gravatar = FakeGravatar()
     covers_music = tempfile.mkdtemp(prefix="pmw-covers-")        # musique à part (l'envoi de zip range déjà « Abba/Arrival »)

@@ -160,6 +160,40 @@ function makeEventSource(jar) {
   check("accueil : plus écoutés, avec « Écouté 12 fois »", await until(() => $(".most-played .play-count") &&
         $(".most-played .play-count").textContent === "Écouté 12 fois"));
 
+  // --- pochettes : la flèche existante lit l'album, la carte reste un lien séparé ---
+  const homeAlbum = $$(".album-card").find(card => card.querySelector(".album-name").textContent === "Arrival");
+  const homePlay = homeAlbum.querySelector(".album-card-play");
+  check("accueil : même flèche de lecture sur les pochettes", $$(".album-card-play").length === $$(".album-card").length &&
+        homePlay.querySelector("svg path").getAttribute("d") === w.eval("ICONS.play") &&
+        homePlay.getAttribute("aria-label") === "Lire l’album « Arrival »" && !homePlay.closest("a"));
+  const beforeAlbumPlay = app.api.get;
+  let releaseAlbumPlay, albumPlayCalls = 0;
+  const albumReady = new Promise(resolve => { releaseAlbumPlay = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/album") { albumPlayCalls++; await albumReady; }
+    return beforeAlbumPlay.call(this, url, params);
+  };
+  homePlay.click();
+  homePlay.click();
+  check("accueil : un seul chargement de l'album à la fois", homePlay.disabled && albumPlayCalls === 1);
+  releaseAlbumPlay();
+  check("accueil : l'album se lit en entier sans quitter l'accueil", await until(() => !homePlay.disabled &&
+        w.eval('App.player.current && App.player.current.id === "s1" && App.player.queue.length === 2')) &&
+        w.location.hash === "#/" && w.eval('App.player.queue.map(s => s.id).join()') === "s1,s2");
+  const albumQueue = w.eval('App.player.queue.map(s => s.id).join()');
+  app.api.get = async function(url, params) {
+    if (url === "/api/album") throw w.eval('new ApiError(503, "subsonic.unreachable")');
+    return beforeAlbumPlay.call(this, url, params);
+  };
+  homePlay.click();
+  check("accueil : erreur expliquée sans perdre la file", await until(() => !homePlay.disabled &&
+        $$(".toast.error").some(t => t.textContent === "Serveur Subsonic injoignable")) &&
+        w.eval('App.player.queue.map(s => s.id).join()') === albumQueue && w.eval('App.player.current.id') === "s1");
+  app.api.get = beforeAlbumPlay;
+  homeAlbum.querySelector(".album-name").click();
+  check("accueil : cliquer le nom ouvre la fiche de l'album", await until(() => $(".album-info h1") &&
+        $(".album-info h1").textContent === "Arrival") && w.location.hash === "#/album/al1");
+
   // --- page Albums : listes de Subsonic en onglets ---
   w.location.hash = "#/albums/frequent";
   check("albums : 9 onglets, « Plus écoutés » actif", await until(() => $$(".tabs .tab").length === 9 &&
@@ -193,7 +227,7 @@ function makeEventSource(jar) {
   check("artiste : radio lancée", await until(() => w.eval("App.player.queue.length") >= 1));
   check("artiste : « Créer un mix » mène au créateur", $(".artist-mix").getAttribute("href") === "#/mix/ar1");
   check("artiste : albums = ses dossiers, liens vers le dossier", $$(".album-card .album-name").map(n => n.textContent).join() ===
-        "Waterloo,Arrival" && $(".album-card").getAttribute("href").startsWith("#/album/fdir-"));
+        "Waterloo,Arrival" && $(".album-card .album-link").getAttribute("href").startsWith("#/album/fdir-"));
 
   // --- album, étoiles ---
   w.location.hash = "#/album/al1";
@@ -204,6 +238,96 @@ function makeEventSource(jar) {
         $("tr.song a.song-download").getAttribute("href") === "/api/download?song=s1");
   check("artiste surligné dans la barre", await until(() => $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar1"));
   check("titres de l'album", $$("tr.song").length === 2);
+  // --- radio d'un titre : API réelle du faux Subsonic, attente et erreur sans perdre la file ---
+  const songRadio = $('tr.song[data-id="s2"] .song-radio');
+  check("radio d'un titre : bouton nommé sur chaque morceau Subsonic", $$("tr.song .song-radio").length === 2 &&
+        songRadio.getAttribute("aria-label") === "Radio de ce titre");
+  const beforeSongRadio = app.api.get;
+  let releaseSongRadio, songRadioCalls = 0;
+  const radioReady = new Promise(resolve => { releaseSongRadio = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/radio/song") { songRadioCalls++; await radioReady; }
+    return beforeSongRadio.call(this, url, params);
+  };
+  songRadio.click();
+  songRadio.click();
+  check("radio d'un titre : un seul chargement à la fois", songRadio.disabled &&
+        songRadio.getAttribute("aria-busy") === "true" && songRadioCalls === 1);
+  releaseSongRadio();
+  check("radio d'un titre : le morceau choisi puis ses voisins dans la file", await until(() =>
+        !songRadio.disabled && w.eval('App.player.current.id === "s2" && App.player.queue.length === 4')) &&
+        w.eval('new Set(App.player.queue.map(s => s.id)).size === 4') && !songRadio.hasAttribute("aria-busy"));
+  const radioQueue = w.eval('App.player.queue.map(s => s.id).join()');
+  app.api.get = async function(url, params) {
+    if (url === "/api/radio/song") throw w.eval('new ApiError(503, "subsonic.unreachable")');
+    return beforeSongRadio.call(this, url, params);
+  };
+  songRadio.click();
+  check("radio d'un titre : erreur expliquée, file conservée et bouton réutilisable", await until(() =>
+        !songRadio.disabled && $$(".toast.error").some(t => t.textContent === "Serveur Subsonic injoignable")) &&
+        w.eval('App.player.queue.map(s => s.id).join()') === radioQueue && w.eval('App.player.current.id') === "s2");
+  app.api.get = beforeSongRadio;
+  const radioRoles = app.user.roles;
+  app.user.roles = radioRoles.filter(role => role !== "stream");
+  const noStreamTable = w.eval('Views.songTable([{id: "s1", title: "Dancing Queen"}])');
+  check("radio d'un titre : absente sans le droit d'écouter", !noStreamTable.querySelector(".song-radio"));
+  noStreamTable.destroy();
+  app.user.roles = radioRoles;
+
+  // --- labels et collaborations : choix d'édition, label, bibliothèque, membre et groupe ---
+  const beforeExplore = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeExplore.call(this, url, params);
+    return url.startsWith("/api/explore/") ? Object.assign(data, {stale: true}) : data;
+  };
+  check("crédits : chargement à la demande", !!$(".explore-open") && !$(".explore-edition"));
+  $(".explore-open").click();
+  check("crédits : éditions proposées sans choix arbitraire", await until(() => $$(".explore-edition option").length === 3) &&
+        $(".explore-edition").value === "" && !$(".explore-people"));
+  check("crédits : consultables malgré un premier 503, cache ancien signalé", !!$(".explore-cached") &&
+        $(".explore-cached").textContent.includes("informations conservées"));
+  $(".explore-edition").value = "00000000-0000-4000-8000-000000000001";
+  $(".explore-edition").dispatchEvent(new w.Event("change"));
+  check("crédits : label, producteur et musicien cliquables", await until(() => $$(".explore-body > .explore-people .explore-link").length === 4) &&
+        $$(".explore-link").some(a => a.textContent === "Polar") &&
+        $(".album-exploration").textContent.includes("Production") && $(".album-exploration").textContent.includes("guitar"));
+  check("album : membres du groupe affichés directement avec les crédits", await until(() => $(".explore-member-card")) &&
+        $(".explore-member-card").textContent.includes("Musicien test") && $(".explore-connections").textContent.includes("toutes périodes"));
+  $(".explore-member-projects").click();
+  check("album : autres groupes du membre, sans répéter le groupe de départ", await until(() => $(".explore-member-links .explore-link")) &&
+        $$(".explore-member-links .explore-link").length === 1 && $(".explore-member-links .explore-link").textContent === "Autre groupe" &&
+        $(".explore-member-links").textContent.includes("1980") && $(".explore-member-links").textContent.includes("1990"));
+  w.location.hash = $$(".explore-link").find(a => a.textContent === "Polar").getAttribute("href");
+  check("label : catalogue et source", await until(() => $("#main h1") && $("#main h1").textContent === "Polar") &&
+        $$(".explore-work").length === 1 && $(".explore-source").getAttribute("href").includes("musicbrainz.org/label/"));
+  check("label : cache ancien signalé", !$(".explore-cached").hidden);
+  $(".explore-find").click();
+  check("label : album retrouvé dans sa bibliothèque", await until(() => $(".explore-local a")) &&
+        $(".explore-local a").getAttribute("href") === "#/album/al1");
+  $(".explore-more").click();
+  check("label : catalogue paginé", await until(() => $$(".explore-work").length === 2) && $(".explore-more").hidden);
+  w.location.hash = "#/explore/artist/00000000-0000-4000-8000-000000000003";
+  check("groupe : membres et participations", await until(() => $("#main h1") && $("#main h1").textContent === "ABBA") &&
+        $(".explore-people").textContent.includes("Membre du groupe") && $$(".explore-work").length === 2);
+  w.location.hash = $(".explore-link").getAttribute("href");
+  check("musicien : retour vers son groupe", await until(() => $("#main h1") && $("#main h1").textContent === "Musicien test") &&
+        $(".explore-link").textContent === "ABBA");
+  w.location.hash = $$(".explore-link").find(a => a.textContent === "Autre groupe").getAttribute("href");
+  check("musicien : un autre projet s'ouvre", await until(() => $("#main h1") && $("#main h1").textContent === "Autre groupe"));
+  app.api.get = beforeExplore;
+  w.location.hash = "#/artist/ar1";
+  await until(() => $(".artist-exploration .explore-artist-open"));
+  $(".explore-artist-open").click();
+  check("page artiste : homonymes proposés sans choisir arbitrairement", await until(() => $$(".explore-artist-choice option").length === 3) &&
+        $(".explore-artist-choice").value === "" && !$(".explore-member-card"));
+  $(".explore-artist-choice").value = "00000000-0000-4000-8000-000000000003";
+  $(".explore-artist-choice").dispatchEvent(new w.Event("change"));
+  check("page artiste : membres après choix de la bonne identité", await until(() => $(".artist-exploration .explore-member-card")));
+  $(".explore-member-projects").click();
+  check("page artiste : autres groupes du membre", await until(() => $(".explore-member-links .explore-link")) &&
+        $(".explore-member-links .explore-link").textContent === "Autre groupe");
+  w.location.hash = "#/album/al1";
+  await until(() => $(".album-info h1") && $(".album-info h1").textContent === "Arrival");
   // --- pochette : crayon, recherche Last.fm, choix d'une image ---
   check("album : crayon pour changer la pochette (droit « upload »)", !!$(".cover-edit button.cover-pencil"));
   $(".cover-pencil").click();
@@ -505,6 +629,23 @@ function makeEventSource(jar) {
   $(".mix-card[data-kind=random]").click();
   check("mix rapide « Au hasard » : lancé", await until(() => w.eval("App.player.queue.length") === 4));
   check("créateur : styles de la bibliothèque", await until(() => $$(".mix-genres .chip").length >= 2));
+  const depths = $$(".mix-depths .chip");
+  check("créateur : profondeur de 1 à 4 niveaux, 4 par défaut", depths.length === 4 &&
+        depths.map(c => c.textContent).join(",") === "1 niveau,2 niveaux,3 niveaux,4 niveaux" &&
+        $(".mix-depths .on").dataset.depth === "4");
+  for (const chip of depths) {
+    chip.click();
+    chip.click();
+    check("créateur : profondeur " + chip.dataset.depth + ", choix unique accessible",
+          $$(".mix-depths .on").length === 1 && chip.classList.contains("on") &&
+          depths.every(c => c.getAttribute("aria-pressed") === String(c === chip)));
+  }
+  depths[1].click();
+  w.eval(`window.mixBuildRequests = []; window.mixOriginalPost = App.api.post;
+          App.api.post = function (url, body) {
+            if (url === "/api/mix/build") window.mixBuildRequests.push(JSON.parse(JSON.stringify(body)));
+            return window.mixOriginalPost.call(this, url, body);
+          };`);
   const pop = $$(".mix-genres .chip").find(c => c.textContent.startsWith("Pop"));
   pop.click();
   check("créateur : style choisi", pop.classList.contains("on"));
@@ -515,11 +656,18 @@ function makeEventSource(jar) {
   w.eval("App.player.queue = []");
   $(".mix-play").click();
   check("créateur : mix lancé", await until(() => w.eval("App.player.queue.length") >= 1));
+  check("créateur : lancement limité à 2 niveaux, artiste et style conservés",
+        w.mixBuildRequests.length === 1 && w.mixBuildRequests[0].depth === 2 &&
+        w.mixBuildRequests[0].seedArtistName === "Björk" && w.mixBuildRequests[0].genres.includes("pop"));
+  depths[2].click();
   $(".mix-save").click();
   check("créateur : nom de playlist proposé", await until(() => $(".dialog-input")) && $(".dialog-input").value.length > 0);
   $(".dialog-ask button.primary").click();
   check("créateur : playlist enregistrée dans Subsonic", await until(() =>
         $$(".toast").some(t => t.textContent.startsWith("Playlist « "))));
+  check("créateur : playlist construite avec 3 niveaux",
+        w.mixBuildRequests.length === 2 && w.mixBuildRequests[1].depth === 3);
+  w.eval("App.api.post = window.mixOriginalPost;");
   w.location.hash = "#/mix/ar1";
   check("créateur depuis la page artiste : artiste déjà choisi", await until(() =>
         $(".mix-seed-chosen") && $(".mix-seed-chosen").textContent.startsWith("Comme : ABBA")));
@@ -583,6 +731,8 @@ function makeEventSource(jar) {
   check("playlist mélangée : le titre d'ailleurs après le titre Subsonic", await until(() => $$("#main tr.song").length === 2) &&
         $$("#main tr.song")[1].dataset.id === "sc-29912345" && $$("#main tr.song")[1].querySelector("td.album").textContent === "SoundCloud" &&
         !$$("#main tr.song")[1].querySelector(".song-download"));
+  check("radio d'un titre : proposée seulement pour le morceau Subsonic de la playlist",
+        !!$$("#main tr.song")[0].querySelector(".song-radio") && !$$("#main tr.song")[1].querySelector(".song-radio"));
   const order = () => $$("#main tr.song").map(r => r.dataset.id).join();
   const before = order();
   check("sa playlist : poignée pour changer l'ordre", $$("#main td.grip").length === 2);

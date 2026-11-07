@@ -1,9 +1,71 @@
 # Versions du site (page « Versions », #/versions), la plus récente EN PREMIER.
 # À compléter à CHAQUE modification du site, AVANT de déployer (deploy/pc/push.sh le rappelle). Écrit pour les personnes
-# qui utilisent le site, pas pour les développeurs. Nouveauté visible : mineure (1.5 → 1.6) ; grand changement : majeure
-# (1.x → 2.0) ; correction de bug : TOUJOURS le troisième niveau (1.5 → 1.5.1, 1.5.2…).
+# qui utilisent le site, pas pour les développeurs. Évolution d'une fonctionnalité existante ou correction : troisième
+# niveau (1.7.1, 1.7.2…). Fonctionnalité distincte : mineure ; grand changement : majeure.
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
+
+- version: "1.7.8"
+  date: 2026-11-07
+  title: "Choisissez la profondeur de vos mix"
+  changes:
+    - "Dans le créateur de mix, choisissez 1, 2, 3 ou 4 niveaux d’artistes proches. Un seul niveau reste près de l’artiste de départ ; les niveaux suivants explorent les proches de ses proches."
+    - "La limite choisie s’applique aussi aux mix enregistrés en playlist. Le réglage initial reste à 4 niveaux."
+
+- version: "1.7.7"
+  date: 2026-11-07
+  title: "Lancez vos albums depuis l’accueil"
+  changes:
+    - "Au survol d’une pochette, une petite flèche de lecture apparaît en haut à gauche : elle lance l’album sans quitter l’accueil. Le clic sur la pochette ou le nom ouvre toujours l’album."
+    - "La flèche reprend le bouton de lecture du site. Elle accompagne aussi les pochettes des pages Albums, artiste, recherche et favoris."
+
+- version: "1.7.6"
+  date: 2026-11-07
+  title: "Une radio à partir de votre morceau"
+  changes:
+    - "Dans les listes de morceaux de la bibliothèque, le bouton « Radio de ce titre » lance le morceau choisi, puis des titres proches. Si Last.fm ne propose rien, la sélection se replie sur le même style, puis sur la bibliothèque au hasard."
+    - "Le bouton indique le chargement. Si le serveur ne répond pas, votre file et votre lecture sont conservées."
+
+- version: "1.7.5"
+  date: 2026-11-07
+  title: "Les envois conservent les noms des artistes"
+  changes:
+    - "Les accents et la ponctuation des noms de dossiers et de titres sont conservés à l'envoi, notamment le dollar de Mon$rock."
+    - "Les ZIP contenant des noms en UTF-8 sans l'indiquer sont reconnus : les accents de noms comme Nán Fiero ne deviennent plus des caractères parasites. La comparaison avec les artistes déjà présents garde leurs noms de dossier."
+
+- version: "1.7.4"
+  date: 2026-11-07
+  title: "Les membres du groupe directement dans les crédits"
+  changes:
+    - "Après le choix de l'édition d'un album, les membres du groupe s'affichent directement avec les crédits, sans bouton supplémentaire. Les autres projets de chaque musicien restent dépliables."
+
+- version: "1.7.3"
+  date: 2026-11-07
+  title: "D'un groupe à ses musiciens et leurs autres projets"
+  changes:
+    - "Sur la page d'un artiste et dans les crédits d'un album, explorez les membres du groupe et, pour chacun, ses autres groupes et projets. Les noms sont cliquables pour continuer la découverte."
+    - "Les périodes de participation connues sont indiquées, les homonymes restent au choix et les liens sont chargés à la demande."
+    - "Les musiciens se présentent dans des cartes avec leurs initiales, et leurs autres projets sont regroupés en pastilles pour mieux parcourir les liens."
+
+- version: "1.7.2"
+  date: 2026-11-07
+  title: "Des crédits plus résistants aux interruptions"
+  changes:
+    - "Une erreur temporaire de MusicBrainz déclenche un nouvel essai automatique. Un échec ne bloque plus les autres recherches."
+    - "Si l'actualisation échoue, les informations conservées depuis moins de 30 jours restent consultables, avec une indication."
+
+- version: "1.7.1"
+  date: 2026-11-07
+  title: "Crédits des albums : les ligatures sont reconnues"
+  changes:
+    - "Les crédits reconnaissent les écritures æ / ae et œ / oe : « Dissidaence Episode 2 » de Vitalic retrouve désormais son édition « Dissidænce Episode 2 » sur MusicBrainz."
+
+- version: "1.7"
+  date: 2026-11-07
+  title: "Explorez les labels et les collaborations"
+  changes:
+    - "Sur un album, découvrez les crédits MusicBrainz en choisissant l'édition du disque : labels, producteurs et musiciens deviennent des liens."
+    - "Explorez le catalogue d'un label, les disques et participations d'un artiste, les membres d'un groupe et leurs autres projets. Cherchez les disques dans votre bibliothèque depuis ces pages."
 
 - version: "1.6"
   date: 2026-10-31
