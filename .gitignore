@@ -1,0 +1,16 @@
+# Secrets et données : jamais dans le dépôt
+.env
+config.json
+*.db
+*.db-wal
+*.db-shm
+*.importe
+
+# Fichiers générés
+__pycache__/
+dist/
+sources.zip
+.DS_Store
+
+# Musique de test en local (MUSIC_DIR vide)
+datas/

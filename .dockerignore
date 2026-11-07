@@ -1,0 +1,16 @@
+# Jamais dans une image : secrets, données, fichiers générés
+.env
+config.json
+*.db
+*.db-wal
+*.db-shm
+*.importe
+**/__pycache__
+**/.DS_Store
+dist/
+archive/
+sources.zip
+.git
+
+# Musique de test en local (MUSIC_DIR vide)
+datas/
