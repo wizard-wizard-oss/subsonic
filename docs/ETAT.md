@@ -16,6 +16,26 @@ Sauvegarde cohérente : ../pimedia-backups/pre-1.9.2-20261110T221310Z/ ; image p
 Recharger la page (Cmd+Maj+R). Voir [À écouter](features/listen-later.md).
 
 
+**Recherche d'artistes, 1.9.1 (10/11/2026, déployée et vérifiée)** :
+la recherche ne dépend plus uniquement des tags ID3 pour les artistes. Elle complète `search3` avec la liste de
+dossiers déjà utilisée par la barre, pour le compte connecté. « gurr » retrouve Gurriers même si les tags sont
+absents des résultats ; comparaison commune des noms, exact puis début de nom avant les occurrences internes,
+huit résultats et dédoublonnage des tags au profit du dossier. Les albums/titres restent ceux de `search3`.
+Le choix manuel d'un départ de mix résout aussi la fiche vers son identifiant musical avant d'activer les actions.
+Pas de collecte supplémentaire, scan ni migration. Le contrôle utilisant les jetons de comptes de production
+a été refusé par la vérification automatique ; aucune recherche avec ces jetons n'a été exécutée.
+Validation : régression reproduite avant correction sur le faux Subsonic ; **642 tests Python et parcours jsdom PC
+passent dans Docker sans réseau externe**, dont recherche par saisie, lien vers la fiche et départ de mix résolu
+avant toute construction. Neuf tests HTTP dédiés couvrent les variantes, le cache et les périmètres des comptes.
+Déployée le 10/11/2026 sur `https://music2.foos.fr` à la demande utilisateur : conteneur sain, HTTPS 200,
+version publique 1.9.1, JavaScript servi conforme et ressources munies de leur nouvelle empreinte de cache.
+**212 fichiers applicatifs identiques aux sources testées** ; seuls quatre changent depuis la production 1.9.
+SQLite intègre au schéma 17 inchangé, dix comptes conservés. Sauvegarde cohérente du code, de la configuration
+et de SQLite : `../pimedia-backups/pre-1.9.1-20261110T212712Z/` ; image précédente : `pimedia-web:pre-1.9.1-20261110t212712z`.
+Le test connecté de « gurr » est laissé à l’utilisateur, selon sa demande ; aucun jeton de compte utilisé
+par les contrôles de déploiement. Recharger la page (Cmd+Maj+R) avant cet essai.
+Détails et limites : [Bibliothèque](features/bibliotheque.md).
+
 **Complément de la page Nouveautés (10/11/2026, déployé avec la 1.9)** : menu et page « Actualités » au pluriel.
 La présentation du site décrit désormais les discographies et choix Discogs, les crédits et groupes liés, les
 sélections et classements des labels avec versions YouTube, les marque-pages et recommandations de « À écouter ».

@@ -4,6 +4,7 @@ import threading
 import time
 from datetime import date
 
+from ..shared.text import normalize
 from .entities import album_topic
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
@@ -43,6 +44,7 @@ def as_list(value):
 
 
 PAGE_SIZE = 40
+SEARCH_ARTIST_COUNT = 8
 DECADES = tuple(range(1950, date.today().year // 10 * 10 + 1, 10))
 # onglet de la page Albums -> type de getAlbumList2 (« highest » et « decade »/« genre » à part)
 ALBUM_LISTS = {"newest": "newest", "frequent": "frequent", "recent": "recent", "random": "random",
@@ -89,10 +91,11 @@ def song_row(raw):
 
 
 class Library:
-    def __init__(self, subsonic, ratings, messages, cache=None):
+    def __init__(self, subsonic, ratings, messages, cache=None, artist_indexes=None):
         self.subsonic = subsonic
         self.ratings = ratings
         self.messages = messages
+        self.artist_indexes = artist_indexes
         self.cache = cache or TtlCache(600)
         self.top_cache = TtlCache(3600)
 
@@ -189,11 +192,35 @@ class Library:
         query = (query or "").strip()[:100]
         if not query:
             return {"artists": [], "albums": [], "songs": []}
-        result = self._call(user, "search3", [("query", query), ("artistCount", 8), ("albumCount", 12),
+        result = self._call(user, "search3", [("query", query), ("artistCount", SEARCH_ARTIST_COUNT), ("albumCount", 12),
                                               ("songCount", 30)]).get("searchResult3") or {}
-        return {"artists": [{"id": a["id"], "name": text(a.get("name"), "?")} for a in visible(result.get("artist"))],
+        return {"artists": self._search_artists(user, query, visible(result.get("artist"))),
                 "albums": self._with_site_data(user, [album_card(a) for a in visible(result.get("album"))]),
                 "songs": [song_row(s) for s in visible(result.get("song"))]}
+
+    def _search_artists(self, user, query, tagged):
+        """Même liste de dossiers que la barre, complétée par les artistes connus seulement par leurs tags."""
+        key = normalize(query)
+        index = []
+        if self.artist_indexes is not None:
+            try:
+                index = self.artist_indexes.for_user(user)
+            except (SubsonicError, SubsonicUnreachable):
+                pass                                    # la recherche ID3 reste utilisable si l'index est indisponible
+        artists = [artist for group in index for artist in group["artists"] if key in normalize(artist["name"])]
+        names = {normalize(artist["name"]) for artist in artists}
+        for raw in tagged:
+            name = text(raw.get("name"), "?")
+            name_key = normalize(name)
+            if name_key not in names:
+                artists.append({"id": raw["id"], "name": name})
+                names.add(name_key)
+
+        def relevance(artist):
+            name = normalize(artist["name"])
+            return name != key, not name.startswith(key), name
+
+        return sorted(artists, key=relevance)[:SEARCH_ARTIST_COUNT]
 
     def starred(self, user):
         result = self._call(user, "getStarred2").get("starred2") or {}

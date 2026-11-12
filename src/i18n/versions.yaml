@@ -12,6 +12,13 @@
     - "Le menu À écouter affiche une pastille rouge dès qu’un membre vous conseille un artiste ou un album. Elle se met à jour dans vos onglets ouverts."
     - "Les conseils affichés sont marqués comme lus à l’ouverture de la page. Un conseil reçu pendant le chargement reste signalé jusqu’à son affichage, et un conseil identique déjà lu ne rallume pas la pastille."
 
+- version: "1.9.1"
+  date: 2026-11-10
+  title: "Retrouvez les artistes avec une partie de leur nom"
+  changes:
+    - "La recherche retrouve aussi les artistes présents dans la barre latérale : « gurr » suffit pour trouver Gurriers, même si les tags des fichiers ne le retrouvent pas."
+    - "Les majuscules, accents et ligatures sont reconnus. Les noms exacts et les débuts de noms apparaissent en premier, sans doublonner les résultats des tags."
+
 - version: "1.9"
   date: 2026-11-10
   title: "Des artistes et des albums à écouter plus tard"

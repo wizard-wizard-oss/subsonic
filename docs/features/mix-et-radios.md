@@ -29,6 +29,13 @@
 `web/static/js/mixes.js`, `mixbuilder.js`, `similar.js`.
 
 ## Tests
+Correction **1.9.1 (déployée le 10/11/2026)** : les résultats de la recherche d'artistes peuvent maintenant désigner
+directement un dossier. Le choix manuel utilise la même résolution vers `id3Id` que le départ depuis une fiche,
+en conservant les styles et les autres réglages. Écoute et sauvegarde attendent cette résolution ; un dossier
+sans identifiant musical laisse les actions bloquées avec l'erreur existante de sélection vide. Les réponses
+d'une page quittée sont ignorées. `tests/e2e_webapp.js` vérifie un nom partiel sans accent, l'attente de la fiche,
+puis l'envoi de l'identifiant musical (jamais du dossier) dans le mix.
+
 Correction **1.8.3 (09/11/2026)** : avec un artiste de départ, seuls ses titres et ceux des artistes du graphe
 borné par `depth` alimentent le créateur. Les titres populaires sont vérifiés par identifiant d’artiste, ou nom
 normalisé lorsque l’identifiant manque ; les albums locaux complètent cette source sans Last.fm. Les artistes

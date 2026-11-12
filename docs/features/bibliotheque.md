@@ -36,6 +36,32 @@ des tags disent « Dalek ». Le reste de Subsonic parle en tags (ID3) ; le site 
 - l'album garde son identifiant ID3 pour ce que Subsonic range sous l'ID3 : commentaires, cœur, note, téléchargement,
   partage, écoutes. L'artiste donne le sien (`id3Id`, celui de son premier titre) pour la radio, le mix et les artistes
   proches ; un dossier sans aucun titre n'a ni radio ni mix.
+
+## Recherche des artistes (1.9.1, déployée le 10/11/2026)
+
+Le champ de recherche retrouve les artistes de la **même liste de dossiers que la barre latérale**, en complément
+des résultats `search3` de Subsonic. Une partie du nom suffit : « gurr » retrouve « Gurriers » même lorsque
+`search3` ne renvoie aucun artiste. Casse, accents, ligatures, espaces et ponctuation utilisent la comparaison
+commune `pimedia.shared.text.normalize` ; le nom affiché conserve son orthographe.
+
+Les noms exacts passent avant les débuts de noms, puis les autres occurrences ; huit artistes au maximum.
+Un résultat des tags portant le même nom normalisé qu'un dossier trouvé est remplacé par ce dossier, dont le lien
+ouvre directement la fiche artiste. Les artistes connus seulement par leurs tags restent proposés.
+
+La liste persistante existante est réutilisée avec les dossiers visibles du compte connecté : aucune nouvelle
+collecte du catalogue ni scan Subsonic. Incoming et les restes macOS sont exclus comme dans la barre latérale.
+Si cette liste est indisponible, les résultats des tags restent utilisables. Les albums et les titres continuent
+de venir de `search3`, avec les limites existantes (12 albums et 30 titres). Pas de correction des fautes de frappe.
+
+Code : `webapp/library.py` (`search`, `_search_artists`), dépendance `artist_indexes` assemblée dans `app.py`.
+Tests : `tests/test_webapp_search.py` (Gurriers sans résultat ID3, variantes de noms, classement, doublons, tags seuls,
+cache, périmètres des comptes, exclusions, indisponibilité de l'index, albums/titres/requête vide),
+`tests/e2e_webapp.js` (saisie du nom partiel sans accent puis ouverture du dossier artiste).
+Validation : 642 tests Python et parcours jsdom PC passent. Déploiement du 10/11/2026 vérifié en HTTPS :
+version publique 1.9.1, 212 fichiers applicatifs identiques aux sources testées, JavaScript servi conforme,
+base intègre au schéma 17 inchangé. Sauvegarde et image précédente conservées (voir `docs/ETAT.md`).
+Le cas Gurriers est reproduit sur le faux Subsonic ; le test connecté en production est laissé à l’utilisateur.
+
 ## Collection en chiffres (1.7.12)
 
 L’accueil présente cinq indicateurs : artistes, albums, chansons, stockage en Gio (octets / 1024³, arrondi à l’entier

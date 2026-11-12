@@ -519,6 +519,15 @@ function makeEventSource(jar) {
   key(d.body, "c");
   check("C : le salon reprend sa place", !d.body.dataset.lyrics && w.getComputedStyle($("#chat-panel")).display !== "none");
 
+  // --- recherche : nom partiel sans accent, lien vers le même dossier que la barre ---
+  type($("#search"), "bjor");
+  check("recherche : nom partiel sans accent retrouve Björk", await until(() =>
+        w.location.hash === "#/search/bjor" && $("#main .chips a[href='#/artist/fdir-ar3']")) &&
+        $("#main .chips a[href='#/artist/fdir-ar3']").textContent === "Björk");
+  $("#main .chips a[href='#/artist/fdir-ar3']").click();
+  check("recherche : le résultat ouvre le dossier artiste", await until(() =>
+        w.location.hash === "#/artist/fdir-ar3" && $(".artist-head h1") && $(".artist-head h1").textContent === "Björk"));
+
   // --- musique d'ailleurs : Jamendo, YouTube (faux lecteur officiel), vidéo refusée ---
   const yt = {players: []};
   w.YT = {Player: class {
@@ -768,16 +777,29 @@ function makeEventSource(jar) {
   const pop = $$(".mix-genres .chip").find(c => c.textContent.startsWith("Pop"));
   pop.click();
   check("créateur : style choisi", pop.classList.contains("on"));
-  type($(".mix-seed-input"), "bjö");
+  type($(".mix-seed-input"), "bjor");
   check("créateur : artiste de départ proposé", await until(() => $$(".mix-seed-results .chip").length === 1));
+  const beforeManualSeed = app.api.get;
+  let releaseManualSeed;
+  const manualSeedReady = new Promise(resolve => { releaseManualSeed = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "fdir-ar3") await manualSeedReady;
+    return beforeManualSeed.call(this, url, params);
+  };
   $(".mix-seed-results .chip").click();
-  check("créateur : « Comme : Björk »", $(".mix-seed-chosen").textContent.startsWith("Comme : Björk"));
+  check("créateur : attend l'identifiant musical du résultat de recherche", $(".mix-play").disabled &&
+        $(".mix-save").disabled && $(".mix-seed-input").disabled);
+  releaseManualSeed();
+  check("créateur : « Comme : Björk »", await until(() => $(".mix-seed-chosen")) &&
+        $(".mix-seed-chosen").textContent.startsWith("Comme : Björk"));
+  app.api.get = beforeManualSeed;
   w.eval("App.player.queue = []");
   $(".mix-play").click();
   check("créateur : mix lancé", await until(() => w.eval("App.player.queue.length") >= 1));
   check("créateur : lancement limité à 2 niveaux, artiste et style conservés",
         w.mixBuildRequests.length === 1 && w.mixBuildRequests[0].depth === 2 &&
-        w.mixBuildRequests[0].seedArtistName === "Björk" && w.mixBuildRequests[0].genres.includes("pop"));
+        w.mixBuildRequests[0].seedArtistId === "ar3" && w.mixBuildRequests[0].seedArtistName === "Björk" &&
+        w.mixBuildRequests[0].genres.includes("pop"));
   depths[2].click();
   $(".mix-save").click();
   check("créateur : nom de playlist proposé", await until(() => $(".dialog-input")) && $(".dialog-input").value.length > 0);

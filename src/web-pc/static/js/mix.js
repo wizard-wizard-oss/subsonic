@@ -170,7 +170,12 @@ Views.mix = (() => {
           try { artists = (await App.api.get("/api/search", {q: query})).artists; } catch (error) { return; }
           if (route.stale || input.value.trim() !== query) return;
           App.append(results, artists.slice(0, 8).map(a =>
-            el("button.chip", {type: "button", text: a.name, onclick: () => this.setSeed(a.id, a.name)})));
+            el("button.chip", {type: "button", text: a.name, onclick: async () => {
+              input.disabled = true;
+              App.clear(results);
+              await this.loadSeed(route, a.id);
+              input.disabled = false;
+            }})));
         }, 250);
       }});
       App.append(this.seedBox, [input, results]);

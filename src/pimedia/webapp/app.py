@@ -158,13 +158,13 @@ class WebApplication:
         self.accounts = Accounts(self.subsonic, self.users, self.sessions)
         self.preferences = Preferences(PreferenceRepository(self.db))
         self.ratings = Ratings(self.subsonic)
-        self.library = Library(self.subsonic, self.ratings, self.messages)
-        self.folders = Folders(self.subsonic, self.library, self.ratings)
-        self.exploration = Exploration(MusicBrainzMetadata(ExplorationRepository(self.db)), self.folders, self.library)
         self.artist_indexes = ArtistIndexes(self.subsonic, ArtistIndexRepository(self.db), self.users, self.hub,
                                             hidden=(self.config.incoming_name,),
                                             shortcuts=[n.strip() for n in self.config.shortcut_folders.split(",") if n.strip()])
+        self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
         self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
+        self.folders = Folders(self.subsonic, self.library, self.ratings)
+        self.exploration = Exploration(MusicBrainzMetadata(ExplorationRepository(self.db)), self.folders, self.library)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
         self.listening = Listening(self.subsonic)
