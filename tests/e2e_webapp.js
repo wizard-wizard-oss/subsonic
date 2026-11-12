@@ -98,7 +98,7 @@ function makeEventSource(jar) {
   const key = (target, k, extra) => target.dispatchEvent(new w.KeyboardEvent("keydown", Object.assign({key: k, bubbles: true}, extra || {})));
 
   // --- connexion ---
-  await until(() => !$("#login").hidden);
+  check("écran de connexion prêt", await until(() => d.readyState === "complete" && !$("#login").hidden, 12000));
   check("page de connexion en français", $("#login h1").textContent === "Connexion");
   check("mot de passe oublié : aide cachée au départ", $("#login-forgot-help").hidden);
   $("#login-forgot").click();
@@ -139,10 +139,11 @@ function makeEventSource(jar) {
   w.location.hash = "#/";
   let reloaded = false;
   const app = w.eval("App"), listCalls = app.api.get;
+  const indexBeforeReload = app.music.sidebar.index;
   app.api.get = url => { if (url === "/api/artists") reloaded = true; return listCalls.call(app.api, url); };
   app.live.emit("artists");                                 // Subsonic a scanné : la barre se recharge seule
   check("bibliothèque changée : barre rechargée sans message d'attente", await until(() => reloaded) &&
-        !$(".sidebar-note") && await until(() => $$(".artist").length >= 1));
+        !$(".sidebar-note") && await until(() => app.music.sidebar.index !== indexBeforeReload && $$(".artist").length >= 1));
   app.api.get = async (url, params) => url === "/api/artists"          // un dossier « Compilations » épinglé
     ? Object.assign(await listCalls.call(app.api, url), {shortcuts: [{id: "fdir-ar3", name: "Compilations"}]})
     : listCalls.call(app.api, url, params);
@@ -216,10 +217,10 @@ function makeEventSource(jar) {
   w.location.hash = "#/artist/ar1";
   check("artiste : titres populaires", await until(() => $$(".popular tr.song").length === 3 &&
         $(".popular .section-head h2").textContent === "Titres populaires"));
-  check("artiste : biographie (Wikipédia, photo, source)", await until(() => $(".artist-bio .bio-text p")) &&
-        $(".artist-bio h2").textContent === "Biographie" &&
+  check("artiste : biographie sous le nom, photo indépendante et source", await until(() => $(".artist-bio .bio-text p") && $(".artist-portrait img")) &&
+        $(".artist-head .artist-bio").getAttribute("aria-label") === "Biographie" &&
         $(".artist-bio .bio-text p").textContent.startsWith("ABBA est un groupe") &&
-        $(".bio-photo").getAttribute("src") === "https://upload.wikimedia.org/abba.jpg" &&
+        $(".artist-portrait img").getAttribute("src") === "https://upload.wikimedia.org/abba.jpg" &&
         $(".bio-source a").textContent === "Wikipédia");
   check("artiste : artistes similaires (Last.fm par Subsonic)", await until(() => $$(".similar a.chip").length === 1) &&
         $(".similar a.chip").getAttribute("href") === "#/artist/ar3" && $(".similar h2").textContent === "Artistes similaires");
@@ -290,7 +291,7 @@ function makeEventSource(jar) {
   $(".explore-edition").dispatchEvent(new w.Event("change"));
   check("crédits : label, producteur et musicien cliquables", await until(() => $$(".explore-body > .explore-people .explore-link").length === 4) &&
         $$(".explore-link").some(a => a.textContent === "Polar") &&
-        $(".album-exploration").textContent.includes("Production") && $(".album-exploration").textContent.includes("guitar"));
+        $(".explore-body").textContent.includes("Production") && $(".explore-body").textContent.includes("guitar"));
   check("album : membres du groupe affichés directement avec les crédits", await until(() => $(".explore-member-card")) &&
         $(".explore-member-card").textContent.includes("Musicien test") && $(".explore-connections").textContent.includes("toutes périodes"));
   $(".explore-member-projects").click();
@@ -306,6 +307,58 @@ function makeEventSource(jar) {
         $(".explore-local a").getAttribute("href") === "#/album/al1");
   $(".explore-more").click();
   check("label : catalogue paginé", await until(() => $$(".explore-work").length === 2) && $(".explore-more").hidden);
+  // Discogs : choix explicite du label, découverte variée et playlist mixte avec choix YouTube.
+  $(".label-discovery form").dispatchEvent(new w.Event("submit", {cancelable: true}));
+  check("label Discogs : homonymes au choix", await until(() => $$(".label-discovery .discogs-identity").length === 2) &&
+        $(".discovery-controls").hidden);
+  $$(".label-discovery .discogs-identity")[1].click();
+  check("label : société distinguée du label musical", await until(() => $(".discovery-related-label")) &&
+    $(".discovery-related-label").getAttribute("href") === "#/discogs/label/7" && $(".discovery-controls").hidden &&
+    !$(".discovery-chosen") && $(".discovery-label-notice").textContent.includes("société"));
+  const emptyPreview = d.createElement("div");
+  new (w.eval("DiscoveryTracks.Playlist"))(emptyPreview, {}, "").show([]);
+  check("label : sélection vide expliquée sans compteur ni boutons inutilisables", !!emptyPreview.querySelector(".discovery-empty") &&
+    !emptyPreview.querySelector(".discovery-chosen, button"));
+  $(".label-discovery .discogs-identity").click();
+  check("label Discogs : deux modes et trois critères sourcés", await until(() => $$(".discovery-mode").length === 2) &&
+        $$(".discovery-source option").length === 3);
+  $('.discovery-mode[data-mode="discover"]').click();
+  check("découverte : rééditions regroupées, pistes locales et rares", await until(() => $$(".discovery-track").length === 4) &&
+        $$(".discovery-rankings .discogs-album").length === 3 && $(".discovery-chosen").textContent === "2 titres choisis sur 4 proposés");
+  const missingLabelTrack = $$(".discovery-track").find(row => row.textContent.includes("One More Time"));
+  check("découverte : vidéos trouvées automatiquement, choix explicite et lien Discogs visible", await until(() =>
+    missingLabelTrack.querySelectorAll(".discovery-video").length === 2) && missingLabelTrack.querySelector("select").value === "-1" &&
+    missingLabelTrack.textContent.includes("lien de l’édition Discogs"));
+  const labelVersion = missingLabelTrack.querySelector("select");
+  labelVersion.value = "1";
+  labelVersion.dispatchEvent(new w.Event("change"));
+  const beforeLabelPlay = app.player.playList;
+  let labelSongs;
+  app.player.playList = songs => { labelSongs = songs; };
+  $(".discovery-play").click();
+  check("découverte : écoute mixte avec la version choisie", labelSongs.length === 3 &&
+        labelSongs.some(song => song.youtubeId === "otherone123") && labelSongs.filter(song => !song.ext).length === 2);
+  app.player.playList = beforeLabelPlay;
+  $('.discovery-mode[data-mode="top"]').click();
+  check("top : note, votes, édition source et méthode", await until(() => $$(".discovery-top li").length === 2 &&
+        !$('.discovery-mode[data-mode="top"]').disabled) && $(".discovery-method").textContent.includes("édition la plus ancienne") &&
+        $(".discovery-figures").textContent.includes("20 votes") && $(".discovery-figures a").href.includes("/release/101"));
+  $(".discovery-source").value = "lastfm_listeners";
+  $(".discovery-source").dispatchEvent(new w.Event("change"));
+  check("top Last.fm : auditeurs et écoutes croisés au catalogue", await until(() =>
+    !$('.discovery-mode[data-mode="top"]').disabled && $(".discovery-method").textContent.startsWith("Last.fm")) &&
+    $(".discovery-ranked-title").textContent.startsWith("Discovery") && $(".discovery-figures").textContent.includes("500 auditeurs"));
+  const topMissing = $$(".discovery-track").find(row => row.textContent.includes("One More Time"));
+  await until(() => topMissing.querySelectorAll("select option").length === 3);
+  topMissing.querySelector("select").value = "1";
+  topMissing.querySelector("select").dispatchEvent(new w.Event("change"));
+  $(".discovery-save").click();
+  await until(() => $(".dialog-input"));
+  $(".dialog-input").value = "Le son de Polar";
+  $(".dialog button.primary").click();
+  check("label : playlist mixte enregistrée et ouverte", await until(() => w.location.hash.startsWith("#/playlist/") &&
+    $("#main .page-head h1")) && $("#main .page-head h1").textContent === "Le son de Polar" &&
+    $$("tr.song").length === 3 && !!$('tr.song[data-id="yt-otherone123"]'));
   w.location.hash = "#/explore/artist/00000000-0000-4000-8000-000000000003";
   check("groupe : membres et participations", await until(() => $("#main h1") && $("#main h1").textContent === "ABBA") &&
         $(".explore-people").textContent.includes("Membre du groupe") && $$(".explore-work").length === 2);
@@ -315,6 +368,8 @@ function makeEventSource(jar) {
   w.location.hash = $$(".explore-link").find(a => a.textContent === "Autre groupe").getAttribute("href");
   check("musicien : un autre projet s'ouvre", await until(() => $("#main h1") && $("#main h1").textContent === "Autre groupe"));
   app.api.get = beforeExplore;
+  await require("./e2e_discovery_checks")(w, app, check, until, wait);
+  await require("./e2e_label_pause_checks")(w, app, check, until, wait);
   w.location.hash = "#/artist/ar1";
   await until(() => $(".artist-exploration .explore-artist-open"));
   $(".explore-artist-open").click();
@@ -326,6 +381,61 @@ function makeEventSource(jar) {
   $(".explore-member-projects").click();
   check("page artiste : autres groupes du membre", await until(() => $(".explore-member-links .explore-link")) &&
         $(".explore-member-links .explore-link").textContent === "Autre groupe");
+  $(".discography-open").click();
+  await until(() => $(".dialog .discogs-search"));
+  $(".dialog .discogs-search").dispatchEvent(new w.Event("submit", {cancelable: true}));
+  check("discographie : identité choisie, pas d’homonyme imposé", await until(() => $$(".dialog .discogs-identity").length === 2) &&
+    !$(".discography .discogs-album"));
+  $(".dialog .discogs-identity").click();
+  check("discographie : cartes, source et bibliothèque prioritaire", await until(() => $(".discography-owned")) &&
+    $$(".discography .discogs-album").length === 2 && $(".discography-owned").getAttribute("href") === "#/album/al1");
+  $(".discogs-more").click();
+  check("discographie : pagination et regroupement des rééditions", await until(() => $$(".discography .discogs-album").length === 3) &&
+    !$(".discogs-more"));
+  check("Discogs : membre du groupe directement cliquable", await until(() => $(".discography-relations .discogs-person")) &&
+    $(".discography-relations .discogs-person").getAttribute("href") === "#/discogs/artist/9");
+  check("fiche artiste : bio sous le nom et Discogs après les albums", $(".artist-head .artist-bio") &&
+    !!($("#artist-albums").compareDocumentPosition($("#artist-discography")) & w.Node.DOCUMENT_POSITION_FOLLOWING));
+  const artistHash = w.location.hash;
+  $(".artist-discogs-shortcut").click();
+  check("raccourci Discogs : garde la fiche et cible sa section", w.location.hash === artistHash &&
+    w.document.activeElement === $("#artist-discography"));
+  w.location.hash = "#/";
+  await until(() => $(".home-columns"));
+  const identityGet = app.api.get;
+  let releaseIdentity;
+  app.api.get = (path, params) => {
+    const result = identityGet.call(app.api, path, params);
+    if (path !== "/api/discogs/artist-link") return result;
+    return Promise.all([result, new Promise(resolve => { releaseIdentity = resolve; })]).then(([data]) => data);
+  };
+  w.location.hash = artistHash;
+  await until(() => releaseIdentity && $(".artist-discogs-shortcut"));
+  $(".artist-discogs-shortcut").click();
+  releaseIdentity();
+  check("discographie : choix retrouvé automatiquement à la visite suivante", await until(() => $(".discography-owned")) &&
+    !$(".dialog") && $(".discography-open").hidden && $(".discography-saved").textContent === "Choix mémorisé");
+  app.api.get = identityGet;
+  check("discographie : un clic avant la fin du chargement ne redemande pas l’identité", !$(".dialog"));
+  $(".discography-refresh").click();
+  check("discographie : actualiser conserve l’identité et la sélection", await until(() => !$("#artist-discography").hasAttribute("aria-busy")) &&
+    !!$(".discography-owned") && !$(".dialog"));
+  w.location.hash = "#/album/al1";
+  await until(() => $(".discogs-credits-open"));
+  $(".discogs-credits-open").click();
+  check("crédits Discogs : éditions au choix", await until(() => $$(".discogs-edition option").length === 3) &&
+    $(".discogs-edition").value === "");
+  $(".discogs-edition").value = "101";
+  $(".discogs-edition").dispatchEvent(new w.Event("change"));
+  check("crédits Discogs : musiciens, rôle et label", await until(() => $$(".discogs-credits .discogs-person").length === 2) &&
+    $(".discogs-credits").textContent.includes("Drums") && $(".discogs-label").getAttribute("href") === "#/discogs/label/7");
+  w.location.hash = $$(".discogs-credits .discogs-person")[1].getAttribute("href");
+  check("Discogs : du musicien à ses groupes et sa discographie", await until(() => $("#main h1") &&
+    $("#main h1").textContent === "Musicien test" && $(".discogs-connections .discogs-person")) &&
+    $(".discogs-connections .discogs-person").getAttribute("href") === "#/discogs/artist/7");
+  w.location.hash = "#/discogs/label/7";
+  check("Discogs : label direct sans recherche MusicBrainz", await until(() => $$(".discovery-mode").length === 2) &&
+    !$(".label-discovery form"));
   w.location.hash = "#/album/al1";
   await until(() => $(".album-info h1") && $(".album-info h1").textContent === "Arrival");
   // --- pochette : crayon, recherche Last.fm, choix d'une image ---

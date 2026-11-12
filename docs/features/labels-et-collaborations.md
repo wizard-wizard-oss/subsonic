@@ -1,7 +1,13 @@
 # Labels et collaborations (site web)
 
 Ajouté le 07/11/2026, version 1.7. Source : **MusicBrainz**, sans compte ni clé API. Lecture seulement : aucun
-changement des tags, des fichiers ou des données de Subsonic. Discogs reste une évolution séparée.
+changement des tags, des fichiers ou des données de Subsonic. Depuis la **1.7.10**, Discogs est proposé en premier
+pour les crédits, membres, groupes et discographies ; MusicBrainz reste un complément distinct et sourcé.
+La découverte des labels, les classements et playlists mixtes sont décrits dans
+[`decouverte-labels.md`](decouverte-labels.md).
+
+Correctif 1.7.11 : les fiches Discogs explicitement réservées aux sociétés, comme Sub Pop Records, proposent
+d’ouvrir le label lié (Sub Pop) ; elles ne sont plus analysées comme des labels musicaux pour aboutir à une sélection vide.
 
 ## Parcours
 1. Sur la page album, sous les titres, **Découvrir les crédits**. Les titres et la lecture sont disponibles avant
@@ -149,7 +155,8 @@ changement des tags, des fichiers ou des données de Subsonic. Discogs reste une
   enregistrement du catalogue. Les relations absentes dans MusicBrainz ne peuvent pas être proposées.
 - La recherche locale utilise les résultats bornés de `search3` (12 albums / 30 titres) : absence de correspondance
   ne prouve pas l'absence d'un fichier. Une correspondance textuelle ne certifie pas l'édition exacte.
-- Pas encore de complément Discogs, de lecture des identifiants MusicBrainz dans les tags, de regroupement des
-  rééditions d'un label, de filtre global « tous les albums de ce label présents chez moi », ni de mix par label.
+- Le complément Discogs, le regroupement de ses rééditions et les sélections par label existent depuis la 1.7.10
+  (`decouverte-labels.md`). Le catalogue MusicBrainz garde ses éditions distinctes. Pas de lecture des identifiants
+  MusicBrainz dans les tags ni de filtre global « tous les albums de ce label présents chez moi ».
 - Sources : [API MusicBrainz](https://musicbrainz.org/doc/MusicBrainz_API),
   [exemples](https://musicbrainz.org/doc/MusicBrainz_API/Examples).

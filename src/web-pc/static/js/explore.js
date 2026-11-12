@@ -216,6 +216,7 @@ const AlbumExploration = (() => {
           }});
         App.append(App.clear(main), [el("h1", {text: data.name}), el("p.muted", {text: data.description}),
           source(data.kind, data.id), notice, el("p.muted", {text: t("incomplete")}),
+          data.kind === "label" ? LabelDiscoveryUI.panel(data.name, route) : DiscogsUI.externalArtistPanel(data.name, route),
           data.kind === "artist" ? el("section", {}, Views.heading(t("connections")), connectionsView(data, route)) : null,
           Views.heading(data.kind === "label" ? t("catalog") : t("works")), list,
           !data.works.length ? el("p.muted", {text: t("no_works")}) : null, more]);

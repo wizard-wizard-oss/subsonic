@@ -249,51 +249,40 @@ const Views = (() => {
         App.bus.emit("route", route);
         App.clear(main);
         const heart = heartButton(data, 24, () => toggleFavorite("folder", data, heart));
-        const bio = el("section.artist-bio"), popular = el("section.popular"), similar = el("section.similar"),
+        const profile = new ArtistProfile(data, route, heart);
+        this.discogs = new ArtistDiscography(data, route, () => profile.loadImage());
+        const popular = el("section.popular"), similar = el("section.similar"),
               press = el("section.press");
+        const albums = PageSections.section("artist-albums");
+        App.append(albums, [heading(App.t("artist.albums")), albumGrid(data.albums, {hideArtist: true})]);
         // radio, mix et artistes proches passent par l'artiste ID3 (tags) : absents s'il n'a aucun titre
-        const actions = data.id3Id ? el("div.artist-actions", {},
+        const actions = el("div.artist-actions", {}, data.id3Id ? [
           App.setIcon(el("button.primary.artist-radio", {type: "button", onclick: () => this.radio(data)}),
                       "play", 16, false, App.t("artist.radio")),
           App.setIcon(el("a.button.artist-mix", {href: "#/mix/" + encodeURIComponent(data.id3Id)}),
-                      "shuffle", 16, false, App.t("artist.mix"))) : null;
+                      "shuffle", 16, false, App.t("artist.mix_short"))] : null,
+          App.setIcon(PageSections.link(App.t("artist.discogs_short"), this.discogs.root,
+            () => { if (!this.discogs.identity) this.discogs.open(); }, ".button.artist-discogs-shortcut"),
+            "discogs", 16, false, App.t("artist.discogs_short")));
         App.append(main, [
-          el("header.page-head", {}, el("h1", {text: data.name}), heart),
+          profile.root,
           actions,
-          AlbumExploration.artistPanel(data.name, route),
-          bio,
+          PageSections.nav([{text: App.t("artist.albums"), section: albums},
+            {text: App.t("artist.discogs_short"), section: this.discogs.root,
+              open: () => { if (!this.discogs.identity) this.discogs.open(); }, className: ".discogs-section-link"},
+            {text: App.t("discovery.members_and_groups"), section: this.discogs.relations}]),
           popular,
-          heading(App.t("artist.albums")), albumGrid(data.albums, {hideArtist: true}),
+          albums,
+          this.discogs.root,
+          this.discogs.relations,
+          AlbumExploration.artistPanel(data.name, route),
           similar,
           press]);
-        this.loadBio(bio, data, route);
+        profile.load();
         this.loadPopular(popular, data.name, route);
         News.pressSection(press, data.name, route);                 // articles des webzines suivis qui le citent
         if (data.id3Id) this.loadSimilar(similar, data.id3Id, route);
       } catch (error) { failed(main, error); }
-    },
-    /** Biographie (Wikipédia en français, sinon Last.fm par Subsonic) : chargée après la page, repliée à quelques
-        lignes avec « Lire la suite ». */
-    async loadBio(section, data, route) {
-      let bio;
-      try { bio = await App.api.get("/api/artist/bio", {name: data.name, id: data.id3Id || ""}); } catch (error) { return; }
-      if (route.stale || !bio.text) return;
-      const text = el("div.bio-text", {}, bio.text.split(/\n+/).map(p => el("p", {text: p})));
-      const more = el("button.link-button.bio-more", {type: "button", text: App.t("artist.bio_more"), onclick: () => {
-        const open = section.classList.toggle("open");
-        more.textContent = App.t(open ? "artist.bio_less" : "artist.bio_more");
-      }});
-      const source = bio.url
-        ? el("a", {href: bio.url, target: "_blank", rel: "noopener noreferrer", text: bio.src})
-        : bio.src;
-      App.append(section, [
-        heading(App.t("artist.bio")),
-        el("div.bio-body", {},
-          bio.img ? el("img.bio-photo", {src: bio.img, alt: data.name, loading: "lazy", referrerPolicy: "no-referrer"}) : null,
-          text),
-        el("div.bio-foot", {}, more, el("small.bio-source", {}, App.t("artist.bio_source"), source))]);
-      // texte court : rien à déplier
-      setTimeout(() => { if (text.scrollHeight <= text.clientHeight + 2) more.hidden = true; }, 0);
     },
     /** Titres populaires (Last.fm, par Subsonic) : chargés après la page ; 5, puis 10 avec « Afficher plus ». */
     async loadPopular(section, name, route) {
@@ -326,7 +315,11 @@ const Views = (() => {
         App.player.playList((await App.api.get("/api/radio/artist", {id: data.id3Id, name: data.name})).songs, 0);
       } catch (error) { App.toast(App.errorText(error), "error"); }
     },
-    destroy() { if (this.table && this.table.destroy) this.table.destroy(); this.table = null; },
+    destroy() {
+      if (this.table && this.table.destroy) this.table.destroy();
+      if (this.discogs) this.discogs.destroy();
+      this.table = this.discogs = null;
+    },
   };
 
   /** Couleur moyenne de la pochette, posée en `--tint` sur l'en-tête (dégradé du fond). Sans effet si le navigateur
@@ -402,6 +395,9 @@ const Views = (() => {
       cover.addEventListener("load", () => tintFromCover(cover), {once: true});
       const coverBox = App.can("upload") ? coverWithPencil(cover, data) : cover;
       this.table = songTable(songs, {albumArtist: data.artist});
+      const credits = new DiscogsCredits.Album(data.folderId || data.id, route);
+      const tracks = PageSections.section("album-tracks");
+      tracks.appendChild(this.table);
       this.thread = new ChatThread("album:" + data.id, {mode: "comments", isVisible: () => !document.hidden,
                                                          readOnly: !App.can("comment")});
       App.append(main, [
@@ -414,7 +410,11 @@ const Views = (() => {
             el("p.muted", {text: facts}),
             el("div.album-rating", {}, el("span.label", {text: App.t("album.your_rating")}), stars.element))),
         albumActions(data, songs, heart),
-        this.table,
+        PageSections.nav([{text: App.t("search.songs"), section: tracks},
+          {text: App.t("discovery.credits_short"), section: credits.root, open: () => credits.open(), className: ".discogs-section-link"},
+          {text: App.t("explore.labels"), section: credits.labels, open: () => credits.open()}]),
+        tracks,
+        credits.root,
         AlbumExploration.panel(data.folderId || data.id, route),
         el("section.comments", {}, heading(App.t("album.comments")), this.thread.element)]);
       this.thread.load();

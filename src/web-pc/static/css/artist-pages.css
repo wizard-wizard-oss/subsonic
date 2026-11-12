@@ -1,0 +1,58 @@
+/* Fiches musicales : bibliothèque d'abord, accès aux sources visibles et contenus complémentaires en dessous. */
+.artist-head { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 16px; }
+.artist-heading { flex: 1; min-width: 0; }
+.artist-head .page-head { justify-content: space-between; margin-bottom: 12px; }
+.artist-head h1 { font-size: 36px; letter-spacing: -1px; }
+.artist-head .bio-text { max-height: 4.5em; }
+.artist-head .bio-text p { margin: 0 0 .4em; }
+.artist-head .bio-foot { flex-wrap: wrap; gap: 8px 14px; }
+.artist-head .bio-more { font-size: 12px; }
+.artist-portrait { flex: 0 0 128px; width: 128px; margin: 0; }
+.artist-portrait img { display: block; width: 128px; height: 140px; border-radius: 8px; object-fit: cover; background: var(--bg-sunken); }
+.artist-portrait figcaption { color: var(--text-dim); font-size: 11px; margin-top: 5px; text-align: right; }
+.artist-actions { align-items: center; flex-wrap: wrap; gap: 8px; }
+.artist-actions :is(button, a.button) { font-size: 12px; padding: 5px 10px; min-height: 30px; }
+.artist-actions .artist-discogs-shortcut { color: var(--accent-strong); border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg)); }
+.page-sections { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 3px 0 12px; margin: 16px 0 24px; border-bottom: 1px solid var(--line); }
+.page-sections a { font-size: 13px; color: var(--text-soft); padding: 5px 0; }
+.page-sections a:hover, .page-sections .discogs-section-link { color: var(--accent-strong); }
+:is(#artist-albums, #artist-discography, #artist-members, #album-tracks, #album-discogs, #album-labels) { scroll-margin-top: 20px; }
+.artist-discography.discography { padding: 24px 0 0; margin: 30px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
+.artist-discography > .section-head { margin-top: 0; gap: 12px; flex-wrap: wrap; }
+.artist-discography h2, .discogs-credits h2 { display: flex; align-items: center; gap: 8px; }
+.artist-discography h2 .icon, .discogs-credits h2 .icon { color: var(--accent); }
+.discography-tools { display: flex; gap: 12px; flex-wrap: wrap; }
+.discography-tools button { font-size: 12px; }
+.discography-association { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px; font-size: 12px; color: var(--text-soft); margin: 12px 0 20px; }
+.discography-saved { margin-left: auto; color: var(--accent-strong); font-size: 11px; }
+.artist-discography .discogs-grid { margin-top: 18px; }
+.discography-relations { border-top: 1px solid var(--line); padding-top: 4px; margin-bottom: 26px; }
+.discography-picker { display: grid; gap: 10px; }
+.discography-picker .discogs-search { flex-wrap: wrap; }
+.discography-picker .discogs-search label { flex-basis: 200px; }
+.discography-picker .discogs-identities { margin-top: 16px; }
+.discography-picker .page-error { margin: 0; }
+.discogs-credits #album-labels { margin-top: 20px; }
+@media (max-width: 700px) {
+  .artist-head { display: grid; grid-template-columns: minmax(0, 1fr) 84px; gap: 15px; }
+  .artist-heading { display: contents; }
+  .artist-head .page-head { grid-column: 1; grid-row: 1; }
+  .artist-head .artist-bio { grid-column: 1 / -1; grid-row: 2; }
+  .artist-head:has(.artist-portrait[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .artist-portrait { grid-column: 2; grid-row: 1; }
+  .artist-head h1 { font-size: 30px; }
+  .artist-portrait { flex-basis: 84px; width: 84px; }
+  .artist-portrait img { width: 84px; height: 100px; }
+  .artist-head .bio-text { max-height: 6em; }
+  .discography-saved { margin-left: 0; flex-basis: 100%; }
+  .page-sections { gap: 5px 16px; }
+  .artist-discography .discogs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .artist-discography .album-name { white-space: normal; }
+}
+.artist-discography .discography-owned { display: inline-flex; align-items: center; gap: 4px; width: fit-content;
+  max-width: 100%; font-size: 11px; white-space: normal; color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+@media (pointer: coarse) {
+  .artist-actions :is(button, a.button), .page-sections a, .discography-tools button { min-height: 44px; }
+}

@@ -255,4 +255,16 @@ MIGRATIONS = [
         fetched_at INTEGER NOT NULL
     )
     """,
+    # 16 : choix Discogs durables, indépendants du cache public et des homonymes.
+    """
+    CREATE TABLE artist_discogs_links (
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        library_key TEXT NOT NULL,
+        artist_id TEXT NOT NULL,
+        discogs_artist_id TEXT NOT NULL,
+        selected_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, library_key, artist_id)
+    )
+    """,
+
 ]

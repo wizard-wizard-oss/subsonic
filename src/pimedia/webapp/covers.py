@@ -13,6 +13,7 @@ import urllib.request
 from ..shared.external import USER_AGENT, query_url
 from ..shared.text import normalize
 from .library import text
+from .lastfm import LASTFM_BLANK
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 MAX_CANDIDATES = 12
@@ -20,7 +21,6 @@ MAX_TERM = 200
 CHUNK = 65536
 LASTFM = "https://ws.audioscrobbler.com/2.0/"
 SIZES = ("mega", "extralarge", "large", "medium")           # du plus grand au plus petit
-LASTFM_BLANK = "2a96cbd8b46e442fc41c2b86b821562f"           # image « pas de pochette » de Last.fm
 SIGNATURES = ((b"\xff\xd8\xff", "jpg"), (b"\x89PNG\r\n\x1a\n", "png"))
 COVER_NAMES = ("cover.jpg", "cover.jpeg", "cover.png")
 

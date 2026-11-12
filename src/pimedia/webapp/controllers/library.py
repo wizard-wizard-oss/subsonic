@@ -15,7 +15,7 @@ class DownloadReply(StreamReply):
 
 def item_id(value):
     value = value or ""
-    if not ITEM_ID.match(value):
+    if not isinstance(value, str) or not ITEM_ID.fullmatch(value):
         raise ValueError("identifiant")
     return value
 

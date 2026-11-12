@@ -8,70 +8,16 @@ import time
 import urllib.parse
 
 from ..server.podcasts.directories import DirectoryError, JsonHttp
-from .extmusic import VIDEO_ID, ExtMusicError, SearchBudget
+from .external_links import parse_link
+from .extmusic import ExtMusicError, SearchBudget
 
 SOUNDCLOUD_OEMBED = "https://soundcloud.com/oembed"
-SOUNDCLOUD_HOSTS = ("soundcloud.com", "m.soundcloud.com", "on.soundcloud.com")
-YOUTUBE_HOSTS = ("youtube.com", "m.youtube.com", "music.youtube.com")
-PLAYLIST_ID = re.compile(r"^[\w-]{10,64}$")
-PRIVATE_PLAYLISTS = ("LL", "LM", "WL")       # J'aime (YouTube, YouTube Music), À regarder plus tard : jamais lisibles
 LINKS_PER_HOUR = 30
 MAX_FAVORITES = 5000
 PLAYLIST_LIMIT = 500
 JAMENDO_URL = re.compile(r"^https://[\w.-]+\.jamendo\.com/")
 SOUNDCLOUD_IMAGE = re.compile(r"^https://[\w.-]+\.sndcdn\.com/")
 SOURCES = ("youtube", "soundcloud", "jamendo")
-
-
-# ---------- lecture d'un lien (fonctions pures) ----------
-def parse_link(text):
-    """Lien collé -> ("youtube_video", id) | ("youtube_playlist", id) | ("soundcloud", adresse de la page).
-    Une adresse « watch » avec une playlist (lancée depuis une playlist) désigne la vidéo : c'est la convention de
-    YouTube ; pour toute la playlist, il faut son lien « playlist?list= »."""
-    text = (text or "").strip()[:500]
-    if text and "://" not in text:
-        text = "https://" + text
-    try:
-        parts = urllib.parse.urlsplit(text)
-    except ValueError:
-        raise ExtMusicError("ext.link_unknown")
-    host = (parts.hostname or "").lower()
-    host = host[4:] if host.startswith("www.") else host
-    path = [p for p in parts.path.split("/") if p]
-    query = urllib.parse.parse_qs(parts.query)
-    if parts.scheme not in ("http", "https"):
-        raise ExtMusicError("ext.link_unknown")
-    if host == "youtu.be" and path:
-        return _video(path[0])
-    if host in YOUTUBE_HOSTS:
-        if path[:1] == ["watch"] and query.get("v"):
-            return _video(query["v"][0])
-        if len(path) == 2 and path[0] in ("shorts", "embed", "live"):
-            return _video(path[1])
-        if path[:1] == ["playlist"] and query.get("list"):
-            return _playlist(query["list"][0])
-    if host in SOUNDCLOUD_HOSTS and len(path) >= (1 if host == "on.soundcloud.com" else 2):
-        if host != "on.soundcloud.com" and "sets" in path[1:2]:
-            raise ExtMusicError("ext.soundcloud_not_track")
-        return "soundcloud", "https://%s/%s" % ("on.soundcloud.com" if host == "on.soundcloud.com" else "soundcloud.com",
-                                                "/".join(urllib.parse.quote(p, safe="%-_.~") for p in path))
-    raise ExtMusicError("ext.link_unknown")
-
-
-def _video(video_id):
-    if not VIDEO_ID.match(video_id):
-        raise ExtMusicError("ext.link_unknown")
-    return "youtube_video", video_id
-
-
-def _playlist(playlist_id):
-    if playlist_id in PRIVATE_PLAYLISTS:
-        raise ExtMusicError("ext.playlist_private")
-    if playlist_id.startswith("RD"):                 # « Mix » calculé par YouTube pour chacun : pas une vraie playlist
-        raise ExtMusicError("ext.playlist_mix")
-    if not PLAYLIST_ID.match(playlist_id):
-        raise ExtMusicError("ext.link_unknown")
-    return "youtube_playlist", playlist_id
 
 
 def soundcloud_track(oembed, page_url):
@@ -193,19 +139,7 @@ class ExtFavorites:
     def _youtube(self, ids):
         """Vidéos lisibles ici, dans l'ordre demandé : déjà connues du site (sans quota), sinon lues chez YouTube
         (1 unité de quota par lot de 50) et gardées dans youtube_videos, relues ensuite tous les 30 jours."""
-        videos = self.extmusic.videos
-        known = {}
-        for start in range(0, len(ids), 200):
-            known.update((t["youtubeId"], t) for t in videos.tracks(ids[start:start + 200]))
-        unknown = [v for v in ids if v not in known]
-        for start in range(0, len(unknown), 50):
-            try:
-                tracks, _gone = self.extmusic.youtube.recheck(unknown[start:start + 50])
-            except DirectoryError:
-                raise ExtMusicError("ext.unreachable")
-            videos.remember(tracks)
-            known.update((t["youtubeId"], t) for t in tracks)
-        return [{"itemId": v} for v in ids if v in known]
+        return [{"itemId": t["youtubeId"]} for t in self.extmusic.video_tracks(ids)]
 
     def _soundcloud(self, page_url):
         query = urllib.parse.urlencode([("format", "json"), ("url", page_url)])

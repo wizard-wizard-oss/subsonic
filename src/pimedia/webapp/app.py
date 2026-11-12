@@ -11,6 +11,8 @@ from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
 from .artist_index import ArtistIndexes
+from .artist_discogs import ArtistDiscogsLinks
+from .artist_portraits import ArtistPortraits
 from .avatars import Avatars, InvalidAvatar
 from .chat import Chat, ChatError
 from .covers import CoverError, Covers, ImageDownloader, LastFmAlbums
@@ -24,6 +26,7 @@ from .controllers.extmusic import ExtMusicController
 from .controllers.imports import ImportController
 from .controllers.facts import FactsController
 from .controllers.exploration import ExplorationController
+from .controllers.discogs import DiscogsController
 from .controllers.listening import ListeningController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
@@ -38,6 +41,13 @@ from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
 from .exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
+from .discogs import Discogs
+from .discogs_catalogs import CatalogError, DiscogsCatalogs
+from .discogs_exploration import DiscogsExploration
+from .lastfm import LastFm
+from .label_discovery import LabelDiscovery
+from .youtube_versions import YouTubeVersions
+from .music_metadata import MusicSourceError
 from .storage.exploration import ExplorationRepository
 from .folders import FolderNotFound, Folders
 from .library import Library
@@ -51,6 +61,7 @@ from .radios import Radios
 from .ratings import InvalidRating, Ratings
 from .schema import MIGRATIONS
 from .storage.artist_index import ArtistIndexRepository
+from .storage.artist_links import ArtistLinkRepository
 from .storage.avatars import AvatarRepository
 from .storage.community import CommunityRepository
 from .storage.ext_favorites import ExtFavoriteRepository, PlaylistExtRepository
@@ -70,7 +81,9 @@ from .subsonic import SubsonicError, SubsonicServer, SubsonicUnreachable
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'self'; "
                                "img-src 'self' data: https://i.ytimg.com https://*.jamendo.com https://*.sndcdn.com "
-                               "https://upload.wikimedia.org https://thumb.wikimedia.org https://lastfm-img.freetls.fastly.net; "
+                               "https://upload.wikimedia.org https://thumb.wikimedia.org https://lastfm-img.freetls.fastly.net "
+                               "https://lastfm.freetls.fastly.net "
+                               "https://i.discogs.com; "
                                "media-src 'self' https://*.jamendo.com; style-src 'self'; "
                                "script-src 'self' https://www.youtube.com https://w.soundcloud.com; "
                                "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://w.soundcloud.com; "
@@ -90,6 +103,10 @@ def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
     if isinstance(error, ExplorationUnavailable):
         return Reply.error(503, "explore.unavailable")
+    if isinstance(error, MusicSourceError):
+        return Reply.error(429 if error.args[0] == "discovery.rate_limited" else 503, error.args[0])
+    if isinstance(error, CatalogError):
+        return Reply.error(400, error.args[0])
     if isinstance(error, Unauthorized):
         return Reply.error(401, "auth.required")
     if isinstance(error, MissingRight):
@@ -158,9 +175,20 @@ class WebApplication:
                                    PlaylistExtRepository(self.db), self.ext_favorites)
         self.imports = PlaylistImport(self.subsonic, self.extmusic, self.playlists, self.ext_favorites,
                                       DeezerReader(JsonHttp()))
+        metadata = ExplorationRepository(self.db)
+        self.discogs = Discogs(metadata, self.config.discogs_api_key)
+        self.discogs_catalogs = DiscogsCatalogs(self.discogs)
+        self.artist_discogs = ArtistDiscogsLinks(ArtistLinkRepository(self.db), self.folders, self.artist_indexes,
+                                               self.discogs, self.discogs_catalogs, self.config.subsonic_url)
+        self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
+        self.lastfm = LastFm(metadata, self.config.lastfm_api_key)
+        self.youtube_versions = YouTubeVersions(self.extmusic)
+        self.label_discovery = LabelDiscovery(self.discogs_catalogs, self.discogs, self.lastfm, self.imports,
+                                               youtube_versions=self.youtube_versions)
         self.lyrics = Lyrics(LyricsFinder(JsonFetcher(), lambda artist, title: ""))    # sans Subsonic
         fetcher = JsonFetcher()
         self.facts = Facts(self.subsonic, MusicBrainz(fetcher), Wikipedia(fetcher))
+        self.artist_portraits = ArtistPortraits(self.artist_discogs, self.discogs, self.subsonic, self.facts.wikipedia)
         self.news = News(NewsRepository(self.db))
         self.releases = read_releases(os.path.join(code_dir, "i18n", "versions.yaml"))
 
@@ -187,8 +215,10 @@ class WebApplication:
         listening = ListeningController(self.listening)
         profile = ProfileController(self.avatars, self.radios, self.config.subsonic_public_url)
         lyrics = LyricsController(self.lyrics)
-        facts = FactsController(self.facts)
+        facts = FactsController(self.facts, self.artist_portraits)
         exploration = ExplorationController(self.exploration)
+        discogs = DiscogsController(self.discogs, self.discogs_catalogs, self.label_discovery, self.discogs_exploration,
+                                   self.artist_discogs)
         extmusic = ExtMusicController(self.extmusic, self.ext_favorites)
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
@@ -209,7 +239,17 @@ class WebApplication:
         router.add("GET", "/api/explore/artists", read(exploration.artists))
         router.add("GET", "/api/explore/connections", read(exploration.connections))
         router.add("GET", "/api/explore/local", read(exploration.local))
+        for path, handler in (("/api/discogs/status", discogs.status), ("/api/discogs/search", discogs.search),
+                              ("/api/discogs/identity", discogs.identity), ("/api/discogs/album", discogs.album),
+                              ("/api/discogs/catalog", discogs.catalog), ("/api/labels/discover", discogs.discover),
+                              ("/api/labels/ranking", discogs.ranking), ("/api/labels/tracks", discogs.tracks)):
+            router.add("GET", path, read(handler))
         router.add("POST", "/api/preferences", write(auth.save_preferences))
+        router.add("GET", "/api/discogs/artist-link", read(discogs.artist_link))
+        router.add("POST", "/api/discogs/artist-link", write(discogs.choose_artist))
+        router.add("POST", "/api/discogs/artist-refresh", write(discogs.refresh_artist))
+        router.add("POST", "/api/labels/versions", write(discogs.versions))
+        router.add("GET", "/api/artist/image", read(facts.artist_image))
 
         for path, handler in (("/api/home", library.home), ("/api/artists", library.artists),
                               ("/api/artist", library.artist), ("/api/artist/top", library.top_songs),

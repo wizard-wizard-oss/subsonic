@@ -1,5 +1,9 @@
 # Playlists, communautaires, glisser-déposer (site web)
 
+Depuis la 1.7.10, la découverte et le Top d’un label réutilisent ces mêmes playlists mixtes : pistes Subsonic
+prioritaires, versions YouTube choisies explicitement, ordre conservé et titres ignorés exclus.
+Voir [`decouverte-labels.md`](decouverte-labels.md). Aucun format de stockage ni droit supplémentaire.
+
 ## Ce que ça fait, de A à Z
 - **Liste** (barre de gauche, onglet Playlists) : *Mes playlists*, *Communautaires* (celles des autres où l'on peut ajouter),
   *Partagées* (publiques des autres, lecture seule). Compteur de titres, filtre, pastille ⚑ pour une communautaire.

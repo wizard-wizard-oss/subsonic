@@ -12,6 +12,43 @@
     - "Le créateur de mix reste parmi l’artiste choisi et ses proches, dans la profondeur demandée. Sans style sélectionné, les styles renseignés de l’artiste servent de repère ; les styles et époques choisis s’appliquent à tous les titres. Une sélection courte n’est plus complétée avec des morceaux sans rapport."
     - "Depuis une fiche artiste, le créateur conserve le bon artiste et attend son chargement avant de permettre le lancement ou l’enregistrement. Ses albums restent disponibles même sans suggestions Last.fm."
 
+- version: "1.8.2"
+  date: 2026-11-08
+  title: "Écouter un label sans terminer toute l’analyse"
+  changes:
+    - "Arrêter le classement prépare la sélection des disques déjà analysés. Les pistes arrivent progressivement : vous pouvez écouter ou enregistrer les titres prêts, puis poursuivre le classement si vous le souhaitez."
+    - "La recherche YouTube reconnaît les codes catalogue et les noms de labels ajoutés aux vidéos, ainsi que de petites différences d’orthographe lorsque la durée concorde. Les titres et versions différents restent écartés."
+
+- version: "1.8.1"
+  date: 2026-11-08
+  title: "Des versions YouTube plus précises pour vos découvertes"
+  changes:
+    - "Les titres sans correspondance sûre dans votre bibliothèque sont recherchés automatiquement sur YouTube. Les liens associés à l’édition Discogs sont vérifiés en priorité."
+    - "Trois versions pertinentes au maximum, filtrées par artiste, titre, version et durée. L’avancement et les résultats sont visibles ; vous choisissez la version à écouter ou à enregistrer."
+
+- version: "1.8"
+  date: 2026-11-08
+  title: "Vos artistes et albums enrichis par Discogs"
+  changes:
+    - "Le choix de la fiche Discogs d’un artiste est mémorisé pour votre compte. Sa discographie s’affiche ensuite automatiquement sous vos albums, avec des boutons pour changer d’artiste ou actualiser le catalogue."
+    - "Des raccourcis rendent Discogs visible en haut des fiches artiste et album. La biographie retrouve sa place sous le nom ; les photos se chargent indépendamment depuis les sources disponibles. Les boutons sont plus compacts."
+
+- version: "1.7.11"
+  date: 2026-11-08
+  title: "Le bon label pour vos découvertes"
+  changes:
+    - "Les fiches Discogs réservées aux sociétés, comme Sub Pop Records, sont distinguées du label musical. Un lien propose d’ouvrir le label indiqué par Discogs, comme Sub Pop."
+    - "Une sélection vide affiche une explication, sans compteur « 0 sur 0 » ni boutons d’écoute ou d’enregistrement inutilisables. L’ancienne sélection disparaît au lancement d’une nouvelle recherche."
+
+- version: "1.7.10"
+  date: 2026-11-08
+  title: "Explorez les labels et les discographies"
+  changes:
+    - "Depuis la fiche d’un label, composez une découverte variée ou un classement avec sa source : notes Discogs et votes, auditeurs ou écoutes Last.fm. Les rééditions sont regroupées et le périmètre analysé reste visible."
+    - "Retrouvez les titres chez vous en priorité, choisissez des versions YouTube pour les pistes manquantes, puis écoutez et enregistrez votre playlist mixte."
+    - "Sur la page artiste, ouvrez sa discographie Discogs : pochettes, dates, formats, participations et liens vers les albums de votre bibliothèque. Les homonymes restent au choix."
+    - "Les crédits Discogs sont proposés depuis l’album, avec choix de l’édition et liens vers les musiciens, leurs groupes et leurs discographies. MusicBrainz reste consultable."
+
 - version: "1.7.9"
   date: 2026-11-07
   title: "Des noms reconnus de façon cohérente"

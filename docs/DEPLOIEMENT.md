@@ -55,6 +55,11 @@ ssh music@serveur 'cd pimedia && docker compose down && docker run --rm -v pimed
 ```
 
 ### Mise à jour
+La version 1.7.10 ajoute `DISCOGS_API_KEY` au `.env` et son passage à `PI_MEDIA_WEB_DISCOGS_API_KEY` dans le conteneur
+web. Jeton personnel Discogs, facultatif et strictement côté serveur ; ne pas le copier dans une commande ou un journal.
+`LASTFM_API_KEY` active les critères auditeurs/écoutes des albums en plus des pochettes. Après réglage,
+reconstruire/recréer le conteneur web pour charger la configuration. Aucun changement de schéma.
+
 ```bash
 bash deploy/pc/push.sh utilisateur@serveur
 ```
@@ -186,6 +191,10 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 ```
 
 ## Avant de déployer
+
+La 1.8 ajoute la migration web 16 (`artist_discogs_links`), appliquée au démarrage. Sauvegarder la base de façon
+cohérente et conserver l’image précédente avant mise à jour. Le `.env` et le montage facultatif des statistiques
+restent ceux du serveur ; aucune nouvelle variable et aucun changement de l’édition Pi pour les fiches Discogs.
 
 Lancer tous les tests (unitaires et parcours navigateur simulé) :
 ```bash

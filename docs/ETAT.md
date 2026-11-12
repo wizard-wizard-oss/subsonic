@@ -19,6 +19,127 @@ JavaScript versionné, création de mix protégée. Base intègre, schéma 16 in
 de la configuration et de SQLite ; image précédente conservée : `../pimedia-backups/pre-1.8.3-20261109T115922Z/`.
 Recharger la page (Cmd+Maj+R) pour utiliser le nouveau créateur. Le cas réel de Raz Fresco X reste à vérifier.
 
+**Arrêt du classement et précision YouTube, 1.8.2 (déployée et vérifiée)** : arrêt sur le dernier lot terminé sans attendre
+le lot réseau suivant ; si aucun lot n’est encore disponible, le premier lot se termine avec un message explicite.
+Sélection alimentée disque par disque, écoute et sauvegarde disponibles dès les premiers titres choisis ; choix
+conservés pendant les ajouts. Sauvegarde limitée aux titres choisis lors de l’envoi, sans double enregistrement.
+Réponses tardives ignorées, reprise au dernier offset confirmé, absence de disque classable expliquée. Bouton
+d’arrêt présenté pendant le classement, après le chargement du catalogue. Cache public lu sans attendre un appel
+réseau sans rapport en cours. Cas Zmatsutsi : orthographe Discogs « Endless Pavments », vidéo « Endless Pavements »
+avec suffixe label/code catalogue ; parseur générique affiné à partir de ces métadonnées, sans artiste ou ID dans
+le code applicatif. Cinq pistes réelles de Hooked Up retrouvées via Discogs, un choix chacune, cache confirmé.
+La vidéo fournie par l’utilisateur est intitulée Hooked Up ; elle n’est pas attribuée arbitrairement à Endless Pavments.
+Validation : **613 tests Python et cinq parcours jsdom passent** dans l’image reconstruite, parcours PC aussi validé
+isolément. Attente du rechargement des artistes stabilisée dans le test ; playlist temporaire du nouveau parcours
+supprimée après ses assertions. Chrome clair/sombre à 1 440, 390 et 320 px : aperçu focalisé, progression, écoute et
+enregistrement disponibles avec le lot réseau et le disque suivants encore bloqués. Cache et cinq correspondances
+réelles de Hooked Up vérifiés depuis Docker ; audio réel non vérifié. Sauvegarde cohérente et image de retour arrière :
+`../pimedia-backups/pre-1.8.2-20261108T190313Z/`, schéma 16 inchangé. Documentation : `docs/features/decouverte-labels.md`.
+Publication vérifiée : 202 fichiers applicatifs identiques aux sources testées, HTTPS sain, version publique 1.8.2,
+JavaScript/CSS/textes conformes, routes protégées et base intègre au schéma 16. Cinq correspondances et cache de
+Hooked Up confirmés aussi depuis le conteneur déployé, en base temporaire, sans compte réel ou playlist modifiés.
+Recharger la page pour charger le nouveau comportement d’arrêt et les règles de recherche.
+
+**Versions YouTube des labels, 1.8.1 (déployée et vérifiée)** : recherche automatique après la priorité bibliothèque,
+liens des éditions Discogs vérifiés d’abord, trois correspondances au maximum. Service `YouTubeVersions`, règles
+pures dans `youtube_matching.py`, transport `YouTubeSource` et cache/budgets existants réutilisés. Artiste, titre,
+version et durée contrôlés ; une réponse vide est préférée aux vidéos sans rapport. Progression visible, cartes
+de versions et choix explicite, file de deux recherches abandonnée lors d’un changement de sélection. Aucun
+service payant ou classement par IA ajouté. Validation Docker : **608 tests Python et cinq parcours jsdom passent** ;
+parcours PC repassé dans l’image finale après les finitions. Chrome clair/sombre à 1 440, 390 et 320 px : chargement
+compact visible, choix explicite et cartes sans débordement. API réelle de l’édition Muslim Disco Club fournie :
+une correspondance liée pour Djetelina, Sladjana et Kurosava ; aucune attribution arbitraire pour Osjecam. Deuxième
+demande servie par le cache, sans nouvel appel YouTube. Sauvegarde cohérente code/configuration/SQLite et image de
+retour arrière : `../pimedia-backups/pre-1.8.1-20261108T183148Z/`, base intègre au schéma 16, sans migration nouvelle.
+Publication vérifiée sur le site : **202 fichiers applicatifs identiques**, HTTPS sain, version publique 1.8.1,
+JavaScript/CSS/textes conformes et nouvelle route POST protégée. Historique 1.8.1 → 1.8 → 1.7.13 ; base intègre,
+schéma 16 conservé. Sonde des quatre pistes relancée depuis le conteneur déployé : mêmes trois correspondances et
+cache confirmé, aucun compte réel ni playlist modifiés. Écoute audio réelle non vérifiée. Recharger la page.
+
+**Fiches artiste/album Discogs, 1.8 (08/11/2026, déployées et vérifiées)** : variante Raccourcis
+validée puis intégrée. Bio sous le nom, visuel indépendant, boutons compacts avec symbole Discogs, accès visibles
+en haut ; discographie et membres sous les albums, crédits et labels sous les pistes. Choix de fiche durable
+par compte/bibliothèque/artiste canonique, migration 16. « Changer » et « Actualiser » distincts ; actualisation
+ciblée et échecs conservant le choix. Providers séparés, nouveaux dépôts/services/entités et petits contrôleurs.
+Validation finale Docker : **593 tests Python et les cinq parcours jsdom passent** sur l’image reconstruite.
+Chrome clair/sombre à 1 440, 390 et 320 px, persistance après rechargement et actualisation vérifiées. API réelles :
+Vitalic identifié, image et premier catalogue de 95 disques regroupés, choix conservé après expiration/réouverture
+dans une base temporaire au schéma 16. Attente initiale du test PC stabilisée sans retirer ses assertions.
+Décision utilisateur : lot Discogs en **1.8**, retouche des compteurs en **1.7.13** après la 1.7.12.
+Le lot a d’abord été mis en ligne et vérifié sous le numéro provisoire 1.7.15 : 198 fichiers applicatifs identiques
+aux sources testées, base intègre au schéma 16, ressources et routes protégées vérifiées. L’historique public est
+réorganisé selon la décision finale ; les noms des sauvegardes réelles sont conservés. Sauvegarde préalable au schéma 15 :
+`../pimedia-backups/pre-1.7.15-20261108T165103Z/`. Fiche et schémas :
+`docs/features/decouverte-labels.md`. Navigation globale par labels toujours en brouillon pour plus tard.
+Publication finale 1.8 vérifiée : **198 fichiers applicatifs identiques**, HTTPS sain, JavaScript/CSS/textes servis
+conformes, nouvelles routes protégées, base intègre au schéma 16. Historique public complet identique au fichier
+réorganisé, début **1.8 → 1.7.13 → 1.7.12**. Cinq tests de versions et parcours PC complet repassés sous 1.8,
+dont un clic sur le raccourci avant la fin du chargement de l’association, sans redemander l’identité enregistrée.
+Sonde API réelle relancée depuis le conteneur déployé, dans une base temporaire, sans compte réel utilisé.
+Sauvegarde cohérente complémentaire avant renumérotation : `../pimedia-backups/pre-1.8-20261108T170300Z/`.
+Recharger la page ; choisir la fiche une première fois permet sa reprise automatique aux prochaines visites.
+
+**Navigation par labels : brouillon pour plus tard (08/11/2026)**. À la demande utilisateur, conserver la conception
+d’un index persistant des labels et des relations albums/labels, avec pages de label (logo, histoire sourcée),
+albums locaux, catalogue complémentaire et choix YouTube mémorisés. Fiche : `docs/features/navigation-labels.md`.
+Non implémenté ; aucun scan, migration ou déploiement demandé pour ce brouillon.
+
+**Fiches artiste/album Discogs : conception historique du 08/11/2026, réalisée en 1.8 ci-dessus**. Mémoriser durablement
+le choix d’identité Discogs de l’artiste local ; proposer « Changer » séparément d’« Actualiser ». Accès compacts
+visibles dès le haut des fiches, contenu Discogs sous les albums de l’artiste ou les pistes de l’album, chargé
+automatiquement une fois l’identité connue. Comparer ancres et onglets dans une maquette avant réalisation.
+État actuel et conception : `docs/features/decouverte-labels.md`. La maquette seule ne modifiait pas le site.
+Affinements de la maquette : bio sous le nom, photo à côté, boutons compacts et symbole Discogs. Modèle proposé
+documenté : `artist_discogs_links` (compte, bibliothèque, artiste local, identité Discogs, date du choix), séparé
+du cache public existant ; schémas de données et d’application dans la fiche. Photos et bio à charger séparément :
+le code antérieur ne reprenait que les visuels Wikipédia et conditionnait leur affichage à un texte de biographie.
+
+**Correctif Sub Pop, 1.7.11 (08/11/2026, déployé et vérifié)** : la fiche sélectionnée était Sub Pop Records, société
+de droits/licences, distincte du label Sub Pop selon les indications et liens Discogs. Le filtre d’édition rejetait
+alors les disques et présentait une sélection « 0 sur 0 ». La page explique désormais cette distinction et propose
+le label explicitement lié ; le serveur arrête l’analyse d’une fiche réservée à une société avant de parcourir
+son catalogue. Aucun nom/identifiant Sub Pop dans le code applicatif, pas de fusion automatique des identités.
+Projection d’identité versionnée pour les caches déjà présents ; profil brut et contacts non conservés.
+Sélection vide expliquée sans compteur ni boutons inutilisables ; ancien aperçu retiré au lancement d’une analyse.
+Validation Docker : 567 tests Python passent et les cinq parcours jsdom sont validés ; le PC a été rejoué isolément
+après trois échecs sur les contrôles initiaux de connexion. Contrôle Chrome du passage société → label et des pistes.
+API réelles : marqueur de société et lien Sub Pop vérifiés, catalogue du label préchargé (111 pages, 11 098 entrées).
+Un tirage réel de quinze disques propose 28 pistes.
+Déployé en production le 08/11/2026 : HTTPS sain, version publique 1.7.11, 187 fichiers applicatifs identiques aux
+sources testées, ressources servies et routes protégées vérifiées, base intègre au schéma 15. Distinction société/label
+et sélection Sub Pop de 28 pistes confirmées depuis le conteneur déployé, sans compte de bibliothèque utilisé.
+Sauvegarde préalable code/configuration/base/image : `../pimedia-backups/pre-1.7.11-20261108T015242Z/` depuis le
+projet distant. Les cookies de session sont conservés ; recharger la page pour charger le nouvel écran.
+Fiche : `docs/features/decouverte-labels.md`.
+
+**Découverte des labels et Discogs, 1.7.10 (08/11/2026, déployé et vérifié)** : deux modes depuis un label identifié :
+tirage varié sans popularité (artistes, disques, décennies, sorties sans note incluses) et Top sourcé (note/votes de
+l’édition Discogs représentative, ou auditeurs/écoutes de l’album Last.fm). Rééditions regroupées avant sélection ;
+analyse progressive avec périmètre visible. Recherche locale prioritaire, choix explicite des versions YouTube,
+écoute et enregistrement par les playlists mixtes existantes.
+Discogs est proposé en premier sur les pages album et artiste : crédits d’une édition choisie, labels et musiciens
+cliquables, membres/groupes, discographies illustrées avec correspondances locales. MusicBrainz reste en complément.
+Services Discogs et Last.fm séparés, services de catalogue/crédits/sélection distincts, petits contrôleurs HTTP ;
+SQL dans le dépôt. `DISCOGS_API_KEY` branchée à `WebConfig` et au conteneur, jeton strictement serveur.
+Métadonnées publiques projetées, cache 24 h, aucune disponibilité de bibliothèque partagée ; schéma 15 inchangé.
+API réelles vérifiées depuis Docker : Clivage Music (19 disques regroupés), notes/votes, découverte, premier lot du
+Top puis classement complet des 19 disques, associations de sociétés écartées ; statistiques Last.fm et discographie
+de Vitalic. Comparaison réelle : mêmes sept membres de Kyuss ; douze groupes
+de Josh Homme chez Discogs contre neuf chez MusicBrainz, avec des liens propres à chacune. L’édition comparée de
+« Dissidænce Episode 2 » a sept crédits chez Discogs et aucune relation de crédit chez MusicBrainz.
+Validation finale : **562 tests Python et les cinq parcours jsdom passent** dans l’image reconstruite. Contrôle Chrome
+en thèmes clair/sombre, nouveaux blocs sans débordement à 390 px. La barre du haut et le lecteur PC existants restent
+peu adaptés à cette largeur ; pas de changement de ces composants dans cette livraison.
+**Déployé sur le site de production le 08/11/2026** avec `deploy/pc/push.sh` : HTTPS et conteneur sains, version
+publique 1.7.10, nouvelles routes authentifiées (401 sans session), JavaScript/CSS/textes servis vérifiés. Les 187
+fichiers applicatifs du conteneur correspondent aux sources testées ; base au schéma 15, `quick_check` OK.
+Clé Discogs ajoutée au `.env` serveur par SSH, sans affichage ; Last.fm déjà configuré. Depuis la production :
+catalogue et notes Discogs, premier lot du Top, compteurs Last.fm, discographie et recherche des crédits validés.
+Sauvegarde préalable du code, du `.env`, d’une copie cohérente de SQLite et de l’image précédente :
+`../pimedia-backups/pre-1.7.10-20261107T233314Z/` depuis le dossier du projet distant (horodatage UTC).
+Fiche complète : `docs/features/decouverte-labels.md`. Écoute audio YouTube réelle et parcours dans un navigateur
+connecté à la bibliothèque de production encore à essayer.
+
 **Crédits complets des albums corrigés, préparés en 1.7.9 et déployés avec la 1.7.10** : le filtre MusicBrainz
 accepte aussi le crédit complet et ses noms d’usage (« Fennesz + Sakamoto », « Prodigy »), en conservant les
 noms canoniques et le choix explicite de l’édition. Trois tests de régression ajoutés ; les 44 tests d’exploration
@@ -421,7 +542,7 @@ L'API Subsonic standard n'a pas de pagination pour `getArtists` : impossible de 
   catalogue d'un label, sorties et participations d'une personne, membres et groupes liés, recherche des disques
   dans la bibliothèque avec le compte courant. Cache SQLite partagé pour les seules métadonnées publiques,
   migration 15 ; régulation commune des appels MusicBrainz, erreurs et reprises sans bloquer les titres locaux.
-- Aucun compte ni clé supplémentaire nécessaire. Discogs n'est pas encore branché.
+- Aucun compte ni clé supplémentaire nécessaire pour MusicBrainz. Discogs est désormais branché dans la 1.7.10.
 - Vérification Docker finale : **494 tests Python OK**, parcours PC et les quatre parcours Pi validés ; le parcours
   Pi haute fidélité a eu un échec intermittent de préchargement, puis est passé entièrement au rejeu isolé.
 - **Version 1.7 déployée en production le 07/11/2026** : https://music2.foos.fr. Accès SSH rétabli avec
@@ -439,18 +560,11 @@ L'API Subsonic standard n'a pas de pagination pour `getArtists` : impossible de 
 - Le plan historique de la page Rangement réserve les migrations 15–17 : la 15 est désormais utilisée ici ;
   renuméroter ses migrations à la suite du schéma en vigueur lors de son implémentation.
 
-## Piste demandée le 07/11/2026 : Discogs sur la page artiste
-- Demande : un lien vers Discogs pour consulter la discographie de l'artiste. **Noté, pas implémenté.**
-- Première étape proposée : bouton « Voir la discographie sur Discogs », vers la bonne fiche artiste ; recherche
-  Discogs en repli si aucun identifiant fiable n'est connu. Ne pas attribuer automatiquement un homonyme.
-- Évolution possible, à décider : afficher la discographie dans le site, par année, en distinguant albums, EP,
-  singles et participations ; regrouper les rééditions et indiquer les albums présents dans la bibliothèque.
-- La discographie reste celle référencée par Discogs (base communautaire), sans garantie d'exhaustivité.
-- Une intégration API devra vérifier les conditions, l'authentification et les limites en vigueur, garder les
-  éventuels secrets côté serveur et charger les données sans ralentir les albums locaux. Aucun appel réel testé.
-- Voir aussi `docs/features/bibliotheque.md`. Les autres suggestions musicales restent des propositions,
-  sans priorité ni décision de réalisation : pile « À écouter », parcours chronologique d'un artiste,
-  redécouverte des albums peu écoutés, exploration des labels et des collaborations.
+## Discogs sur la page artiste : intégré en 1.7.10
+Demande du 07/11/2026 réalisée : bouton ouvrant la discographie dans le site, identité au choix, pochettes, années,
+formats et participations, rééditions regroupées et repères de bibliothèque. Les membres, groupes et crédits
+d’album permettent de poursuivre l’exploration dans Discogs. Fiche : `docs/features/decouverte-labels.md`.
+La couverture dépend des contributions à Discogs ; pas de garantie d’exhaustivité. Déployé en production le 08/11/2026.
 
 ## Décisions (25/10/2026)
 - Le Pi est à part (local, à la maison) : on n'y touche pas, pas de socle commun à construire pour l'instant.

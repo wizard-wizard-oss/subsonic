@@ -26,6 +26,7 @@ class WebConfig:
     ext_youtube_key: str = ""
     ext_youtube_region: str = "FR"
     lastfm_api_key: str = ""          # clé d'API Last.fm (gratuite, last.fm/api) : recherche de pochettes ; vide : désactivée
+    discogs_api_key: str = ""         # jeton personnel Discogs, seulement côté serveur
     music_dir: str = ""               # racine de la musique de Subsonic (vide : envoi de fichiers désactivé)
     incoming_name: str = "Incoming"   # dossier, dans cette racine, où le site range les fichiers envoyés
     shortcut_folders: str = "Compilations"   # dossiers de la racine épinglés en haut de la barre (séparés par des virgules)

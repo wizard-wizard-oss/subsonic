@@ -65,6 +65,17 @@ Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 
 ## Où chercher quoi
+- Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;
+  `youtube_matching.py` porte les règles pures de pertinence. `ExternalMusic` réutilise `server/extmusic/YouTubeSource`,
+  les budgets et le dépôt de vidéos commun aux favoris. Parseur de liens mutualisé dans `webapp/external_links.py` ;
+  adaptation HTTP dans le contrôleur Discogs, assemblage `app.py`. Aucun nouveau service externe ou déplacement de zone.
+- Associations Discogs (1.8) : `webapp/artist_discogs.py`, entités `artist_entities.py`, SQL dans
+  `storage/artist_links.py` (migration 16). Visuels indépendants dans `artist_portraits.py`, cache public existant
+  conservé séparément. Petits contrôleurs Discogs/Facts, assemblage `app.py` ; aucune dépendance nouvelle côté Pi.
+- Découverte et discographies (1.7.10) : fournisseurs séparés `webapp/discogs.py` et `webapp/lastfm.py`, objets typés ;
+  transport/cache dans `music_metadata.py`, SQL dans `storage/exploration.py`. Services de catalogue, crédits et
+  sélection dans `discogs_catalogs.py`, `discogs_exploration.py` et `label_discovery.py` ; contrôleur limité au HTTP.
+  Assemblage dans `app.py`, aucun déplacement vers le Pi ou `shared/`.
 - Fonctionnalités, ce qui existe / n'existe pas : `docs/features/` (une fiche par fonctionnalité).
 - Où en est-on, décisions : `docs/ETAT.md`. Reprise par une autre IA : `docs/REPRISE.md`.
 - Déployer : `docs/DEPLOIEMENT.md`.

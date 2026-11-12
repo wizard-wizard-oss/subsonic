@@ -66,29 +66,23 @@ Albums, recherche, favoris, titres populaires, mix (`library.mac_leftover`, `vis
 music.foos.fr il y en a trois (`Music/__MACOSX`, `Music/Compilations/__MACOSX`, `Music/Incoming/__MACOSX`), à effacer à la
 main si on veut aussi les retirer des applis Subsonic. L'envoi de zip les ignorait déjà. Pas fait pour l'édition Pi.
 
-## Piste Discogs (demandée le 07/11/2026, pas implémentée)
-- Ajouter sur la page artiste un lien « Voir la discographie sur Discogs ». Lien direct vers une fiche identifiée
-  avec fiabilité ; sinon recherche sur Discogs, sans choisir arbitrairement entre homonymes.
-- Possibilité ultérieure, à décider : discographie intégrée au site, triée par année, albums / EP / singles /
-  participations séparés, rééditions regroupées, rapprochement prudent avec les albums de la bibliothèque.
-- « Complète » signifie ici l'ensemble des sorties référencées par Discogs, pas une exhaustivité garantie.
-- Accès API authentifié testé le 07/11/2026 ; intégration dans le site non implémentée. Vérifier au moment de
-  l'implémentation les conditions d'utilisation, de conservation des données et d'attribution. Ne rien modifier
-  dans les fichiers musicaux ni dans Subsonic pour établir ce lien.
-- Essai en lecture seule avec la variable locale `DISCOGS_API_KEY` : jeton personnel accepté par `/oauth/identity`,
-  puis recherche des labels, profil, catalogue paginé et détails d'une édition. **13 requêtes HTTP 200** ; limite
-  annoncée par les réponses : 60 requêtes/minute. Valeur du jeton et identité du compte jamais affichées.
-- Labels identifiés au nom exact : On-U Sound (`2409`), Dischord Records (`18955`), Clivage Music (`1126309`).
-  Éditions d'échantillon : `25744`, `368211`, `22347544` ; chacune appartient bien au label demandé. Aucun classement
-  construit lors de cet essai.
-- Champs effectivement présents : notes communautaires (`community.rating.average` / `count`), collection et
-  souhaits (`have` / `want`), liste des pistes, liens YouTube dans `videos`. Les liens ont été lus, leur lecture et
-  leur correspondance avec chaque piste restent à vérifier. Les notes sont celles d'une édition : regrouper les
-  rééditions sera nécessaire pour présenter un classement d'albums.
-- La variable n'est pas encore branchée à `WebConfig` ni passée par `compose.yaml` ; aucun changement du site,
-  aucune écriture sur Discogs, aucune mise en production lors de cet essai.
-- Sources : [aide Discogs](https://support.discogs.com/hc/en-us/articles/360009335353-Information-For-Artists-And-Labels),
-  [documentation API](https://www.discogs.com/developers/) (accès automatisé refusé en 403 lors de cette lecture).
+## Discographies et crédits Discogs (1.7.10)
+- Depuis la 1.8 : choix d’artiste Discogs mémorisé par compte, accès compacts visibles en haut et discographie
+  automatique sous les albums. Bio sous le nom, visuel indépendant (Discogs, Subsonic, Wikipédia selon identité).
+  « Changer » et « Actualiser » distincts. Schéma 16 ; détails et validations dans `decouverte-labels.md`.
+- Sur la page artiste : **Voir la discographie Discogs**, choix explicite de l’identité, cartes avec pochettes,
+  dates et formats, disques principaux et participations, pagination et rééditions regroupées. Les correspondances
+  locales donnent accès à l’album ; une recherche est proposée sinon. Les membres/groupes sont également cliquables.
+- Sur l’album : choix d’une édition Discogs, labels et musiciens crédités ; liens vers leurs fiches et discographies.
+  Discogs est proposé avant le complément MusicBrainz. Les crédits d’édition et les membres d’un groupe restent distincts.
+- Depuis un label : découverte variée ou classement sourcé, priorité à la bibliothèque, versions YouTube choisies,
+  écoute et enregistrement de playlists mixtes. Détails : [`decouverte-labels.md`](decouverte-labels.md).
+- `DISCOGS_API_KEY` est maintenant branchée à la configuration et au conteneur, strictement côté serveur.
+  Métadonnées utiles seulement, cache 24 h ; aucune écriture Discogs, modification de tags ou de fichiers.
+- L’essai initial du 07/11/2026 avait validé treize lectures authentifiées ; la 1.7.10 vérifie aussi les services
+  réels dans Docker. La couverture dépend de la base communautaire, sans garantie d’exhaustivité. **Déployé et vérifié
+  le 08/11/2026** : HTTPS, version et fichiers servis, base intègre ; API Discogs/Last.fm relues depuis la production.
+  Lecture audio YouTube réelle et parcours connecté à la bibliothèque de production encore à essayer.
 
 ## N'existe pas / pas vérifié
 - Présentation de la page Albums « provisoire » (pastilles), à refaire en s'inspirant de Spotify/Deezer.
