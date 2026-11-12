@@ -1,5 +1,24 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Historique des envois, 1.10 (12/11/2026, déployé et vérifié)** : migration web 19, historique SQLite des envois
+réussis associé au compte authentifié. Tableau partagé entre tous les comptes connectés dans Envoyer : auteur, date, fichier/ZIP,
+nombre de fichiers et résultat du rangement ; pagination de 50 envois. Mention discrète sur les nouveaux albums
+de l'accueil et sur la fiche, après confirmation du dossier dans Subsonic. Aucun droit d'envoi/téléchargement requis
+pour consulter l'attribution ; seul l'envoi conserve son droit Subsonic. Pas de statistiques pour le moment. Pas de reconstitution des anciens envois,
+ni de suivi des déplacements ultérieurs. Validation finale : 691 tests Python et les six parcours jsdom passent (le parcours À écouter a été rejoué après
+correction de son attente du DOM). Les tests des migrations 15, 17 et 18 partent désormais de schémas historiques
+explicites, indépendants de la dernière migration. Envois simultanés de même nom isolés et publication protégée.
+Publié sur le site local (HTTP 127.0.0.1:8200) et sur https://music2.foos.fr : conteneurs sains, version 1.10,
+215 fichiers applicatifs conformes à l’instantané testé dans chaque image. HTTPS, textes et JavaScript/CSS publics
+versionnés vérifiés ; l’historique reste réservé aux comptes connectés. SQLite intègre au schéma 19,
+12 comptes, 160 messages et les deux marque-pages / deux recommandations de production conservés.
+Migration répétée avant publication sur une copie privée de la sauvegarde, sans réseau ni services applicatifs.
+Sauvegarde de production : ../pimedia-backups/pre-1.10-20261112T180315Z/ (code, configuration et SQLite cohérent).
+Image précédente : pimedia-web:pre-1.10-20261112t180315z. Base locale également sauvegardée avant migration 15 vers 19.
+Le site local conserve sa topologie existante en HTTP : le proxy Traefik facultatif n’est pas lancé.
+Recharger la page (Cmd+Maj+R) ; les envois antérieurs à la 1.10 restent sans attribution.
+Voir [Envoi de fichiers](features/envoi-fichiers.md).
+
 **Retouche des pochettes, 1.9.3 (12/11/2026, publiée avec la 1.10)** : le bouton de lecture au survol
 passe en bas à gauche de la pochette, dans les grilles normale et compacte.
 Position calculée sur la largeur de la pochette carrée, indépendamment des textes sous l’album.

@@ -21,7 +21,8 @@ def item_id(value):
 
 
 class LibraryController:
-    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics):
+    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics, upload_attribution):
+        self.upload_attribution = upload_attribution
         self.library = library
         self.folders = folders
         self.artist_indexes = artist_indexes
@@ -31,6 +32,7 @@ class LibraryController:
 
     def home(self, request, user):
         data = self.library.home(user)
+        self.upload_attribution.annotate(user, data["newest"])
         statistics = self.statistics.get()
         return ok(dict(data, statistics=statistics.to_api() if statistics else None))
 
@@ -51,7 +53,9 @@ class LibraryController:
         return ok({"artists": self.library.similar_artists(user, item_id(request.param("id")))})
 
     def album(self, request, user):
-        return ok(self.folders.album(user, item_id(request.param("id"))))
+        album = self.folders.album(user, item_id(request.param("id")))
+        self.upload_attribution.annotate(user, [album])
+        return ok(album)
 
     def albums(self, request, user):
         page = request.param("page", "0")

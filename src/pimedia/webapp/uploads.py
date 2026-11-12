@@ -4,9 +4,13 @@ dans le .env), monté en écriture dans le conteneur. Un zip est décompressé, 
 aussitôt sa place dans la bibliothèque (<racine>/Artiste/Album, voir layout.py), même entouré de dossiers en trop ; ce qui
 ne peut pas être placé (artiste inconnu, nomenclature non respectée, album déjà présent) reste dans Incoming, tel qu'il
 était organisé, pour être rangé à la main. Seuls les fichiers audio et les images (pochettes) d'un zip sont gardés."""
+import hashlib
 import os
 import re
 import shutil
+import time
+import threading
+import uuid
 import zipfile
 
 from .layout import EXTENSIONS, extension_of, find_albums
@@ -17,6 +21,7 @@ ZIP = "zip"
 MAX_FILE_BYTES = 300 * 1024 * 1024
 MAX_ZIP_BYTES = 2000 * 1024 * 1024
 MAX_UNZIPPED_BYTES = 4000 * 1024 * 1024          # garde-fou contre un zip qui gonfle démesurément
+HISTORY_PAGE_SIZE = 50
 CHUNK = 65536
 NOT_AUTHORIZED = 50
 BAD_CREDENTIALS = 40
@@ -50,7 +55,9 @@ def incoming_dir(music_dir, incoming_name):
 
 
 class Uploads:
-    def __init__(self, subsonic, users, library):
+    def __init__(self, subsonic, users, library, history):
+        self._placement_lock = threading.Lock()
+        self.history = history
         self.subsonic = subsonic
         self.users = users
         self.library = library
@@ -76,6 +83,17 @@ class Uploads:
             return {"enabled": False, "reason": "not_writable", "folder": folder}
         return {"enabled": True, "reason": "", "folder": folder, "maxBytes": MAX_FILE_BYTES, "maxZipBytes": MAX_ZIP_BYTES}
 
+    @property
+    def library_key(self):
+        return hashlib.sha256(os.path.realpath(self.library.music_dir).encode("utf-8")).hexdigest()
+
+    def history_page(self, before=None):
+        if before is not None and not 0 < before < 2 ** 63:
+            raise UploadError("upload.bad_cursor")
+        entries = self.history.page(before, HISTORY_PAGE_SIZE + 1)
+        return {"entries": [entry.to_api() for entry in entries[:HISTORY_PAGE_SIZE]],
+                "before": entries[HISTORY_PAGE_SIZE - 1].id if len(entries) > HISTORY_PAGE_SIZE else None}
+
     def save(self, user, stream, length, filename):
         """Copie le corps de la requête (length octets) dans Incoming ; un zip y est décompressé et ses albums rangés.
         Renvoie {"files": titres et images gardés, "skipped": fichiers ignorés du zip, "placed": albums rangés dans la
@@ -90,12 +108,19 @@ class Uploads:
         if not 0 < length <= (MAX_ZIP_BYTES if extension == ZIP else MAX_FILE_BYTES):
             raise UploadError("upload.bad_size")
         if extension == ZIP:
-            return self._save_zip(name, stream, length)
-        path = self._free_path(self.directory, name)          # un titre seul : jamais d'artiste ni d'album connus
-        part = self._part(self.directory, os.path.basename(path))
-        self._receive(stream, length, part)
-        self._publish(part, path)
-        return {"files": 1, "skipped": 0, "placed": [], "waiting": [os.path.basename(path)]}
+            saved = self._save_zip(name, stream, length)
+        else:
+            part = self._part(self.directory, name)
+            self._receive(stream, length, part)
+            try:
+                with self._placement_lock:
+                    path = self._free_path(self.directory, name)  # jamais d'écrasement entre deux envois simultanés
+                    self._publish(part, path)
+            finally:
+                self._remove(part)
+            saved = {"files": 1, "skipped": 0, "placed": [], "waiting": [os.path.basename(path)]}
+        self.history.add(user, name, length, saved, int(time.time()), self.library_key)
+        return saved
 
     def _save_zip(self, name, stream, length):
         """Le zip arrive dans un fichier caché et est décompressé dans un dossier caché. Chaque album trouvé y est rangé
@@ -110,9 +135,10 @@ class Uploads:
             if not kept:
                 raise UploadError("upload.empty_zip")
             self._gather_loose_files(unpacked, base)
-            placed = self._place_albums(unpacked)
-            self._remove_empty_dirs(unpacked)
-            waiting = self._merge(unpacked, self.directory)
+            with self._placement_lock:
+                placed = self._place_albums(unpacked)
+                self._remove_empty_dirs(unpacked)
+                waiting = self._merge(unpacked, self.directory)
         except OSError:
             raise UploadError("upload.write_failed")
         finally:
@@ -246,7 +272,7 @@ class Uploads:
 
     @staticmethod
     def _part(folder, name):
-        return os.path.join(folder, "." + name + ".part")                       # caché : Subsonic n'y touche pas
+        return os.path.join(folder, "." + name + "." + uuid.uuid4().hex + ".part")                       # caché : Subsonic n'y touche pas
 
     @staticmethod
     def _remove(path):

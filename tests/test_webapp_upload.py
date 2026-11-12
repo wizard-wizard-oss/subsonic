@@ -3,6 +3,7 @@
 import io
 import os
 import stat
+import unittest
 import zipfile
 from urllib.parse import quote
 
@@ -147,6 +148,161 @@ class UploadHttpTest(WebAppTestCase):
         self.assertEqual(self.bob.post_json("/api/upload/finish", {}).json(), {"scanning": False})
 
 
+class UploadHistoryTest(UploadHttpTest):
+    def history(self, client=None, suffix=""):
+        return (client or self.bob).get("/api/upload/history" + suffix).json()
+
+    def test_attributes_each_upload_to_the_authenticated_account(self):
+        self.assertEqual(self.history(), {"entries": [], "before": None})
+        alice = self.client("alice", "secret")
+        self.send("same.flac&username=alice&userId=1")
+        self.send("same.flac", client=alice)
+        entries = self.history()["entries"]
+        self.assertEqual([e["username"] for e in entries], ["alice", "bob"])
+        self.assertEqual([e["waiting"] for e in entries], [["same (2).flac"], ["same.flac"]])
+        self.assertEqual(entries[0]["bytes"], len(AUDIO))
+        self.assertGreater(entries[0]["uploadedAt"], 0)
+        self.assertEqual(entries, self.history(alice)["entries"])
+        self.assertNotIn("subsonic_token", str(entries))
+
+    def test_zip_records_the_archive_and_its_actual_placement(self):
+        self.send("Lot.zip", make_zip({"Converge/Jane Doe/01.flac": AUDIO,
+                                        "Seul/02.flac": AUDIO, "notes.txt": b"x"}))
+        entry = self.history()["entries"][0]
+        self.assertEqual((entry["filename"], entry["files"], entry["skipped"]), ("Lot.zip", 2, 1))
+        self.assertEqual(entry["placed"], ["Converge/Jane Doe"])
+        self.assertEqual(entry["waiting"], ["Seul"])
+
+    def test_failed_or_interrupted_upload_is_not_recorded(self):
+        self.send("bad.exe")
+        self.send("bad.zip", b"not a zip")
+        bob = self.app.users.by_name("bob")
+        with self.assertRaises(UploadError):
+            self.app.uploads.save(bob, io.BytesIO(b"x"), len(AUDIO), "short.flac")
+        self.assertEqual(self.history()["entries"], [])
+
+    def test_history_survives_a_new_database_connection(self):
+        from pimedia.storage.database import Database
+        from pimedia.webapp.schema import MIGRATIONS
+        from pimedia.webapp.storage.uploads import UploadRepository
+        self.send(quote("Été.flac"))
+        database = Database(self.app.db.path, MIGRATIONS)
+        try:
+            entries = UploadRepository(database).page(None, 50)
+            self.assertEqual((entries[0].username, entries[0].filename), ("bob", "Été.flac"))
+        finally:
+            database.close()
+
+    def test_history_requires_only_authentication(self):
+        self.assertEqual(self.client().get("/api/upload/history").status, 401)
+        self.subsonic.roles["bob"] = {"uploadRole": False}
+        bob = self.client("bob", "pw2")
+        self.assertEqual(bob.get("/api/upload/history").status, 200)
+
+    def test_album_and_home_show_the_sender_without_upload_or_download_right(self):
+        self.send("Arrival.zip", make_zip({"ABBA/Arrival/CD1/01.flac": AUDIO}))
+        self.subsonic.roles["bob"] = {"uploadRole": False, "downloadRole": False}
+        viewer = self.client("bob", "pw2")
+        for identity in ("al1", "fdir-al1"):
+            album = viewer.get("/api/album?id=" + identity).json()
+            self.assertEqual(album["uploadedBy"]["username"], "bob")
+        newest = viewer.get("/api/home").json()["newest"]
+        arrival = next(a for a in newest if a["id"] == "al1")
+        self.assertEqual(arrival["uploadedBy"]["username"], "bob")
+        self.assertNotIn("uploadedBy", viewer.get("/api/album?id=al2").json())
+
+    def test_attribution_still_works_when_tags_differ_from_directory_names(self):
+        self.send("Arrival.zip", make_zip({"ABBA/Arrival/01.flac": AUDIO}))
+        from pimedia.webapp.upload_attribution import UploadAttribution
+        service = UploadAttribution(self.app.uploads, self.app.subsonic)
+        card = {"id": "al1", "artist": "Other tags", "name": "Deluxe edition"}
+        service.annotate(self.app.users.by_name("bob"), [card])
+        self.assertEqual(card["uploadedBy"]["username"], "bob")
+
+    def test_same_tags_never_attribute_another_folder(self):
+        self.send("Arrival.zip", make_zip({"ABBA/Arrival/01.flac": AUDIO}))
+        # Les tags restent identiques mais le chemin Subsonic désigne un autre dossier.
+        self.app.upload_attribution.paths.get = lambda key, load: "Other/Arrival"
+        self.assertNotIn("uploadedBy", self.bob.get("/api/album?id=al1").json())
+        self.assertTrue(all("uploadedBy" not in a for a in self.bob.get("/api/home").json()["newest"]))
+
+    def test_uploads_from_another_music_root_are_not_attributed(self):
+        self.send("Arrival.zip", make_zip({"ABBA/Arrival/01.flac": AUDIO}))
+        other = os.path.join(self.tmp, "Other")
+        os.makedirs(other)
+        self.use(MusicTree(other, incoming_dir(other, "Incoming")))
+        self.assertNotIn("uploadedBy", self.bob.get("/api/album?id=al1").json())
+
+    def test_simultaneous_uploads_of_the_same_name_keep_the_correct_authors(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        self.client("alice", "secret")
+        barrier = threading.Barrier(2)
+
+        class Together(io.BytesIO):
+            def read(self, size=-1):
+                barrier.wait(timeout=5)
+                return super().read(size)
+
+        def save(username, body):
+            try:
+                user = self.app.users.by_name(username)
+                self.app.uploads.save(user, Together(body), len(body), "same.flac")
+            finally:
+                self.app.db.close()
+
+        with ThreadPoolExecutor(2) as pool:
+            a = pool.submit(save, "alice", b"alice")
+            b = pool.submit(save, "bob", b"bob")
+            a.result(timeout=10)
+            b.result(timeout=10)
+        entries = self.history()["entries"]
+        self.assertEqual(len(entries), 2)
+        for entry in entries:
+            with open(os.path.join(self.incoming, entry["waiting"][0]), "rb") as received:
+                self.assertEqual(received.read(), entry["username"].encode())
+
+    def test_cursor_bounds_are_validated(self):
+        for value in ("-1", "0", str(2 ** 100)):
+            response = self.bob.get("/api/upload/history?before=" + value)
+            self.assertEqual((response.status, response.json()["error"]), (400, "upload.bad_cursor"))
+
+    def test_cursor_does_not_duplicate_entries_when_an_upload_arrives(self):
+        from pimedia.webapp.uploads import HISTORY_PAGE_SIZE
+        user = self.app.users.by_name("bob")
+        result = {"files": 1, "skipped": 0, "placed": [], "waiting": ["a.flac"]}
+        for n in range(HISTORY_PAGE_SIZE + 2):
+            self.app.uploads.history.add(user, "a.flac", len(AUDIO), result, n)
+        first = self.history()
+        self.assertEqual(len(first["entries"]), HISTORY_PAGE_SIZE)
+        self.send("latest.flac")
+        last = self.history(suffix="?before=" + str(first["before"]))
+        self.assertEqual(len(last["entries"]), 2)
+        self.assertIsNone(last["before"])
+        self.assertFalse({e["id"] for e in first["entries"]} & {e["id"] for e in last["entries"]})
+
+
+class UploadMigrationTest(unittest.TestCase):
+    def test_existing_database_is_upgraded_and_logins_preserved(self):
+        import tempfile
+        from pimedia.storage.database import Database
+        from pimedia.webapp.schema import MIGRATIONS
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "old.db")
+            old = Database(path, MIGRATIONS[:18])
+            old.execute("INSERT INTO users (username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
+                        "VALUES ('kept', 's', 't', 1, 1)")
+            old.close()
+            upgraded = Database(path, MIGRATIONS)
+            try:
+                self.assertEqual(upgraded.version, len(MIGRATIONS))
+                self.assertEqual(upgraded.one("SELECT username FROM users")[0], "kept")
+                self.assertEqual(upgraded.query("SELECT * FROM upload_history"), [])
+                self.assertEqual(upgraded.query("SELECT * FROM upload_albums"), [])
+            finally:
+                upgraded.close()
+
+
 class UploadZipTest(UploadHttpTest):
     """Un zip est décompressé, puis chaque album trouvé dedans part aussitôt chez son artiste dans la bibliothèque."""
     ALBUM = {"Converge/Jane Doe/01 Concubine.flac": AUDIO, "Converge/Jane Doe/CD2/02 Fault.mp3": AUDIO,
@@ -264,7 +420,7 @@ class UploadUnitTest(WebAppTestCase):
         super().setUp()
         self.incoming = os.path.join(self.tmp, "Incoming")
         os.makedirs(self.incoming)
-        self.uploads = Uploads(self.subsonic, self.app.users, MusicTree(self.tmp, self.incoming))
+        self.uploads = Uploads(self.subsonic, self.app.users, MusicTree(self.tmp, self.incoming), self.app.uploads.history)
         self.user = self.app.users.save_login("zoé/../x", "s", "t", frozenset({"upload"}))
 
     def test_interrupted_upload_leaves_nothing(self):

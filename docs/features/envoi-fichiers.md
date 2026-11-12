@@ -6,6 +6,35 @@ Le site décompresse le zip, puis **range aussitôt** chaque album qui respecte 
 bibliothèque, chez son artiste. Ce qu'il ne sait pas placer attend dans `Incoming`, pour être rangé à la main. Subsonic
 scanne ensuite pour faire apparaître les nouveaux titres.
 
+## Historique des envois (1.10)
+La page « Envoyer » affiche un tableau partagé entre tous les comptes connectés : date, compte connecté,
+fichier ou archive, nombre de fichiers reçus et résultat du rangement. Il se recharge à la fin de chaque lot et à
+chaque visite. Les envois précédents se chargent par pages de 50, du plus récent au plus ancien.
+
+La migration web 19 ajoute `upload_history` : identifiant, référence au compte, copie de son nom, nom du fichier,
+taille reçue, nombres de fichiers gardés/ignorés, albums rangés et éléments restés dans Incoming, date de réception.
+L'auteur vient uniquement de la session authentifiée. L'historique reste dans `webapp.db` après redémarrage.
+Le dépôt `storage/uploads.py` renvoie des entités `upload_entities.py` ; `Uploads` enregistre après réception réussie
+et publie une page via `GET /api/upload/history?before=<id>` (authentification uniquement).
+L'attribution est aussi montrée sur les nouveaux albums à l'accueil et dans la fiche album, sans droit d'envoi
+ou de téléchargement requis. `upload_albums` relie les dossiers rangés à leur envoi, dans la racine de musique
+concernée. `upload_attribution.py` confirme le chemin des titres dans Subsonic (disques CD compris) avant de
+montrer un nom, même quand les tags diffèrent des noms de dossiers. Les chemins résolus sont mis en cache
+dix minutes ; l'accueil utilise au plus quatre lectures simultanées. Aucune lecture supplémentaire de Subsonic
+n'est faite en l'absence d'albums attribués dans cette bibliothèque. Aucun nom n'est déduit des droits ou des dates Subsonic.
+
+Limites : aucun rattrapage des anciens envois, aucun inventaire piste par piste d'un ZIP, aucun suivi des déplacements
+manuels ou automatiques ultérieurs. Le résultat est celui à la réception. Les refus et interruptions ne sont pas
+des envois réussis. Disque et SQLite ne forment pas une transaction commune : une panne après écriture du fichier
+et avant inscription en base peut laisser un fichier sans historique. Version 1.10 déployée et vérifiée le 12/11/2026 sur le site local et sur https://music2.foos.fr :
+conteneurs sains, version publique 1.10, ressources versionnées conformes et SQLite intègre au schéma 19.
+Les 12 comptes et les données existantes de production sont conservés ; l’historique démarre vide pour les anciens envois.
+Validation globale : 691 tests Python et les six parcours navigateur, dont le parcours À écouter rejoué après correction
+d’une attente du DOM. Sauvegarde et image de retour arrière consignées dans docs/ETAT.md.
+
+Validation : `UploadHistoryTest` (attribution, accès, ZIP, échecs, persistance, pagination et envois simultanés) et parcours jsdom PC
+(tableau, auteur, résultat et retour sur la page).
+
 ## La nomenclature (`pimedia/webapp/layout.py`)
 La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous-dossier par album :
 
@@ -22,6 +51,8 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 - **Un seul dossier par artiste** : un artiste déjà présent est retrouvé **sans tenir compte des majuscules, des
   accents, des espaces ni de la ponctuation** (« Dalek » rejoint « Dälek », « DJ NaZe » rejoint « DJ Naze »,
   « A.A.Williams » rejoint « A.A. Williams ») ; le nom du dossier existant est gardé.
+  Depuis la 1.7.9, les ligatures sont également équivalentes (`Œdipe` / `Oedipe`, `æ` / `ae`) via la comparaison
+  commune `shared.text.normalize`. Le nettoyage des chemins d’envoi reste distinct de cette clé de comparaison.
 - **Rien n'est jamais écrasé** : un album déjà présent chez l'artiste (même nom, aux mêmes détails près) n'est
   pas rangé, il attend dans Incoming.
 - Aucun nom n'est corrigé automatiquement (pas de majuscule ajoutée, pas d'accent retiré).
@@ -32,14 +63,14 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
   `Compilations/Mon album/…` rejoint le dossier existant. Il a un raccourci en haut de la barre (`barre-gauche.md`).
 
 ## Ce qui se passe, de A à Z
-1. Le lien **« Envoyer »** (menu du haut) apparaît si le compte a le droit Subsonic `upload` et que le site peut écrire dans
-   la racine de la musique.
+1. Le lien **« Envoyer »** (ou **« Envois »** sans droit `upload`) est accessible à tous les comptes connectés.
+   L'historique est commun ; le formulaire reste réservé aux comptes qui peuvent envoyer et à une racine accessible.
 2. Page `#/upload` : on glisse des fichiers (ou clic pour choisir). Formats : **zip** (2 Go au plus), mp3, flac, m4a, aac,
    ogg, oga, opus, wav, aiff, aif (300 Mo au plus). Un format ou une taille refusés sont expliqués tout de suite.
 3. **Barres de progression** : une par fichier (l'envoi, puis une barre animée « Décompression et rangement… » pendant que
    le serveur travaille : il ne dit pas où il en est), et une pour le lot entier (« Fichier 2 sur 5 — 40 % », puis
    « Terminé »). Un fichier à la fois.
-4. Le serveur reçoit le corps brut (`POST /api/upload?name=`) dans un fichier caché d'Incoming (`.nom.part`).
+4. Le serveur reçoit le corps brut (`POST /api/upload?name=`) dans un fichier caché unique d'Incoming (`.nom.<identifiant>.part`). Les publications sont sérialisées pour que deux envois simultanés ne se mélangent pas.
 5. **Zip** : décompressé dans un dossier caché d'Incoming. Seuls les fichiers audio et les images jpg/png sont gardés (pas
    `__MACOSX`, `.DS_Store`, textes, playlists…). Noms nettoyés : rien ne peut sortir d'Incoming (`../`, chemins absolus,
    `C:\`). Seuls les caractères de contrôle et les caractères interdits (`<>:"|?*`) sont remplacés ; accents et

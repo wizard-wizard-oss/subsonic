@@ -310,4 +310,26 @@ MIGRATIONS = [
     CREATE INDEX recommendations_unread_by_recipient
         ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
     """,
+    # 19 : historique des envois réussis, attribués au compte authentifié.
+    """
+    CREATE TABLE upload_history (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+        username TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        byte_count INTEGER NOT NULL,
+        file_count INTEGER NOT NULL,
+        skipped_count INTEGER NOT NULL,
+        placed TEXT NOT NULL,
+        waiting TEXT NOT NULL,
+        uploaded_at INTEGER NOT NULL
+    );
+    CREATE INDEX upload_history_by_user ON upload_history (user_id, id DESC);
+    CREATE TABLE upload_albums (
+        library_key TEXT NOT NULL,
+        album_path TEXT NOT NULL,
+        upload_id INTEGER NOT NULL REFERENCES upload_history (id),
+        PRIMARY KEY (library_key, album_path)
+    )
+    """,
 ]

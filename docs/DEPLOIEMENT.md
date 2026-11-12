@@ -214,6 +214,20 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 
 ## Avant de déployer
 
+La 1.10 ajoute la migration web 19 : `upload_history` et `upload_albums`, pour attribuer les nouveaux envois
+au compte connecté et afficher l’auteur sur les albums. Aucun nouveau réglage d’environnement.
+L’historique est initialement vide : les anciens envois ne peuvent pas être attribués rétroactivement.
+Sauvegarder SQLite via son API de backup, archiver code/configuration et conserver l’image précédente.
+Publication du 12/11/2026 : sauvegarde ../pimedia-backups/pre-1.10-20261112T180315Z/ et image
+`pimedia-web:pre-1.10-20261112t180315z`. Migration répétée sur copie sans réseau, puis schéma 19 et intégrité
+vérifiés en production ; 12 comptes et les données existantes conservés. Les tables sont additives :
+un retour à l’image précédente peut garder la base actuelle et ses tables inutilisées.
+Les sites local et production servent la 1.10, avec 215 fichiers applicatifs identiques à l’instantané testé.
+Local : service en HTTP sur 127.0.0.1:8200, démarré avec `docker compose -f compose.yaml up -d --no-build web`
+pour conserver le réseau existant ; le réseau externe Traefik `proxy` est absent de cet environnement.
+Validation finale : 691 tests Python et six parcours jsdom ; points de départ historiques des tests de migration
+figés, attente du DOM À écouter corrigée puis parcours rejoué.
+
 La 1.9.2 ajoute la migration web 18 : marqueurs de conseils non lus et index par destinataire.
 Les conseils existants sont initialisés comme non lus ; aucune nouvelle variable ni tâche périodique.
 Sauvegarder SQLite et conserver l’image précédente avant publication.

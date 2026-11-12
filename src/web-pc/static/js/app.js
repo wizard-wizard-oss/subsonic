@@ -93,13 +93,11 @@ class MusicApp {
     this.navigate();
   }
 
-  /** Le lien « Envoyer » n'apparaît que si le compte a le droit Subsonic d'envoyer et que le site sait où ranger les fichiers. */
-  async showUploadLink() {
-    if (!App.can("upload")) return;
-    try {
-      document.getElementById("nav-upload").hidden = !(await App.api.get("/api/upload/status")).enabled &&
-        !App.can("admin");                                   // un administrateur voit la page, et pourquoi elle ne marche pas
-    } catch (error) { /* lien absent */ }
+  /** L'historique est accessible à tous les comptes connectés. */
+  showUploadLink() {
+    const link = document.getElementById("nav-upload");
+    link.hidden = false;
+    link.textContent = App.t(App.can("upload") ? "nav.upload" : "upload.activity");
   }
 
   applyPreferences() {

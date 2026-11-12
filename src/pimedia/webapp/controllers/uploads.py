@@ -1,12 +1,15 @@
 """Envoi de fichiers audio (ou d'un zip, décompressé) dans le dossier Incoming de Subsonic."""
 from ...server.transport import Reply
 from ..uploads import UploadError
-from .base import ok
+from .base import int_param, ok
 
 
 class UploadController:
     def __init__(self, uploads):
         self.uploads = uploads
+
+    def history(self, request, user):
+        return ok(self.uploads.history_page(int_param(request, "before")))
 
     def status(self, request, user):
         return ok(self.uploads.status(user))

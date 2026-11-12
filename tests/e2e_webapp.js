@@ -1030,12 +1030,39 @@ function makeEventSource(jar) {
   check("envoi : Subsonic invité à scanner", await until(() => $(".upload-summary").textContent.startsWith("2 fichiers envoyés. Subsonic scanne"), 5000));
   check("envoi : fichier seul signalé hors nomenclature", $$(".upload-row.done .upload-state").every(s => s.textContent.includes("à ranger")));
   // un album en zip, rangé Artiste/Album (2 titres et une pochette) : décompressé sur le serveur, nomenclature respectée
-  const albumZip = "UEsDBBQAAAAAANVtWl3sfd8UGAAAABgAAAAWAAAAQWJiYS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAADVbVpd7H3fFBgAAAAYAAAAFgAAAEFiYmEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAA1W1aXeka6EYDAAAAAwAAABYAAABBYmJhL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAA1W1aXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFiYmEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAADVbVpd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQWJiYS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAANVtWl3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBYmJhL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
+  const albumZip = "UEsDBBQAAAAAAHmVbF3sfd8UGAAAABgAAAAWAAAAQUJCQS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAEFCQkEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAeZVsXeka6EYDAAAAAwAAABYAAABBQkJBL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAeZVsXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAHmVbF3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
   w.eval(`Views.upload.add([new File([Uint8Array.from(atob("${albumZip}"), c => c.charCodeAt(0))], "Album.zip")])`);
   check("envoi : zip décompressé et album rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
-        s.textContent === "Décompressé : 3 fichiers — rangé dans Abba/Arrival"), 5000));
+        s.textContent === "Décompressé : 3 fichiers — rangé dans ABBA/Arrival"), 5000));
   check("envoi : barre du lot entier, terminée", await until(() => !$(".upload-total").hidden &&
         $(".upload-total progress").value === 1 && $(".upload-total .upload-state").textContent === "Terminé", 5000));
+
+  check("historique : auteur, fichier et résultat du ZIP", await until(() =>
+    $$(".upload-history tbody tr").some(row => row.children[1].textContent === "bob" &&
+      row.children[2].textContent === "Album.zip" && row.children[3].textContent === "3" &&
+      row.children[4].textContent.includes("ABBA/Arrival")), 5000));
+  check("historique : seuls les envois réussis apparaissent", $$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "Essai.flac") && !$$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "virus.exe"));
+  w.location.hash = "#/news";
+  await until(() => !$(".upload-history"));
+  w.location.hash = "#/upload";
+  check("historique : conservé en revenant sur la page", await until(() =>
+    $$(".upload-history tbody tr").some(row => row.children[2].textContent === "Album.zip"), 5000));
+
+  w.location.hash = "#/";
+  check("accueil : auteur discret sur le nouvel album", await until(() =>
+    $$(".album-card .album-uploader").some(node => node.textContent === "Envoyé par bob"), 5000));
+  w.location.hash = "#/album/al1";
+  check("album : auteur de l'envoi", await until(() => $(".album-info .album-uploader") &&
+    $(".album-info .album-uploader").textContent === "Envoyé par bob", 5000));
+
+  const uploadRoles = w.eval("App.user.roles.slice()");
+  w.eval('App.user.roles = App.user.roles.filter(role => role !== "upload" && role !== "download"); App.music.showUploadLink()');
+  w.location.hash = "#/upload";
+  check("historique : accessible sans droits d'envoi ou téléchargement", await until(() =>
+    $$(".upload-history tbody tr").length > 0) && !$(".upload-zone") && $("#nav-upload").textContent === "Envois");
+  w.eval("App.user.roles = " + JSON.stringify(uploadRoles) + "; App.music.showUploadLink()");
 
   // --- Actualité : flux des webzines, partagés par tout le site ---
   w.location.hash = "#/news";

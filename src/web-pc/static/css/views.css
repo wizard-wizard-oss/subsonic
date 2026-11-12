@@ -430,3 +430,13 @@ tr.song[draggable="true"], .album-card[draggable="true"] { cursor: grab; }
   .explore-people li.explore-member-card { transition: none; }
   .explore-people li.explore-member-card:hover { transform: none; }
 }
+
+/* Historique des envois : défilement horizontal sur les petits écrans. */
+.upload-history { margin-top: 2rem; }
+.upload-history-scroll { overflow-x: auto; }
+.upload-history table { width: 100%; border-collapse: collapse; }
+.upload-history th, .upload-history td { padding: .65rem; text-align: left; vertical-align: top; }
+.upload-history td { overflow-wrap: anywhere; }
+
+.album-link .album-uploader { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-history tbody tr { border-top: 1px solid var(--line); }

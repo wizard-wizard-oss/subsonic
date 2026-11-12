@@ -76,9 +76,11 @@ from .storage.youtube import ExtSearchRepository, YouTubeVideoRepository
 from .storage.messages import MessageRepository
 from .storage.news import NewsRepository
 from .storage.preferences import PreferenceRepository
+from .storage.uploads import UploadRepository
 from .storage.users import SessionRepository, UserRepository
 from .incoming import IncomingSorter
 from .layout import MusicTree
+from .upload_attribution import UploadAttribution
 from .uploads import UploadError, Uploads, incoming_dir
 from .versions import read_releases
 from .subsonic import SubsonicError, SubsonicServer, SubsonicUnreachable
@@ -171,7 +173,8 @@ class WebApplication:
         self.avatars = Avatars(AvatarRepository(self.db), self.users, self.subsonic)
         self.radios = Radios(self.subsonic)
         library = MusicTree(self.config.music_dir, incoming_dir(self.config.music_dir, self.config.incoming_name))
-        self.uploads = Uploads(self.subsonic, self.users, library)
+        self.uploads = Uploads(self.subsonic, self.users, library, UploadRepository(self.db))
+        self.upload_attribution = UploadAttribution(self.uploads, self.subsonic)
         self.covers = Covers(self.folders, self.config.music_dir, LastFmAlbums(JsonFetcher(), self.config.lastfm_api_key),
                              ImageDownloader())
         self.incoming = IncomingSorter(library, self.config.incoming_wait_hours, self.uploads.scan_as_admin)
@@ -220,7 +223,7 @@ class WebApplication:
         auth = AuthController(self.accounts, self.preferences, self.chat, self.users, self.config.secure_cookie,
                               self.config.trust_proxy)
         library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic,
-                                    self.library_statistics)
+                                    self.library_statistics, self.upload_attribution)
         chat = ChatController(self.chat, self.hub)
         mixes = MixController(self.mixes)
         playlists = PlaylistController(self.playlists)
@@ -323,6 +326,7 @@ class WebApplication:
             router.add("POST", path, write(handler))
         router.add("POST", "/api/avatar/upload", write(profile.upload_avatar, AVATAR_BODY_LIMIT))
         # envoi de fichiers dans Incoming (droit Subsonic « upload ») : le fichier (ou un zip) est le corps brut de la requête
+        router.add("GET", "/api/upload/history", read(uploads.history))
         router.add("GET", "/api/upload/status", read(uploads.status, right="upload"))
         router.add("POST", "/api/upload", guard.raw_writer(uploads.upload, right="upload"))
         router.add("POST", "/api/upload/finish", write(uploads.finish, right="upload"))

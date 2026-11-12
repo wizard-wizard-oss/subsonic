@@ -5,6 +5,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.10"
+  date: 2026-11-12
+  title: "Retrouver qui a envoyé la musique"
+  changes:
+    - "La page Envoyer garde un historique partagé : qui a envoyé quel fichier ou ZIP, à quelle date, avec le nombre de fichiers reçus et les albums rangés ou laissés dans Incoming."
+    - "L’auteur apparaît aussi sur les nouveaux albums de l’accueil et sur la fiche album. Tous les comptes connectés peuvent le voir, sans droit d’envoi ou de téléchargement."
+    - "Les nouveaux envois sont associés automatiquement au compte connecté. Les envois précédant cette version ne peuvent pas être attribués."
+
 - version: "1.9.3"
   date: 2026-11-12
   title: "Les paroles retrouvent les titres de YouTube"

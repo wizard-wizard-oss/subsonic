@@ -45,8 +45,48 @@ Views.upload = (() => {
     return "";
   }
 
+  /** Historique partagé, paginé sans perdre les anciens envois quand de nouveaux arrivent. */
+  function history(main) {
+    const body = el("tbody"), message = el("p.muted");
+    const more = el("button", {text: t("upload.history_more"), hidden: true, onclick: () => load(false)});
+    const headings = ["date", "person", "file", "count", "result"];
+    const section = el("section.upload-history", {}, el("h2", {text: t("upload.history")}),
+      el("div.upload-history-scroll", {}, el("table", {},
+        el("thead", {}, el("tr", {}, ...headings.map(key => el("th", {scope: "col", text: t("upload.history_" + key)})))), body)),
+      message, more);
+    let before = null, generation = 0;
+    async function load(reset) {
+      const current = reset ? ++generation : generation;
+      more.disabled = true;
+      try {
+        const data = await App.api.get("/api/upload/history" + (!reset && before ? "?before=" + before : ""));
+        if (current !== generation || !section.isConnected) return;
+        if (reset) App.clear(body);
+        for (const entry of data.entries) {
+          body.appendChild(el("tr", {},
+            el("td", {text: App.fullDate(entry.uploadedAt)}), el("td", {text: entry.username}),
+            el("td", {text: entry.filename}), el("td", {text: String(entry.files)}),
+            el("td", {text: outcome({name: entry.filename}, entry)})));
+        }
+        before = data.before;
+        more.hidden = !before;
+        message.textContent = body.children.length ? "" : t("upload.history_empty");
+      } catch (error) {
+        if (current === generation && section.isConnected) message.textContent = App.errorText(error);
+      } finally { if (current === generation) more.disabled = false; }
+    }
+    main.appendChild(section);
+    load(true);
+    return () => load(true);
+  }
+
   return {
     async render(main, route) {
+      if (!App.can("upload")) {
+        App.clear(main).appendChild(el("h1", {text: t("upload.activity")}));
+        this.refreshHistory = history(main);
+        return;
+      }
       let status;
       try {
         status = await App.api.get("/api/upload/status");
@@ -58,6 +98,7 @@ Views.upload = (() => {
       App.clear(main);
       main.appendChild(el("h1", {text: t("upload.title")}));
       if (!status.enabled) {
+        this.refreshHistory = history(main);
         main.appendChild(el("p.page-error", {text: t("upload." + status.reason)}));
         return;
       }
@@ -83,6 +124,7 @@ Views.upload = (() => {
       this.batch = {files: 0, bytes: 0, doneFiles: 0, doneBytes: 0};
       App.append(main, [el("p.muted", {text: t("upload.intro", {folder: status.folder})}), zone, this.input, this.total,
                         this.rows, this.summary]);
+      this.refreshHistory = history(main);
     },
 
     add(files) {
@@ -144,6 +186,7 @@ Views.upload = (() => {
       this.busy = false;
       this.totalLabel.textContent = t("upload.total_done");
       if (!sent) return;
+      await this.refreshHistory();
       try {
         const scanning = (await App.api.post("/api/upload/finish", {})).scanning;
         this.summary.textContent = App.plural("upload.summary", sent) + ". " + t(scanning ? "upload.scanning" : "upload.not_scanning");

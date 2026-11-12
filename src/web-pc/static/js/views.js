@@ -29,6 +29,7 @@ const Views = (() => {
           el("strong.album-name", {text: album.name}),
           options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
           album.year ? el("span.album-year", {text: album.year}) : null,
+          album.uploadedBy ? el("span.album-uploader.muted", {text: App.t("upload.by", {name: album.uploadedBy.username})}) : null,
           meta), play);
       if (App.can("playlist")) Dnd.source(card, {albumId: album.id, label: album.name});      // vers une playlist
       grid.appendChild(card);
@@ -411,6 +412,8 @@ const Views = (() => {
             el("h1", {text: data.name}),
             el("a.album-artist-link", {href: "#/artist/" + encodeURIComponent(data.artistId), text: data.artist}),
             el("p.muted", {text: facts}),
+            data.uploadedBy ? el("p.album-uploader.muted", {text: App.t("upload.by", {name: data.uploadedBy.username}),
+              title: App.fullDate(data.uploadedBy.uploadedAt)}) : null,
             el("div.album-rating", {}, el("span.label", {text: App.t("album.your_rating")}), stars.element))),
         albumActions(data, songs, heart),
         PageSections.nav([{text: App.t("search.songs"), section: tracks},
