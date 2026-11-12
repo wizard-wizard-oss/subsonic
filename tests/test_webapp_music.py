@@ -6,8 +6,8 @@ import random
 import unittest
 import urllib.error
 
-from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
 from pimedia.shared.text import normalize
+from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
 from pimedia.webapp.mixes import MixError, MixOptions, spread_artists
 from tests.fake_subsonic import PNG
 from tests.webapp_support import FakeInfoSites, FakeLyricsSites, WebAppTestCase
@@ -103,13 +103,19 @@ class MixHttpTest(WebAppTestCase):
 
     def test_mix_builder(self):
         bob = self.client("bob", "pw2")
-        genres = bob.get("/api/mix/genres").json()["genres"]
+        settings = bob.get("/api/mix/genres").json()
+        genres = settings["genres"]
         self.assertEqual([g["key"] for g in genres], ["pop", "electronic"])
+        self.assertEqual(settings["options"]["depths"], [1, 2, 3, 4])
+        self.assertEqual(settings["options"]["sizes"], [30, 60, 100])
+        self.assertEqual(MixOptions.parse({}).depth, settings["options"]["defaultDepth"])
+        for depth in settings["options"]["depths"]:
+            self.assertEqual(MixOptions.parse({"depth": depth}).depth, depth)
         built = bob.post_json("/api/mix/build", {"genres": ["pop"], "decades": [1970], "size": 30,
                                                  "chronological": True}).json()
         self.assertEqual(([s["year"] for s in built["songs"]], built["name"]), ([1974, 1976, 1976], "Mix Pop 70s"))
         built = bob.post_json("/api/mix/build", {"seedArtistId": "ar3", "seedArtistName": "Björk"}).json()
-        self.assertEqual((len(built["songs"]), built["name"]), (4, "Mix Björk"))
+        self.assertEqual(([s["title"] for s in built["songs"]], built["name"]), (["Army of Me"], "Mix Björk"))
         empty = bob.post_json("/api/mix/build", {"genres": ["pop"], "decades": [2020]})
         self.assertEqual((empty.status, empty.json()["error"]), (400, "mix.empty"))
         self.assertEqual(bob.post_json("/api/mix/build", {}, csrf=False).status, 403)
@@ -151,6 +157,92 @@ class MixHttpTest(WebAppTestCase):
                 self.assertEqual((response.status, response.json()["error"]), (400, "mix.invalid"))
         self.assertEqual(self.subsonic.calls["getArtistInfo2"], 0)
 
+    def seeded_library(self):
+        """Suggestions et recherche de titres volontairement polluées par du rock et du métal."""
+        names = {"artist-0": "Raz Fresco X", **{
+            "artist-%s" % i: "Proche %s" % i for i in range(1, 5)},
+            "metal": "Groupe de métal", "rock": "Groupe de rock"}
+        songs = {aid: {"id": "song-" + aid, "title": name, "artistId": aid, "artist": name,
+                       "year": 2020, "genre": {"rock": "Rock", "metal": "Metal"}.get(aid, "Hip-Hop")}
+                 for aid, name in names.items()}
+        songs["artist-1"]["genre"] = "Hip hop"
+
+        def artist(h, p):
+            aid = p["id"]
+            h.reply_json({"artist": {"id": aid, "name": names[aid], "album": [{"id": aid}]}})
+
+        def top(h, p):
+            tracks = [s for s in songs.values() if s["artist"] == p["artist"]]
+            h.reply_json({"topSongs": {"song": tracks + [songs["rock"], songs["metal"]]}})
+
+        def neighbours(h, p):
+            aid = p["id"]
+            level = int(aid.split("-")[1]) if aid.startswith("artist-") else 4
+            ids = ["artist-%s" % (level + 1)] if level < 4 else []
+            if level == 1:
+                ids += ["metal"]
+            h.reply_json({"artistInfo2": {"similarArtist": [
+                {"id": i, "name": names[i]} for i in ids] + [{"id": "-1", "name": "Absent"}]}})
+
+        self.subsonic.api_getArtist = artist
+        self.subsonic.api_getGenres = lambda h, p: h.reply_json({"genres": {"genre": [
+            {"value": genre, "songCount": 10} for genre in ("Hip-Hop", "Rock", "Metal")]}})
+        self.subsonic.api_getTopSongs = top
+        self.subsonic.api_getArtistInfo2 = neighbours
+        self.subsonic.api_getAlbum = lambda h, p: h.reply_json({"album": {"song": [songs[p["id"]]]}})
+        self.subsonic.api_getRandomSongs = lambda h, p: h.reply_json({"randomSongs": {"song": [songs["rock"]]}})
+        self.subsonic.api_getSimilarSongs2 = lambda h, p: h.reply_json({"similarSongs2": {"song": list(songs.values())}})
+        self.subsonic.api_getStarred2 = lambda h, p: h.reply_json({"starred2": {"song": [
+            songs["rock"], songs["metal"], dict(songs["artist-1"], id="favorite-near"),
+            dict(songs["rock"], id="unrelated-hiphop", genre="Hip-Hop")]}})
+        return songs
+
+    def test_seeded_mix_keeps_depth_and_style_without_random_or_opaque_suggestions(self):
+        self.seeded_library()
+        bob = self.client("bob", "pw2")
+        for depth in range(1, 5):
+            with self.subTest(depth=depth):
+                response = bob.post_json("/api/mix/build", {"seedArtistId": "artist-0",
+                                         "seedArtistName": "Raz Fresco X", "depth": depth})
+                self.assertEqual(response.status, 200)
+                self.assertEqual({s["artistId"] for s in response.json()["songs"]},
+                                 {"artist-%s" % i for i in range(depth + 1)})
+        self.assertEqual(self.subsonic.calls["getRandomSongs"], 0)
+        self.assertEqual(self.subsonic.calls["getSimilarSongs2"], 0)
+
+    def test_seeded_mix_filters_favorites_and_all_sources_by_genre_and_decade(self):
+        self.seeded_library()
+        bob = self.client("bob", "pw2")
+        options = {"seedArtistId": "artist-0", "depth": 2, "favoritesFirst": True}
+        response = bob.post_json("/api/mix/build", options)
+        self.assertEqual(response.status, 200)
+        songs = response.json()["songs"]
+        self.assertIn("favorite-near", {s["id"] for s in songs})
+        self.assertEqual({s["artistId"] for s in songs}, {"artist-0", "artist-1", "artist-2"})
+        rock = bob.post_json("/api/mix/build", dict(options, genres=["rock"]))
+        self.assertEqual((rock.status, rock.json()["error"]), (400, "mix.empty"))
+        metal = bob.post_json("/api/mix/build", dict(options, genres=["metal"]))
+        self.assertEqual(metal.status, 200)
+        self.assertEqual({s["artistId"] for s in metal.json()["songs"]}, {"metal"})
+        unknown = bob.post_json("/api/mix/build", dict(options, genres=["absent"]))
+        self.assertEqual((unknown.status, unknown.json()["error"]), (400, "mix.empty"))
+        old = bob.post_json("/api/mix/build", dict(options, decades=[1970]))
+        self.assertEqual((old.status, old.json()["error"]), (400, "mix.empty"))
+
+    def test_seeded_mix_uses_local_albums_without_lastfm(self):
+        self.subsonic.lastfm = False
+        bob = self.client("bob", "pw2")
+        response = bob.post_json("/api/mix/build", {"seedArtistId": "ar1", "seedArtistName": "Nom erroné"})
+        self.assertEqual(response.status, 200)
+        self.assertEqual(set(titles(response)), {"Dancing Queen", "Knowing Me", "Waterloo"})
+        self.assertEqual(self.subsonic.calls["getRandomSongs"], 0)
+
+    def test_missing_seed_never_falls_back_to_the_whole_library(self):
+        bob = self.client("bob", "pw2")
+        response = bob.post_json("/api/mix/build", {"seedArtistId": "missing"})
+        self.assertEqual((response.status, response.json()["error"]), (400, "mix.empty"))
+        self.assertEqual(self.subsonic.calls["getRandomSongs"], 0)
+
 
 class TopSongsHttpTest(WebAppTestCase):
     def test_popular_songs_of_an_artist(self):
@@ -191,6 +283,7 @@ class LyricsHttpTest(WebAppTestCase):
         self.assertEqual(len(self.sites.urls), asked)                                  # gardé en mémoire
         self.assertEqual(bob.get("/api/lyrics?artist=&title=x").status, 400)
         self.assertEqual(self.client().get("/api/lyrics?artist=a&title=b").status, 401)
+
 
 
 class ArtistBioHttpTest(WebAppTestCase):
@@ -439,6 +532,7 @@ class ListeningHttpTest(WebAppTestCase):
         self.assertEqual(([s["title"] for s in queue["songs"]], queue["index"], queue["position"]),
                          (["Dancing Queen", "Knowing Me", "Army of Me"], 1, 42.0))
         self.assertEqual(bob.post_json("/api/play-queue/save", {"ids": "s1"}).status, 400)
+
 
 
 class ProfileHttpTest(WebAppTestCase):

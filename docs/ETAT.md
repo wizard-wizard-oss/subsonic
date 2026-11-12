@@ -1,5 +1,24 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Cohérence des mix, 1.8.3 (déployée et vérifiée le 09/11/2026)** : le créateur depuis un artiste abandonne
+le remplissage global et les titres proches dont la profondeur interne échappe au choix de la page. Titres
+vérifiés par artiste ; albums locaux utilisés sans Last.fm, artistes absents ignorés. Le style renseigné du
+départ sert de filtre par défaut ; les genres explicites le remplacent et les décennies filtrent toutes les
+sources. Les favoris restent dans les artistes retenus, une sélection peut rester courte. Depuis une fiche,
+le chargement de l’artiste précède écoute et sauvegarde ; son identifiant musical est conservé, au lieu de
+celui du dossier. Une erreur ne produit plus un mix global silencieux.
+Documentation et limites : `docs/features/mix-et-radios.md`. La bibliothèque réelle de Raz Fresco X n’a pas été
+interrogée ; les régressions recréent les contaminations rock/métal avec un faux Subsonic.
+Validation Docker sans réseau externe : **617 tests Python passent**, syntaxe JavaScript valide et cinq parcours
+jsdom vérifiés. Lors du lancement global, le parcours PC a dépassé son attente initiale sur la connexion ; tous
+ses cas de mix passaient déjà. Rejoué isolément, il passe entièrement, connexion comprise. Les quatre parcours
+Pi passent lors du lancement global.
+Publication vérifiée sur `music2.foos.fr` : **202 fichiers applicatifs identiques** aux sources testées,
+conteneur sain, HTTPS 200, version publique 1.8.3, JavaScript/CSS et textes du mix conformes. Page sans cache et
+JavaScript versionné, création de mix protégée. Base intègre, schéma 16 inchangé. Sauvegarde cohérente du code,
+de la configuration et de SQLite ; image précédente conservée : `../pimedia-backups/pre-1.8.3-20261109T115922Z/`.
+Recharger la page (Cmd+Maj+R) pour utiliser le nouveau créateur. Le cas réel de Raz Fresco X reste à vérifier.
+
 **Crédits complets des albums corrigés, préparés en 1.7.9 et déployés avec la 1.7.10** : le filtre MusicBrainz
 accepte aussi le crédit complet et ses noms d’usage (« Fennesz + Sakamoto », « Prodigy »), en conservant les
 noms canoniques et le choix explicite de l’édition. Trois tests de régression ajoutés ; les 44 tests d’exploration
@@ -56,18 +75,24 @@ re-préchargé). Mesure sur le Pi : `python3 diagnostic-ampli.py` (voir `docs/fe
 `docker compose build tests` avant, sinon on teste l'ancien code. Idem `docker compose up -d --build web`.
 Chemins de code ci-dessous : relatifs à `src/`.
 
-**Profondeur des mix ajoutée le 07/11/2026 (1.7.8, pas encore déployée)** : le créateur du site propose 1, 2, 3 ou
+**Profondeur des mix ajoutée le 07/11/2026 (1.7.8, déployée et vérifiée)** : le créateur du site propose 1, 2, 3 ou
 4 niveaux d'artistes proches, au lieu du bouton 1 ou 4. Le choix (4 par défaut) fixe la profondeur maximale depuis
 l'artiste de départ, pour l'écoute et la playlist. Le serveur valide `depth` ; les anciennes pages envoyant `wide`
 restent compatibles. Radio de l'artiste et édition Pi inchangées. Fiche : `docs/features/mix-et-radios.md`.
-Validation Docker sur les sources modifiées : 52 tests Python (mix, radios, playlists, versions et services associés),
-syntaxe JavaScript et parcours jsdom PC complet passent. La chaîne de cinq artistes vérifie l'arrêt aux quatre
-profondeurs ; la page vérifie les choix exclusifs, le lancement à 2 niveaux et la playlist à 3 niveaux.
+Validation Docker finale avant déploiement : **525 tests Python et les cinq parcours jsdom passent** dans l'image
+reconstruite. La chaîne de cinq artistes vérifie l'arrêt aux quatre profondeurs ; la page vérifie les choix exclusifs,
+le lancement à 2 niveaux et la playlist à 3 niveaux.
+Déployée sur `music2.foos.fr` le 07/11/2026 : copie ciblée des quatre fichiers applicatifs, reconstruction du seul
+conteneur web. HTTPS sain, version publique 1.7.8, libellés disponibles et JavaScript servi identique au fichier testé.
+Les quatre fichiers dans le conteneur sont identiques aux sources testées ; base au schéma 15, intégrité OK.
+Sauvegarde préalable des quatre fichiers, de la base SQLite et de la référence de l'image 1.7.7 :
+`/home/subsonic/pimedia-backups/pre-1.7.8-20261107T221218Z/`. Le parcours connecté contre le vrai Last.fm reste à essayer.
 
 **Essai API Discogs du 07/11/2026** : `DISCOGS_API_KEY` présente dans le `.env` local et reconnue comme jeton
 personnel. Treize lectures HTTP 200 : authentification, recherche et catalogues d'On-U Sound, Dischord Records et
 Clivage Music, puis une édition de chaque label. Notes / nombre de votes, pistes et liens YouTube récupérés ; aucune
-lecture vidéo ni sélection « Top » validée. Jeton et identité non affichés. Pas encore branché au site, aucun déploiement.
+lecture vidéo ni sélection « Top » validée. Jeton et identité non affichés. État historique de cet essai :
+l’intégration est désormais déployée et vérifiée en 1.7.10.
 Détails et points à traiter (regroupement des éditions, conservation des données) : `docs/features/bibliotheque.md`.
 
 **Lecture au survol des pochettes ajoutée le 07/11/2026 (1.7.7, déployée et vérifiée)** : petite flèche en haut

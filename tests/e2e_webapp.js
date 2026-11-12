@@ -668,9 +668,79 @@ function makeEventSource(jar) {
   check("créateur : playlist construite avec 3 niveaux",
         w.mixBuildRequests.length === 2 && w.mixBuildRequests[1].depth === 3);
   w.eval("App.api.post = window.mixOriginalPost;");
+  // Le chargement de l'artiste de la fiche doit précéder toute construction du mix.
+  const beforeSeedLoad = app.api.get;
+  let releaseSeedLoad;
+  const seedReady = new Promise(resolve => { releaseSeedLoad = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "ar1") await seedReady;
+    return beforeSeedLoad.call(this, url, params);
+  };
   w.location.hash = "#/mix/ar1";
+  check("créateur depuis la fiche : attente de l’artiste avant écoute et sauvegarde", await until(() =>
+        $(".mix-seed-input") && $(".mix-play").disabled && $(".mix-save").disabled));
+  const seedQueue = w.eval("App.player.queue.map(s => s.id).join()");
+  $(".mix-play").click();
+  check("créateur depuis la fiche : aucun mix sans l’artiste pendant le chargement",
+        w.eval("App.player.queue.map(s => s.id).join()") === seedQueue);
+  releaseSeedLoad();
   check("créateur depuis la page artiste : artiste déjà choisi", await until(() =>
-        $(".mix-seed-chosen") && $(".mix-seed-chosen").textContent.startsWith("Comme : ABBA")));
+        $(".mix-seed-chosen") && $(".mix-seed-chosen").textContent.startsWith("Comme : ABBA")) &&
+        !$(".mix-play").disabled && !$(".mix-save").disabled);
+  app.api.get = beforeSeedLoad;
+
+  const beforeSeedBuild = app.api.post;
+  let releaseSeedBuild, seedBuildCalls = 0, seedBuildOptions;
+  const seedBuildReady = new Promise(resolve => { releaseSeedBuild = resolve; });
+  app.api.post = async function(url, body) {
+    if (url === "/api/mix/build") {
+      seedBuildCalls++;
+      seedBuildOptions = JSON.parse(JSON.stringify(body));
+      await seedBuildReady;
+    }
+    return beforeSeedBuild.call(this, url, body);
+  };
+  $(".mix-play").click();
+  $(".mix-save").click();
+  check("créateur : écoute et sauvegarde partagent un seul chargement",
+        $(".mix-play").disabled && $(".mix-save").disabled && seedBuildCalls === 1);
+  releaseSeedBuild();
+  check("créateur depuis la fiche : l’identifiant musical est envoyé, pas celui du dossier", await until(() =>
+        !$(".mix-play").disabled) && seedBuildOptions.seedArtistId === "ar1" &&
+        w.eval('App.player.queue.length === 3 && App.player.queue.every(s => s.artistId === "ar1")'));
+  const loadedSeedQueue = w.eval("App.player.queue.map(s => s.id).join()");
+  app.api.post = beforeSeedBuild;
+
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "missing") throw w.eval('new ApiError(404, "mix.empty")');
+    return beforeSeedLoad.call(this, url, params);
+  };
+  w.location.hash = "#/mix/missing";
+  check("créateur depuis la fiche : erreur visible sans repli vers un mix quelconque", await until(() =>
+        $(".mix-seed .error")) && $(".mix-play").disabled && $(".mix-save").disabled &&
+        w.eval("App.player.queue.map(s => s.id).join()") === loadedSeedQueue);
+  type($(".mix-seed-input"), "bjö");
+  check("créateur : un autre artiste peut remplacer celui qui manque", await until(() =>
+        $$(".mix-seed-results .chip").length === 1));
+  $(".mix-seed-results .chip").click();
+  check("créateur : choix manuel après erreur réactive les actions", await until(() => $(".mix-seed-chosen")) &&
+        !$(".mix-play").disabled && !$(".mix-save").disabled &&
+        !$(".mix-seed .error"));
+  app.api.get = beforeSeedLoad;
+
+  const beforeMixSettings = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeMixSettings.call(this, url, params);
+    if (url !== "/api/mix/genres") return data;
+    return Object.assign({}, data, {options: {depths: [1, 2], defaultDepth: 2,
+      sizes: [30, 100], defaultSize: 100, decades: [1980]}});
+  };
+  w.location.hash = "#/mix";
+  check("créateur : choix et valeurs initiales fournis par le serveur", await until(() =>
+        $$(".mix-depths .chip").length === 2) && $(".mix-depths .on").dataset.depth === "2" &&
+        $$(".mix-sizes .chip").length === 2 && $(".mix-sizes .on").textContent.startsWith("100") &&
+        $$(".mix-decades .chip").length === 1 && w.eval("Views.mix.options.size") === 100);
+  app.api.get = beforeMixSettings;
 
   // --- playlists : onglet de la barre, création, glisser-déposer, communautaires ---
   const shared = (await (await alice.post("/api/playlist/create", {name: "Soirée à tous", songIds: ["s1"], community: true})).json()).playlist;

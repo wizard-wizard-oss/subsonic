@@ -5,6 +5,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.8.3"
+  date: 2026-11-09
+  title: "Des mix fidèles à l’artiste de départ"
+  changes:
+    - "Le créateur de mix reste parmi l’artiste choisi et ses proches, dans la profondeur demandée. Sans style sélectionné, les styles renseignés de l’artiste servent de repère ; les styles et époques choisis s’appliquent à tous les titres. Une sélection courte n’est plus complétée avec des morceaux sans rapport."
+    - "Depuis une fiche artiste, le créateur conserve le bon artiste et attend son chargement avant de permettre le lancement ou l’enregistrement. Ses albums restent disponibles même sans suggestions Last.fm."
+
 - version: "1.7.9"
   date: 2026-11-07
   title: "Des noms reconnus de façon cohérente"

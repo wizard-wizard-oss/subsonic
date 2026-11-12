@@ -2,6 +2,7 @@
 les commentaires de la base du site."""
 import threading
 import time
+from datetime import date
 
 from .entities import album_topic
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
@@ -42,7 +43,7 @@ def as_list(value):
 
 
 PAGE_SIZE = 40
-DECADES = tuple(range(1950, 2030, 10))
+DECADES = tuple(range(1950, date.today().year // 10 * 10 + 1, 10))
 # onglet de la page Albums -> type de getAlbumList2 (« highest » et « decade »/« genre » à part)
 ALBUM_LISTS = {"newest": "newest", "frequent": "frequent", "recent": "recent", "random": "random",
                "starred": "starred", "alphabetical": "alphabeticalByName"}
