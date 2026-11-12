@@ -33,6 +33,19 @@
     - "Le choix de la fiche Discogs d’un artiste est mémorisé pour votre compte. Sa discographie s’affiche ensuite automatiquement sous vos albums, avec des boutons pour changer d’artiste ou actualiser le catalogue."
     - "Des raccourcis rendent Discogs visible en haut des fiches artiste et album. La biographie retrouve sa place sous le nom ; les photos se chargent indépendamment depuis les sources disponibles. Les boutons sont plus compacts."
 
+- version: "1.7.13"
+  date: 2026-11-08
+  title: "Des chiffres plus compacts"
+  changes:
+    - "Le stockage de la bibliothèque s’affiche arrondi à l’entier, sans décimales, pour tenir plus facilement dans sa carte."
+
+- version: "1.7.12"
+  date: 2026-11-08
+  title: "Votre bibliothèque en chiffres"
+  changes:
+    - "L’accueil présente les artistes, albums, chansons, le stockage et les heures de musique de la collection, avec la date du dernier scan."
+    - "Les chiffres sont ceux déjà enregistrés par Subsonic après son scan : aucune collecte de la bibliothèque ni calcul supplémentaire. L’affichage s’active lorsque ce fichier est accessible au site."
+
 - version: "1.7.11"
   date: 2026-11-08
   title: "Le bon label pour vos découvertes"

@@ -51,6 +51,7 @@ from .music_metadata import MusicSourceError
 from .storage.exploration import ExplorationRepository
 from .folders import FolderNotFound, Folders
 from .library import Library
+from .library_statistics import SubsonicStatistics
 from .listening import Listening
 from .lyrics import Lyrics
 from .mixes import MixError, Mixes
@@ -157,6 +158,7 @@ class WebApplication:
         self.artist_indexes = ArtistIndexes(self.subsonic, ArtistIndexRepository(self.db), self.users, self.hub,
                                             hidden=(self.config.incoming_name,),
                                             shortcuts=[n.strip() for n in self.config.shortcut_folders.split(",") if n.strip()])
+        self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
         self.listening = Listening(self.subsonic)
@@ -208,7 +210,8 @@ class WebApplication:
         read, write = guard.reader, guard.writer
         auth = AuthController(self.accounts, self.preferences, self.chat, self.users, self.config.secure_cookie,
                               self.config.trust_proxy)
-        library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic)
+        library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic,
+                                    self.library_statistics)
         chat = ChatController(self.chat, self.hub)
         mixes = MixController(self.mixes)
         playlists = PlaylistController(self.playlists)

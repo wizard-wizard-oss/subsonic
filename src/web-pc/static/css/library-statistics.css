@@ -1,0 +1,28 @@
+/* Collection : compteurs du dernier scan, dans les couleurs du thème. */
+.library-collection { position: relative; margin-bottom: 32px; padding: 26px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line)); border-radius: 18px;
+  background: radial-gradient(ellipse at top right, color-mix(in srgb, var(--accent) 14%, transparent), transparent 65%), var(--bg-raised); }
+.collection-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px; margin-bottom: 24px; }
+.collection-eyebrow { margin: 0 0 6px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.6px; font-size: 10px; font-weight: 700; }
+.collection-head h2 { font-size: 25px; letter-spacing: -0.6px; }
+.collection-scan { color: var(--text-soft); font-size: 11px; }
+.collection-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.collection-metric { min-width: 0; padding: 18px 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.collection-metric dt { display: flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 12px; }
+.collection-metric dt .icon { color: var(--accent); }
+.collection-metric dd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+.collection-metric strong { font-size: clamp(22px, 2.1vw, 34px); line-height: 1.2; font-weight: 650; letter-spacing: -0.8px; white-space: nowrap; }
+.collection-unit { color: var(--text-soft); font-size: 12px; }
+.collection-highlight { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+.collection-highlight strong { color: var(--accent-strong); }
+@media (max-width: 1150px) {
+  .collection-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .library-collection { padding: 18px; border-radius: 14px; }
+  .collection-head { margin-bottom: 18px; }
+  .collection-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .collection-highlight { grid-column: 1 / -1; }
+  .collection-metric strong { font-size: clamp(20px, 6.4vw, 28px); }
+}

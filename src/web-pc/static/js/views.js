@@ -229,6 +229,7 @@ const Views = (() => {
         if (route.stale) return;           // on a changé de page entre-temps
         App.clear(main);
         App.append(main, [
+          LibraryStatistics.render(data.statistics),
           el("section", {}, heading(App.t("home.newest")), albumGrid(data.newest)),
           el("section.most-played", {}, heading(App.t("home.most_played")), albumGrid(data.mostPlayed)),
           el("div.home-columns", {},

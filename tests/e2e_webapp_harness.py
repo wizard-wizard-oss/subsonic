@@ -43,7 +43,11 @@ def main():
     fake = FakeSubsonicFull().start()
     fake.api_getIndexes = slow_then_failing_once(fake.api_getIndexes)
     music = tempfile.mkdtemp(prefix="pmw-music-")                 # Incoming y est créé au premier passage
-    app = WebApplication(PROJECT, environ=dict(KEYS, PI_MEDIA_WEB_SUBSONIC_URL=fake.url, PI_MEDIA_WEB_MUSIC_DIR=music),
+    statistics = os.path.join(music, "subsonic.properties")
+    with open(statistics, "w", encoding="iso-8859-1") as source:
+        source.write("LastScanned=1794150239000\nMediaLibraryStatistics=5440 11843 137315 1587931675620 33224428\n")
+    app = WebApplication(PROJECT, environ=dict(KEYS, PI_MEDIA_WEB_SUBSONIC_URL=fake.url, PI_MEDIA_WEB_MUSIC_DIR=music,
+                                               PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE=statistics),
                          data_dir=tempfile.mkdtemp(prefix="pmw-e2e-"))
     app.lyrics.finder.fetcher = FakeLyricsSites()
     app.exploration.metadata.fetcher = FakeMusicBrainz()

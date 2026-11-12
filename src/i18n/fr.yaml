@@ -135,6 +135,17 @@ webapp:
     chat: "Salon"
     shortcuts: "Raccourcis clavier"
     account: "Mon compte"
+  collection:
+    scope: "Collection du serveur"
+    title: "Votre bibliothèque en chiffres"
+    artists: "Artistes"
+    albums: "Albums"
+    songs: "Chansons"
+    storage: "Stockage"
+    duration: "Musique"
+    gib: "Gio"
+    hours: "heures"
+    last_scan: "Dernier scan · {date}"
   home:
     newest: "Derniers albums ajoutés"
     top_rated: "Les mieux notés"

@@ -35,6 +35,51 @@ des tags disent « Dalek ». Le reste de Subsonic parle en tags (ID3) ; le site 
 - l'album garde son identifiant ID3 pour ce que Subsonic range sous l'ID3 : commentaires, cœur, note, téléchargement,
   partage, écoutes. L'artiste donne le sien (`id3Id`, celui de son premier titre) pour la radio, le mix et les artistes
   proches ; un dossier sans aucun titre n'a ni radio ni mix.
+## Collection en chiffres (1.7.12)
+
+L’accueil présente cinq indicateurs : artistes, albums, chansons, stockage en Gio (octets / 1024³, arrondi à l’entier
+depuis 1.7.13, sans décimales : « 1 479,69 » devient « 1 480 ») et heures
+de musique (secondes / 3600, partie entière), avec la date du dernier scan et un bloc adapté aux petits écrans.
+Le périmètre affiché est **la collection du serveur**, comme les statistiques de la page d’aide Subsonic,
+indépendamment des dossiers accessibles à chaque compte. Aucune liste de fichiers ou information de compte n’est exposée.
+
+Les valeurs viennent directement de `MediaLibraryStatistics` et `LastScanned` dans `subsonic.properties`, que Subsonic
+enregistre après son scan. Aucun parcours REST, comptage SQL, lecture des fichiers musicaux ou nouveau scan n’est lancé
+par le site. Ce fichier est déjà le cache persistant : inutile de recopier les chiffres en base. Le lecteur garde
+le dernier résultat valide en mémoire, ne relit le fichier que s’il change et ne remplace les compteurs que si la date
+du scan change. Une visite ou un réglage Subsonic sans nouveau scan ne les recalcule jamais.
+
+Activation facultative : `compose.statistics.yaml` monte le seul fichier de propriétés en lecture seule, son chemin
+sur l’hôte étant réglé par `SUBSONIC_PROPERTIES_FILE`. Hors Docker : `PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE`.
+Sans source réglée ou lisible, le bloc est masqué sans faux zéros. Une sauvegarde temporairement incomplète ou une
+disparition du fichier conserve le dernier résultat valide déjà lu ; sa date reste visible. Seuls six nombres sont
+renvoyés dans `/api/home`, jamais le contenu des autres propriétés ni le chemin du fichier.
+
+La prochaine visite de l’accueil prend le résultat du nouveau scan ; pas de mise à jour automatique d’une page restée
+ouverte. Pas de migration, de minuterie, d’identifiants supplémentaires ni de changement de Subsonic.
+
+Code : `webapp/library_statistics.py`, entité `LibraryStatistics` dans `entities.py`, assemblage dans `app.py`,
+`controllers/library.py` ; composant `web-pc/static/js/library-statistics.js` et sa feuille CSS.
+Tests : `tests/test_library_statistics.py` (format natif, cache, changement de scan, redémarrage, source absente ou
+incomplète, remplacement de fichier, HTTP authentifié et absence de collecte/secrets), `tests/e2e_webapp.js`
+(placement, cinq indicateurs, nombres français, conversion et date, source absente).
+Vérification en lecture seule sur la production le 08/11/2026 : format et cinq compteurs confirmés, ainsi que
+leur utilisation par la page d’aide dans la distribution officielle Subsonic 6.1.6.
+Validation Docker : 577 tests Python passent ; parcours PC validé après reprise isolée des attentes de connexion,
+puis dix tests des statistiques rejoués après la dernière protection contre une ligne tronquée. Rendu Chrome vérifié
+en sombre et clair, largeurs 1440, 390 et 320 px, sans débordement des chiffres. Configuration Compose validée.
+**Déployé et vérifié le 08/11/2026** : version publique 1.7.12, HTTPS et conteneur sains, montage en lecture seule,
+190 fichiers applicatifs identiques aux sources testées, JavaScript/CSS/textes publics à jour, SQLite intègre au
+schéma 15 et dix comptes conservés. Valeurs du dernier scan confirmées depuis le conteneur : 5 441 artistes,
+11 844 albums, 137 323 chansons, 1 588 511 745 837 octets, 33 227 128 secondes. Aucun nouveau scan ni redémarrage
+Subsonic pour cette mise à jour. Sauvegarde préalable et retour arrière décrits dans `docs/ETAT.md`.
+Le parcours dans un navigateur connecté à la production n’a pas été rejoué ; rendu Chrome et parcours jsdom validés.
+
+**Retouche 1.7.13 déployée le 08/11/2026** : stockage arrondi à l’entier, sans décimales, pour tenir dans sa carte.
+Initialement publiée en 1.7.14, elle est renumérotée 1.7.13 dans l’historique à la demande utilisateur.
+Arrondi et absence de débordement vérifiés directement dans Chrome à 1440, 390 et 320 px ; le parcours jsdom existant
+est adapté, sans nouvelle exécution pour cette retouche (Docker local arrêté). Version publique et JavaScript servis
+vérifiés, santé interne et HTTPS saines ; sauvegarde et image de retour arrière conservées.
 
 ## Où
 Les **labels et collaborations**, accessibles depuis la page album, sont détaillés dans

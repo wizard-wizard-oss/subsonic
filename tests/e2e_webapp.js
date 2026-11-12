@@ -133,6 +133,15 @@ function makeEventSource(jar) {
   type($("#artist-filter"), "");
   check("barre : dossiers d'artistes, sans Incoming", $$(".letter-head").map(h => h.textContent).join() === "A,B" &&
         $(".artist").getAttribute("href") === "#/artist/fdir-ar1");
+  check("collection : cinq compteurs du serveur en haut de l’accueil", await until(() => $(".library-collection")) &&
+        $("#main").firstElementChild.classList.contains("library-collection") && $$(".collection-metric").length === 5);
+  const figure = key => $("[data-metric=" + key + "] strong").textContent.replace(/\s/g, "");
+  check("collection : nombres français, stockage arrondi sans décimales et heures", figure("artists") === "5440" &&
+        figure("albums") === "11843" && figure("songs") === "137315" && figure("storage") === "1479" &&
+        figure("duration") === "9229" && $("[data-metric=storage] .collection-unit").textContent === "Gio");
+  check("collection : périmètre et dernier scan visibles", $(".collection-eyebrow").textContent === "Collection du serveur" &&
+        $(".collection-scan").textContent.startsWith("Dernier scan") && $(".collection-scan").getAttribute("datetime"));
+  check("collection : source absente, aucun bloc inventé", w.eval("LibraryStatistics.render(null)") === null);
   w.location.hash = "#/artist/ar3";                          // lien par l'identifiant des tags : ramené au dossier
   check("artiste en cours d'une lettre pas encore construite : surligné", await until(() =>
         $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar3"));

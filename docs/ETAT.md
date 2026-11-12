@@ -79,6 +79,41 @@ Sonde API réelle relancée depuis le conteneur déployé, dans une base tempora
 Sauvegarde cohérente complémentaire avant renumérotation : `../pimedia-backups/pre-1.8-20261108T170300Z/`.
 Recharger la page ; choisir la fiche une première fois permet sa reprise automatique aux prochaines visites.
 
+**Stockage sans décimales, 1.7.13 (08/11/2026, déployée et vérifiée)** : à la demande utilisateur, le volume de la collection
+est arrondi à l’entier pour tenir dans sa carte (« 1 479,69 Gio » devient « 1 480 Gio »). Le test existant est adapté.
+Livraison isolée à partir des sources de la 1.7.12 déployée ; le lot Discogs préparé en parallèle et livré ensuite
+en 1.8 n’était pas inclus dans cette retouche. Publiée initialement sous le numéro 1.7.14, cette entrée est
+renumérotée 1.7.13 à la demande utilisateur ; les références d’exploitation et de sauvegarde ci-dessous sont historiques.
+Vérification dans Chrome à 1440, 390 et 320 px : arrondi, zéro, absence de décimales et de débordement corrects.
+Le parcours jsdom existant est adapté ; il n’a pas été rejoué pour cette retouche, Docker local étant arrêté.
+Déploiement isolé : seuls le composant et la version changent parmi les 190 fichiers applicatifs. Version publique
+1.7.14 et JavaScript servis vérifiés, santé interne et HTTPS saines. Sauvegarde de la 1.7.12 avant modification :
+`../pimedia-backups/pre-1.7.14-20261108T162954Z/` ; image précédente conservée pour retour arrière.
+
+**Collection en chiffres, 1.7.12 (08/11/2026, déployée et vérifiée)** : l’accueil affiche artistes, albums, chansons,
+stockage et heures à partir de `MediaLibraryStatistics` / `LastScanned` dans le fichier de propriétés de Subsonic.
+Décision utilisateur : réutiliser les compteurs existants, ne pas parcourir le catalogue par API et ne pas recalculer
+à chaque visite ou sur expiration d’un cache. Lecture du fichier en lecture seule, dernier résultat valide conservé,
+remplacement uniquement lorsque la date du scan change. Le bloc indique son périmètre global et la date ; masqué
+sans source. Montage facultatif `compose.statistics.yaml` et `SUBSONIC_PROPERTIES_FILE`, aucune migration ni écriture
+dans Subsonic. Les nouveaux chiffres sont visibles à la prochaine visite de l’accueil.
+Source confirmée en lecture seule sur la production : 5 440 artistes, 11 843 albums, 137 315 chansons,
+1 587 931 675 620 octets et 33 224 428 secondes ; même source dans la page d’aide de la distribution officielle 6.1.6.
+Validation : 577 tests Python passent dans Docker ; quatre parcours Pi passent. Le parcours PC passe isolément
+après trois échecs initiaux sur les attentes de connexion dans le lancement complet (instabilité déjà signalée en
+1.7.11) ; les quatre contrôles du nouveau bloc passent dans les deux passages. Après la dernière protection contre
+une ligne numérique tronquée, les dix tests ciblés passent sur une image reconstruite. Configuration Compose
+validée ; rendu Chrome contrôlé à 1440, 390 et 320 px, sans débordement des chiffres, thèmes sombre et clair.
+Tests et intégration : `docs/features/bibliotheque.md`.
+Déployée sur `https://music2.foos.fr` le 08/11/2026 : sauvegarde cohérente code/configuration/SQLite et image de
+retour arrière dans `../pimedia-backups/pre-1.7.12-20261108T161734Z/` depuis le projet distant. Les 190 fichiers
+applicatifs correspondent exactement à l’image testée puis au conteneur déployé. Santé interne et HTTPS, version
+publique 1.7.12, ressources et textes servis, routes protégées vérifiés ; dix comptes conservés, SQLite intègre,
+schéma 15 inchangé. Montage `subsonic.properties` activé en lecture seule dans le `.env` du serveur, configuration
+existante conservée ; Subsonic n’a pas été redémarré. Les valeurs du dernier scan sont bien lues : 5 441 artistes,
+11 844 albums, 137 323 chansons, 1 588 511 745 837 octets et 33 227 128 secondes. Aucun scan déclenché pour ce déploiement.
+Un rechargement forcé du navigateur charge les nouveaux fichiers. Le parcours connecté en production reste à regarder.
+
 **Navigation par labels : brouillon pour plus tard (08/11/2026)**. À la demande utilisateur, conserver la conception
 d’un index persistant des labels et des relations albums/labels, avec pages de label (logo, histoire sourcée),
 albums locaux, catalogue complémentaire et choix YouTube mémorisés. Fiche : `docs/features/navigation-labels.md`.

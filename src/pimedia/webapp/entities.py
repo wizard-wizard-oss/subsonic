@@ -165,6 +165,21 @@ class DiscussedAlbum:
                 "lastMessageAt": self.last_message_at, "comments": self.comments}
 
 
+@dataclass(frozen=True)
+class LibraryStatistics:
+    """Collection globale du serveur : valeurs persistées par Subsonic, date du scan en millisecondes."""
+    artists: int
+    albums: int
+    songs: int
+    total_bytes: int
+    duration_seconds: int
+    last_scan: int
+
+    def to_api(self):
+        return {"artists": self.artists, "albums": self.albums, "songs": self.songs,
+                "bytes": self.total_bytes, "seconds": self.duration_seconds, "lastScan": self.last_scan}
+
+
 @dataclass
 class ArtistIndex:
     """Liste des artistes de la barre, la même pour tous les comptes qui voient les mêmes dossiers de musique."""

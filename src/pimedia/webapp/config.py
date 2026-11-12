@@ -16,6 +16,7 @@ def default_data_dir(environ):
 class WebConfig:
     subsonic_url: str = ""
     subsonic_public_url: str = ""     # adresse de Subsonic pour les personnes (liens) ; vide : subsonic_url
+    subsonic_statistics_file: str = ""  # subsonic.properties en lecture seule ; vide : compteurs masqués
     bind: str = "127.0.0.1"           # derrière un proxy HTTPS (nginx, Caddy) ; 0.0.0.0 pour le réseau local
     port: int = 8200
     secure_cookie: bool = False       # true dès que le site est servi en HTTPS

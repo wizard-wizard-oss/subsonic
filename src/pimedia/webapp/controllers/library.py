@@ -21,15 +21,18 @@ def item_id(value):
 
 
 class LibraryController:
-    def __init__(self, library, folders, artist_indexes, ratings, subsonic):
+    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics):
         self.library = library
         self.folders = folders
         self.artist_indexes = artist_indexes
         self.ratings = ratings
         self.subsonic = subsonic
+        self.statistics = statistics
 
     def home(self, request, user):
-        return ok(self.library.home(user))
+        data = self.library.home(user)
+        statistics = self.statistics.get()
+        return ok(dict(data, statistics=statistics.to_api() if statistics else None))
 
     def artists(self, request, user):
         index = self.artist_indexes.for_user(user)

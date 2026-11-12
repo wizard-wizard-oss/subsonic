@@ -18,6 +18,28 @@ Les commandes se lancent depuis le dossier `sources/` du projet, sur ton poste.
 
 ## Site web (édition PC)
 
+### Compteurs de la bibliothèque (facultatif, 1.7.12)
+
+Le site peut lire les statistiques que Subsonic a déjà enregistrées après son scan. Monter son fichier
+`subsonic.properties` en lecture seule avec `compose.statistics.yaml`, en plus des fichiers Compose habituels :
+
+```dotenv
+COMPOSE_FILE=compose.yaml:compose.subsonic.yaml:compose.statistics.yaml
+SUBSONIC_PROPERTIES_FILE=/chemin/des/donnees/subsonic.properties
+```
+
+Le chemin désigne **le fichier existant sur l’hôte Docker**, lisible par l’utilisateur du conteneur web.
+Le montage refuse de créer un dossier si ce fichier manque. Ne pas changer les permissions de la configuration
+Subsonic pour l’exposer publiquement. Le navigateur ne reçoit que les compteurs et la date du scan.
+Le fichier n’est ni copié dans l’image ni servi par HTTP, et le site ne le modifie jamais.
+Subsonic conserve déjà ces chiffres entre les redémarrages : aucune nouvelle base, tâche planifiée ou clé API.
+L’accueil prend les nouveaux chiffres lors de sa prochaine ouverture après un scan terminé.
+
+Hors Docker, régler `PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE` sur le fichier lisible en lecture seule.
+Sans cette option, le reste du site fonctionne et le bloc des compteurs reste masqué. Si le fichier monté est
+remplacé manuellement par renommage (restauration de sauvegarde), recréer le conteneur web pour renouveler ce
+montage de fichier. Les sauvegardes ordinaires de Subsonic mettent à jour le fichier en place.
+
 ### Premier déploiement
 Le site s'installe sous **le même utilisateur que Subsonic** (`music`), dans son dossier personnel : `~music/pimedia`.
 Ainsi les fichiers envoyés appartiennent à `music`, comme le reste de la musique. Le site a sa propre base (volume

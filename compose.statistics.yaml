@@ -1,0 +1,13 @@
+# Compteurs persistants de Subsonic, sans accès à la bibliothèque ni à sa base de données.
+# Ajouter ce fichier à COMPOSE_FILE et régler SUBSONIC_PROPERTIES_FILE (fichier sur l'hôte).
+services:
+  web:
+    environment:
+      PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE: /run/subsonic/subsonic.properties
+    volumes:
+      - type: bind
+        source: ${SUBSONIC_PROPERTIES_FILE:?Régler le chemin du fichier subsonic.properties existant}
+        target: /run/subsonic/subsonic.properties
+        read_only: true
+        bind:
+          create_host_path: false
