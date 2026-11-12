@@ -7,6 +7,8 @@ import time
 import urllib.parse
 import urllib.request
 
+from .text import normalize
+
 USER_AGENT = "PiMediaStation/1.0 (lecteur personnel)"
 
 
@@ -64,6 +66,38 @@ def distinct_pairs(pairs):
     return seen
 
 
+def lyrics_search_pairs(artist, title):
+    """Variantes (titre, artiste) pour les paroles, originales d'abord, sans modifier les données affichées.
+
+    Une vidéo peut créditer l'artiste dans son titre, dans l'un ou l'autre ordre ; son champ artiste
+    désigne alors souvent la chaîne. Un sous-titre final entre parenthèses reste une variante de secours.
+    """
+    pairs = [(title, artist)]
+    separator = re.search(r"\s*;\s*|\s+[-–—|]\s+", title)
+    if separator:
+        left, right = title[:separator.start()].strip(), title[separator.end():].strip()
+        if left and right:
+            inferred = [(left, right), (right, left)]
+            pairs += inferred if ";" in separator.group() else inferred[::-1]
+    attempts = []
+    for song, performer in pairs:
+        cleaned, performer_head = clean_title(song), first_artist(performer)
+        attempts += [(song, performer), (cleaned, performer_head)]
+        short = re.sub(r"\s*(?:\([^()]*\)|\[[^\[\]]*\])\s*$", "", cleaned).strip()
+        if short:
+            attempts.append((short, performer_head))
+    return distinct_pairs(attempts)
+
+
+def filter_lyrics_candidates(candidates, attempts):
+    """Écarter les homonymes et titres voisins des résultats LRCLIB, même après une recherche libre."""
+    def key(title, artist):
+        return normalize(clean_title(title)), normalize(first_artist(artist))
+    wanted = {key(title, artist) for title, artist in attempts}
+    return [candidate for candidate in candidates if isinstance(candidate, dict) and
+            key(candidate.get("trackName") or "", candidate.get("artistName") or "") in wanted]
+
+
 # ---------- accès HTTP ----------
 class JsonFetcher:
     def get(self, url, timeout=8):
@@ -97,7 +131,7 @@ class LyricsFinder:
         self.subsonic_lyrics = subsonic_lyrics      # fonction (artiste, titre) -> texte ou ""
 
     def find(self, artist, title, album="", duration=0):
-        attempts = distinct_pairs([(title, artist), (clean_title(title), first_artist(artist))])
+        attempts = lyrics_search_pairs(artist, title)
         best = self._best_lrclib(self._lrclib_candidates(attempts, album, duration), duration)
         if best:
             return {"synced": best.get("syncedLyrics") or "", "plain": best.get("plainLyrics") or "", "src": "LRCLIB"}
@@ -116,7 +150,7 @@ class LyricsFinder:
                 return candidates
         if not self._has_synced(candidates):
             found = self._lrclib("search", [("q", "%s %s" % (clean_title(attempts[0][0]), first_artist(attempts[0][1])))])
-            candidates += found if isinstance(found, list) else []
+            candidates += filter_lyrics_candidates(found, attempts) if isinstance(found, list) else []
         return candidates
 
     def _exact_and_search(self, title, artist, album, duration):
@@ -130,7 +164,7 @@ class LyricsFinder:
         if isinstance(exact, dict):
             found.append(exact)
         similar = self._lrclib("search", [("track_name", title), ("artist_name", artist)])
-        return found + (similar if isinstance(similar, list) else [])
+        return filter_lyrics_candidates(found + (similar if isinstance(similar, list) else []), [(title, artist)])
 
     @staticmethod
     def _has_synced(candidates):

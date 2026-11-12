@@ -5,6 +5,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.9.3"
+  date: 2026-11-12
+  title: "Les paroles retrouvent les titres de YouTube"
+  changes:
+    - "Les paroles reconnaissent l’artiste indiqué dans un titre YouTube comme « Destinée ; Guy Marchand », même lorsque la chaîne porte un autre nom."
+    - "Les sous-titres entre parenthèses sont essayés avec le titre court : « Delirium (Ma chérie je t’écris…) » retrouve les paroles de « Delirium ». Les titres affichés restent conservés."
+
 - version: "1.9.2"
   date: 2026-11-10
   title: "Un point rouge pour les nouveaux conseils"

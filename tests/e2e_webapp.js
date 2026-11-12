@@ -574,6 +574,19 @@ function makeEventSource(jar) {
   check("vidéo lue ici : en tête avec « déjà lue ici », la refusée n'est plus proposée", await until(() =>
         $$(".ext-part.youtube tr.song").length === 1 && $(".ext-part.youtube .ext-played") &&
         $(".ext-part.youtube tr.song").dataset.id === "yt-otherone123"));
+  w.eval(`App.player.playList([{id: "yt-destinee", youtubeId: "otherone123", ext: "youtube",
+    title: "Destinée ; Guy Marchand", artist: "AnyMusics", duration: 275}]);`);
+  key(d.body, "l");
+  check("paroles YouTube : artiste dans le titre malgré le nom de la chaîne", await until(() =>
+        $$(".lyric-line").length === 2 && $(".lyrics-source").textContent === "Source : LRCLIB") &&
+        $(".lyrics-song").textContent === "Destinée ; Guy Marchand — AnyMusics" &&
+        w.eval("App.player.current.title") === "Destinée ; Guy Marchand");
+  w.eval(`App.player.playList([{id: "yt-delirium", youtubeId: "otherone123", ext: "youtube",
+    title: "Delirium (Ma chérie je t'écris...)", artist: "Guy Marchand", duration: 180}]);`);
+  check("paroles YouTube : sous-titre entre parenthèses reconnu, affichage conservé", await until(() =>
+        $$(".lyric-line").length === 2 && $(".lyrics-source").textContent === "Source : LRCLIB") &&
+        $(".lyrics-song").textContent === "Delirium (Ma chérie je t'écris...) — Guy Marchand");
+  key(d.body, "c");
   $(".ext-part.jamendo .row-play").click();
   check("Jamendo : son direct, fenêtre vidéo fermée", await until(() => !d.body.dataset.video &&
         w.eval("App.player.audio.audio.src").startsWith("https://prod-1.storage.jamendo.com/")));

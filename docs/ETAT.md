@@ -1,5 +1,19 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Recherche des paroles, 1.9.3 (11/11/2026, publiée sur le site avec la 1.10)** :
+« Destinée ; Guy Marchand — AnyMusics » échouait parce que le nom de chaîne était utilisé comme artiste ;
+« Delirium (Ma chérie je t'écris...) — Guy Marchand » différait du titre court présent dans LRCLIB.
+Les deux recherches ont été reproduites vides sur l'API publique, puis retrouvées sous Guy Marchand / Destinée
+et Guy Marchand / Delirium avec paroles synchronisées. Deux régressions HTTP échouent avant la correction.
+Fonction pure `lyrics_search_pairs` pour préparer les variantes et `filter_lyrics_candidates` pour vérifier
+les noms renvoyés, avec la normalisation commune. La fonction d'envoi HTTP reste inchangée ; mêmes sources,
+choix par durée et caches, métadonnées originales prioritaires et affichage conservé. Aucun artiste ni titre
+codé en dur dans le code applicatif. Code partagé aux deux éditions ; aucune dépendance déplacée.
+Tests unitaires dédiés, régressions HTTP et parcours PC complétés pour les deux cas.
+Validation : suite complète de 664 tests Python dans Docker, puis 29 contrôles ciblés du code final,
+parcours PC complet avec les deux titres YouTube et leur affichage, recherches réelles via le finder corrigé.
+Publié sur les sites web local et de production avec la 1.10 le 12/11/2026 ; aucun déploiement Pi dans cette opération. Voir [Paroles](features/paroles.md).
+
 **Notifications des recommandations, 1.9.2 (10/11/2026, déployées et vérifiées)** :
 pastille rouge sur « À écouter » tant que des conseils restent non lus. État persistant par recommandation,
 flux SSE existant ciblé sur le destinataire, mise à jour des onglets et rattrapage à la reconnexion ou au retour

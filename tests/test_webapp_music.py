@@ -5,6 +5,7 @@ import io
 import random
 import unittest
 import urllib.error
+import urllib.parse
 
 from pimedia.shared.text import normalize
 from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
@@ -284,6 +285,23 @@ class LyricsHttpTest(WebAppTestCase):
         self.assertEqual(bob.get("/api/lyrics?artist=&title=x").status, 400)
         self.assertEqual(self.client().get("/api/lyrics?artist=a&title=b").status, 401)
 
+    def test_youtube_title_contains_the_artist_instead_of_the_channel(self):
+        bob = self.client("bob", "pw2")
+        query = urllib.parse.urlencode({"artist": "AnyMusics", "title": "Destinée ; Guy Marchand", "duration": 275})
+        found = bob.get("/api/lyrics?" + query).json()
+        self.assertEqual((found.get("synced"), found.get("src")), (FakeLyricsSites.LRC, "LRCLIB"))
+        asked = len(self.sites.urls)
+        self.assertEqual(bob.get("/api/lyrics?" + query).json(), found)
+        self.assertEqual(len(self.sites.urls), asked)
+        self.assertEqual(self.subsonic.calls["getLyrics"], 0)
+
+    def test_title_with_a_subtitle_finds_the_short_catalogue_title(self):
+        bob = self.client("bob", "pw2")
+        query = urllib.parse.urlencode({"artist": "Guy Marchand", "title": "Delirium (Ma chérie je t'écris...)",
+                                        "duration": 180})
+        found = bob.get("/api/lyrics?" + query).json()
+        self.assertEqual((found.get("synced"), found.get("src")), (FakeLyricsSites.LRC, "LRCLIB"))
+        self.assertEqual(self.subsonic.calls["getLyrics"], 0)
 
 
 class ArtistBioHttpTest(WebAppTestCase):
