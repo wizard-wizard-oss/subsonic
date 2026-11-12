@@ -7,6 +7,7 @@ class Player {
     this.audio = engine;
     this.queue = [];
     this.index = -1;
+    this.resumePosition = null;
     this.audio.volume = App.local.get("volume", 0.8);
     this.audio.addEventListener("ended", () => this.next());
     this.audio.addEventListener("error", () => {
@@ -24,6 +25,22 @@ class Player {
 
   get current() { return this.queue[this.index] || null; }
   get playing() { return !this.audio.paused && !!this.audio.src; }
+  get position() { return this.resumePosition === null ? this.audio.currentTime : this.resumePosition; }
+
+  /** Retrouver la liste sans charger de flux, lancer de lecture ou compter une écoute. */
+  restoreQueue(songs, index, position) {
+    this.audio.stop();
+    this.queue = songs.slice();
+    this.index = songs.length ? index : -1;
+    this.resumePosition = position;
+    this.history = [];
+    this.listen = null;
+    this.reported = null;
+    if (this.current) this.updateMediaSession(this.current);
+    else if ("mediaSession" in navigator) navigator.mediaSession.metadata = null;
+    App.bus.emit("queue", this);
+    App.bus.emit("player", this);
+  }
 
   playList(songs, start, shuffle) {
     if (!songs.length) return;
@@ -45,19 +62,20 @@ class Player {
     App.bus.emit("queue", this);
   }
 
-  load(index) {
+  load(index, position = 0) {
     if (index < 0 || index >= this.queue.length) return;
     if (!this.queue[index].ext && !App.can("stream")) {          // droit Subsonic « écouter »
       App.toast(App.t("auth.missing_right"), "error");
       return;
     }
     this.index = index;
+    this.resumePosition = null;
     this.reported = null;
     const song = this.current;
     this.startListen(song);
-    const started = song.ext === "youtube" ? this.audio.playYouTube(song.youtubeId)
-      : song.ext === "soundcloud" ? this.audio.playSoundCloud(song.soundcloudUrl)
-      : this.audio.playUrl(song.ext === "jamendo" ? song.streamUrl : "/api/stream?" + new URLSearchParams({id: song.id}));
+    const started = song.ext === "youtube" ? this.audio.playYouTube(song.youtubeId, position)
+      : song.ext === "soundcloud" ? this.audio.playSoundCloud(song.soundcloudUrl, position)
+      : this.audio.playUrl(song.ext === "jamendo" ? song.streamUrl : "/api/stream?" + new URLSearchParams({id: song.id}), position);
     if (started && started.catch) started.catch(() => { /* lecture refusée par le navigateur : bouton lecture */ });
     this.updateMediaSession(song);
     App.bus.emit("queue", this);
@@ -130,25 +148,33 @@ class Player {
 
   toggle() {
     if (!this.current) return;
-    if (this.audio.paused) this.audio.play(); else this.audio.pause();
+    if (this.resumePosition !== null) this.load(this.index, this.resumePosition);
+    else if (this.audio.paused) this.audio.play(); else this.audio.pause();
   }
 
   next() { if (this.index + 1 < this.queue.length) this.load(this.index + 1); }
 
   previous() {
-    if (this.audio.currentTime > 4 || this.index === 0) this.audio.currentTime = 0;
+    if (this.position > 4 || this.index === 0) this.seekTo(0);
     else this.load(this.index - 1);
   }
 
-  seekBy(seconds) {
-    if (this.current && isFinite(this.audio.duration)) {
-      this.audio.currentTime = Math.max(0, Math.min(this.audio.duration, this.audio.currentTime + seconds));
-    }
+  get duration() {
+    return isFinite(this.audio.duration) && this.audio.duration > 0 ? this.audio.duration : (this.current && this.current.duration) || 0;
   }
 
-  seekRatio(ratio) {
-    if (isFinite(this.audio.duration)) this.audio.currentTime = this.audio.duration * ratio;
+  seekTo(seconds) {
+    if (!this.current || !this.duration) return;
+    const position = Math.max(0, Math.min(this.duration, seconds));
+    if (this.resumePosition !== null) this.resumePosition = position;
+    else this.audio.currentTime = position;
+    App.bus.emit("player", this);
+    App.bus.emit("queue", this);
   }
+
+  seekBy(seconds) { this.seekTo(this.position + seconds); }
+
+  seekRatio(ratio) { this.seekTo(this.duration * ratio); }
 
   setVolume(value) {
     this.audio.volume = Math.max(0, Math.min(1, value));
@@ -296,15 +322,26 @@ class PlayerBar {
   }
 
   refresh() {
-    const player = this.player, song = player.current, audio = player.audio;
+    const player = this.player, song = player.current;
     if (this.shownPlaying !== player.playing) {
       this.shownPlaying = player.playing;
       App.setIcon(this.playButton, player.playing ? "pause" : "play", 20);
     }
-    this.position.textContent = App.duration(audio.currentTime);
-    this.length.textContent = App.duration(isFinite(audio.duration) ? audio.duration : (song && song.duration) || 0);
-    const ratio = isFinite(audio.duration) && audio.duration ? audio.currentTime / audio.duration : 0;
+    this.position.textContent = App.duration(player.position);
+    this.length.textContent = App.duration(player.duration);
+    const ratio = player.duration ? player.position / player.duration : 0;
     this.bar.style.width = (ratio * 100).toFixed(2) + "%";
+    if (!song && this.shown) {
+      this.shown = null;
+      this.title.textContent = "";
+      this.title.href = "#/";
+      this.artist.textContent = "";
+      const fresh = App.cover("", 48);
+      this.cover.replaceWith(fresh);
+      this.cover = fresh;
+      this.refreshDetails();
+      if (App.music) App.music.updateTitle(0);
+    }
     if (song && this.shown !== song) {
       this.shown = song;
       this.title.textContent = song.title;

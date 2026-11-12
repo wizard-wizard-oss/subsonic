@@ -551,6 +551,34 @@ class ListeningHttpTest(WebAppTestCase):
                          (["Dancing Queen", "Knowing Me", "Army of Me"], 1, 42.0))
         self.assertEqual(bob.post_json("/api/play-queue/save", {"ids": "s1"}).status, 400)
 
+    def test_play_queue_survives_logout_and_is_private(self):
+        bob = self.client("bob", "pw2")
+        self.assertEqual(bob.post_json("/api/play-queue/save", {
+            "ids": ["s2", "s1", "s2"], "current": "s1", "position": 12.375}).status, 200)
+        bob.post_json("/api/logout", {})
+        self.assertEqual(bob.get("/api/play-queue").status, 401)
+        self.assertEqual(bob.post_json("/api/play-queue/save", {"ids": ["s4"]}).status, 401)
+        alice = self.client("alice", "secret")
+        self.assertEqual(alice.get("/api/play-queue").json()["songs"], [])
+        queue = self.client("bob", "pw2").get("/api/play-queue").json()
+        self.assertEqual(([s["id"] for s in queue["songs"]], queue["index"], queue["position"]),
+                         (["s2", "s1", "s2"], 1, 12.375))
+
+    def test_large_queue_is_sent_as_post_without_truncation(self):
+        bob = self.client("bob", "pw2")
+        ids = ["s1", "s2"] * 1500
+        self.assertEqual(bob.post_json("/api/play-queue/save", {
+            "ids": ids, "current": "s2", "position": 9}).status, 200)
+        self.assertEqual(self.subsonic.play_queues["bob"]["ids"], ids)
+        self.assertEqual(self.subsonic.posts["savePlayQueue"], 1)
+
+    def test_play_queue_validation_and_csrf(self):
+        bob = self.client("bob", "pw2")
+        for body in ({"ids": "s1"}, {"ids": ["s1"] * 5001}, {"ids": ["s1"], "position": -1},
+                     {"ids": ["s1"], "position": True}, {"ids": ["s1"], "position": float("inf")}):
+            with self.subTest(body_keys=list(body)):
+                self.assertEqual(bob.post_json("/api/play-queue/save", body).status, 400)
+        self.assertEqual(bob.post_json("/api/play-queue/save", {"ids": ["s1"]}, csrf=False).status, 403)
 
 
 class ProfileHttpTest(WebAppTestCase):

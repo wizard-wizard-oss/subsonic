@@ -9,6 +9,8 @@ import time
 from .library import as_list, song_row
 from .subsonic import Credentials
 
+MAX_QUEUE_SONGS = 5000
+
 
 class Listening:
     def __init__(self, subsonic, clock=time.time):
@@ -65,8 +67,8 @@ class Listening:
                 "changedBy": raw.get("changedBy", ""), "changed": raw.get("changed", "")}
 
     def save_play_queue(self, user, song_ids, current_id, position_seconds):
-        ids = [str(s) for s in song_ids][:500]
+        ids = [str(s) for s in song_ids]
         params = [("id", s) for s in ids]
         if current_id and str(current_id) in ids:
             params += [("current", current_id), ("position", int(max(0, position_seconds or 0) * 1000))]
-        self._call(user, "savePlayQueue", params)
+        self.subsonic.call(Credentials.of(user), "savePlayQueue", params, post=True)

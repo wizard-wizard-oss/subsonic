@@ -27,7 +27,7 @@ from .controllers.imports import ImportController
 from .controllers.facts import FactsController
 from .controllers.exploration import ExplorationController
 from .controllers.discogs import DiscogsController
-from .controllers.listening import ListeningController
+from .controllers.listening import PLAY_QUEUE_BODY_LIMIT, ListeningController
 from .controllers.listen_later import ListenLaterController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
@@ -316,7 +316,6 @@ class WebApplication:
         for path, handler in (("/api/mix/build", mixes.build),
                               ("/api/scrobble", listening.scrobble), ("/api/bookmark/save", listening.save_bookmark),
                               ("/api/bookmark/delete", listening.delete_bookmark),
-                              ("/api/play-queue/save", listening.save_play_queue),
                               ("/api/avatar/delete", profile.remove_avatar), ("/api/avatar/gravatar", profile.gravatar),
                               ("/api/ext/alternative", extmusic.alternative), ("/api/ext/unplayable", extmusic.unplayable),
                               ("/api/ext/played", extmusic.played), ("/api/ext/favorite", extmusic.favorite),
@@ -324,6 +323,7 @@ class WebApplication:
                               ("/api/news/feed/add", news.add), ("/api/news/feed/remove", news.remove),
                               ("/api/news/feed/show", news.show)):
             router.add("POST", path, write(handler))
+        router.add("POST", "/api/play-queue/save", write(listening.save_play_queue, PLAY_QUEUE_BODY_LIMIT))
         router.add("POST", "/api/avatar/upload", write(profile.upload_avatar, AVATAR_BODY_LIMIT))
         # envoi de fichiers dans Incoming (droit Subsonic « upload ») : le fichier (ou un zip) est le corps brut de la requête
         router.add("GET", "/api/upload/history", read(uploads.history))

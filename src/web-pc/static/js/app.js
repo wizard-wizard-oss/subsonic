@@ -25,6 +25,8 @@ class MusicApp {
   }
 
   showLogin(message) {
+    if (this.queueMemory) this.queueMemory.suspend();
+    if (App.queuePanel) App.queuePanel.close();
     App.live.stop();
     document.getElementById("app").hidden = true;
     document.getElementById("login").hidden = false;
@@ -52,6 +54,11 @@ class MusicApp {
   }
 
   async start(me) {
+    const changedUser = App.user && App.user.id !== me.user.id;
+    if (changedUser) {
+      App.live.stop();
+      if (this.queueMemory) this.queueMemory.suspend();
+    }
     App.user = me.user;
     ListenLaterUI.reset();
     ListenLaterUI.start();
@@ -63,7 +70,12 @@ class MusicApp {
     document.getElementById("app").hidden = false;
     App.append(App.clear(document.getElementById("me")), [App.avatar(App.user.username, 26),
                                                           App.el("span.me-name", {text: App.user.username})]);
-    if (this.started) return;          // reconnexion après une session expirée : tout est déjà en place
+    if (this.started) {
+      this.queueMemory.start();
+      if (changedUser) App.live.start();
+      this.navigate();
+      return;
+    }          // reconnexion après une session expirée : tout est déjà en place
     this.started = true;
 
     App.player = new Player(new PlaybackEngine(new Audio(), document.getElementById("video-frame")));
@@ -73,6 +85,8 @@ class MusicApp {
     setInterval(() => { if (!document.hidden) Avatars.load(); }, 10 * 60 * 1000);   // photos changées par les autres
     App.queuePanel = new QueuePanel(App.player);
     new PlayerBar(document.getElementById("player"), App.player);
+    this.queueMemory = new QueueMemory(App.player);
+    this.queueMemory.start();
     this.sidebar = new ArtistSidebar(this);
     this.playlistPanel = new PlaylistPanel(this);
     this.listeningPanel = new ListeningPanel();
@@ -121,6 +135,9 @@ class MusicApp {
     document.getElementById("open-settings").addEventListener("click", () => Dialogs.settings());
     document.getElementById("open-shortcuts").addEventListener("click", () => Dialogs.shortcuts());
     document.getElementById("logout").addEventListener("click", async () => {
+      this.queueMemory.record();
+      await this.queueMemory.flush();
+      this.queueMemory.suspend();
       try { await App.api.post("/api/logout"); } catch (e) { /* déjà déconnecté */ }
       App.player.audio.pause();
       location.hash = "#/";

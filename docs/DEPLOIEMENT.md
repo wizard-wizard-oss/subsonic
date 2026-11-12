@@ -214,6 +214,16 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 
 ## Avant de déployer
 
+La 1.10.1 ne change ni le schéma ni la configuration. Elle relie le lecteur aux routes existantes de file
+Subsonic et ajoute une copie locale par compte. Publiée le 12/11/2026 sur https://music2.foos.fr après
+694 tests Python et les sept parcours jsdom ; les deux parcours PC ont été rejoués sur le code final.
+Sauvegarde cohérente du code, de la configuration et de SQLite : `../pimedia-backups/pre-1.10.1-20261112T200913Z`.
+Image précédente conservée : `pimedia-web:pre-1.10.1-20261112t200913z`. Publication par `deploy/pc/push.sh`,
+sans modifier le `.env` ni les volumes. Le conteneur est sain ; les 216 fichiers applicatifs correspondent
+aux sources testées. HTTPS, version, scripts versionnés et connexion publique dans jsdom vérifiés ;
+les routes de file exigent session et CSRF. SQLite reste au schéma 19, intègre, avec les compteurs inchangés.
+Aucun compte ni file de production utilisé pour les tests connectés. Recharger la page avec Cmd+Maj+R.
+
 La 1.10 ajoute la migration web 19 : `upload_history` et `upload_albums`, pour attribuer les nouveaux envois
 au compte connecté et afficher l’auteur sur les albums. Aucun nouveau réglage d’environnement.
 L’historique est initialement vide : les anciens envois ne peuvent pas être attribués rétroactivement.

@@ -59,6 +59,13 @@ class PlaybackEngine extends EventTarget {
     this.state = -1;
     this.youtubeError = null;
     this.level = audio.volume;
+    this.audioStart = null;
+    audio.addEventListener("loadedmetadata", () => {
+      if (this.audioStart === null || this.isYouTube || this.isSoundCloud) return;
+      const position = this.audioStart;
+      this.audioStart = null;
+      audio.currentTime = position;
+    });
     for (const kind of AUDIO_EVENTS) {
       audio.addEventListener(kind, () => { if (!this.videoId && !this.sound) this.emit(kind); });
     }
@@ -77,11 +84,12 @@ class PlaybackEngine extends EventTarget {
   get src() { return this.sound ? "soundcloud:" + this.sound.url : this.isYouTube ? "youtube:" + this.videoId : this.audio.src; }
   get currentTime() {
     if (this.sound) return this.sound.position;
-    return this.isYouTube ? this.call("getCurrentTime", 0) : this.audio.currentTime;
+    return this.isYouTube ? this.call("getCurrentTime", this.videoStart || 0) : this.audioStart ?? this.audio.currentTime;
   }
   set currentTime(seconds) {
     if (this.sound) { this.sound.position = seconds; this.soundCall("seekTo", Math.round(seconds * 1000)); }
     else if (this.isYouTube) this.call("seekTo", null, seconds, true);
+    else if (this.audioStart !== null) this.audioStart = seconds;
     else this.audio.currentTime = seconds;
   }
   get duration() {
@@ -108,19 +116,30 @@ class PlaybackEngine extends EventTarget {
     else this.audio.pause();
   }
 
-  /* --- sources --- */
-  playUrl(url) {
+  stop() {
     this.leaveYouTube();
     this.leaveSoundCloud();
+    this.audio.pause();
+    this.audioStart = null;
+    this.audio.removeAttribute("src");
+    this.audio.load();
+  }
+
+  /* --- sources --- */
+  playUrl(url, position = 0) {
+    this.leaveYouTube();
+    this.leaveSoundCloud();
+    this.audioStart = position;
     this.audio.src = url;
     return this.audio.play();
   }
 
-  playYouTube(videoId) {
+  playYouTube(videoId, position = 0) {
     this.leaveSoundCloud();
     this.audio.pause();
     this.audio.removeAttribute("src");
     this.videoId = videoId;
+    this.videoStart = position;
     this.state = -1;
     this.youtubeError = null;
     document.body.dataset.video = "on";
@@ -131,10 +150,10 @@ class PlaybackEngine extends EventTarget {
 
   start(YT, videoId) {
     if (this.videoId !== videoId) return;            // un autre titre a été choisi entre-temps
-    if (this.youtube) { this.youtube.loadVideoById(videoId); return; }
+    if (this.youtube) { this.youtube.loadVideoById(videoId, this.videoStart); return; }
     this.youtube = new YT.Player(this.videoBox, {
       width: "100%", height: "100%", videoId, host: "https://www.youtube-nocookie.com",
-      playerVars: {autoplay: 1, controls: 0, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1, fs: 0},
+      playerVars: {autoplay: 1, start: Math.floor(this.videoStart), controls: 0, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1, fs: 0},
       events: {
         onReady: () => this.call("setVolume", null, Math.round(this.level * 100)),
         onStateChange: event => this.changed(event.data),
@@ -174,7 +193,7 @@ class PlaybackEngine extends EventTarget {
 
   /** Titre SoundCloud (url : « https://api.soundcloud.com/tracks/<n> ») : un nouveau lecteur officiel par titre,
       dans la fenêtre vidéo. Son API répond par événements : position et durée sont gardées au fil de l'eau. */
-  playSoundCloud(url) {
+  playSoundCloud(url, position = 0) {
     this.leaveYouTube();
     this.leaveSoundCloud();
     this.audio.pause();
@@ -185,7 +204,7 @@ class PlaybackEngine extends EventTarget {
     frame.allow = "autoplay; encrypted-media";            // comme le code d'intégration de SoundCloud
     frame.src = SOUNDCLOUD_PLAYER + new URLSearchParams(Object.assign({url}, SOUNDCLOUD_OPTIONS));
     this.videoWindow.appendChild(frame);
-    const sound = {url, frame, widget: null, playing: false, position: 0, duration: NaN, error: null};
+    const sound = {url, frame, widget: null, playing: false, position, start: position, duration: NaN, error: null};
     this.sound = sound;
     document.body.dataset.video = "on";
     document.body.dataset.videoSource = "soundcloud";
@@ -202,7 +221,13 @@ class PlaybackEngine extends EventTarget {
       if (this.sound === sound && ms > 0) { sound.duration = ms / 1000; this.emit("durationchange"); }
     });
     on(events.READY, () => { widget.setVolume(Math.round(this.level * 100)); readDuration(); });
-    on(events.PLAY, () => { sound.playing = true; readDuration(); this.emit("play"); });
+    on(events.PLAY, () => {
+      sound.playing = true;
+      if (sound.start) widget.seekTo(Math.round(sound.start * 1000));
+      sound.start = 0;
+      readDuration();
+      this.emit("play");
+    });
     on(events.PAUSE, () => { sound.playing = false; this.emit("pause"); });
     on(events.FINISH, () => { sound.playing = false; this.emit("ended"); });
     on(events.PLAY_PROGRESS, event => { sound.position = (event.currentPosition || 0) / 1000; this.emit("timeupdate"); });

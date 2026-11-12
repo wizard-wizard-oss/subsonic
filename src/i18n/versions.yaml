@@ -5,6 +5,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.10.1"
+  date: 2026-11-12
+  title: "Retrouver votre file d’écoute"
+  changes:
+    - "Votre file d’écoute est sauvegardée dans votre compte Subsonic : retrouvez les morceaux dans leur ordre, le titre courant et sa position après un rafraîchissement ou une reconnexion. La lecture reprend à votre demande."
+    - "Une copie dans ce navigateur conserve aussi les titres YouTube, SoundCloud et Jamendo et les changements en attente si Subsonic est injoignable. Ils sont gardés séparément pour chaque compte."
+
 - version: "1.10"
   date: 2026-11-12
   title: "Retrouver qui a envoyé la musique"

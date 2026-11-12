@@ -1,5 +1,22 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Persistance de la file d'écoute, 1.10.1 (12/11/2026, déployée et vérifiée)** : vérification de l'API officielle
+Subsonic (`getPlayQueue` / `savePlayQueue`, depuis 1.12.0) et branchement des routes existantes au lecteur web.
+Liste, ordre, titre courant et position restaurés en pause après rafraîchissement ou reconnexion, y compris depuis
+un autre navigateur. Copie locale par compte pour les sources externes et les modifications non envoyées ;
+reprise des envois après coupure, réponses lentes protégées et écritures sérialisées. Les longues files passent
+en POST vers Subsonic (5 000 titres maximum), sans tronquer à 500. Aucun cache audio ni démarrage complet garanti
+sans accès au serveur web ; la copie locale nécessite une page chargée et un compte authentifié.
+Validation : 694 tests Python et les sept parcours jsdom passent dans Docker sans réseau externe ; les deux
+parcours PC ont été rejoués après la gestion du quota local (32 contrôles dédiés à la file).
+Publication vérifiée sur https://music2.foos.fr : conteneur sain, HTTPS et version publique 1.10.1,
+216 fichiers applicatifs identiques aux sources testées et cinq scripts modifiés servis avec leur nouvelle
+empreinte de cache. Page publique chargée dans jsdom : connexion en français, nouveau composant présent,
+aucune erreur JavaScript. Routes de file protégées par session et CSRF ; aucune file utilisateur modifiée
+pour les contrôles. SQLite intègre au schéma 19, 12 comptes et données existantes conservés.
+Sauvegarde cohérente : `../pimedia-backups/pre-1.10.1-20261112T200913Z` ; image précédente : `pimedia-web:pre-1.10.1-20261112t200913z`.
+Recharger la page (Cmd+Maj+R). Détails et limites dans [Lecteur](features/lecteur.md).
+
 **Historique des envois, 1.10 (12/11/2026, déployé et vérifié)** : migration web 19, historique SQLite des envois
 réussis associé au compte authentifié. Tableau partagé entre tous les comptes connectés dans Envoyer : auteur, date, fichier/ZIP,
 nombre de fichiers et résultat du rangement ; pagination de 50 envois. Mention discrète sur les nouveaux albums
