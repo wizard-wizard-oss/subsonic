@@ -28,6 +28,7 @@ from .controllers.facts import FactsController
 from .controllers.exploration import ExplorationController
 from .controllers.discogs import DiscogsController
 from .controllers.listening import ListeningController
+from .controllers.listen_later import ListenLaterController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
 from .controllers.news import NewsController
@@ -53,6 +54,11 @@ from .folders import FolderNotFound, Folders
 from .library import Library
 from .library_statistics import SubsonicStatistics
 from .listening import Listening
+from .listen_later import ListenLater
+from .recommendations import Recommendations
+from .listening_targets import ListeningTargets, ListenLaterError
+from .storage.listen_later import ListenLaterRepository
+from .storage.recommendations import RecommendationRepository
 from .lyrics import Lyrics
 from .mixes import MixError, Mixes
 from .news import News, NewsError
@@ -122,7 +128,7 @@ def error_reply(error):
         return Reply.error(404 if error.code == 70 else 502, "subsonic.error")
     if isinstance(error, SubsonicUnreachable):
         return Reply.error(503, "subsonic.unreachable")
-    if isinstance(error, (MixError, PlaylistError, InvalidAvatar, ExtMusicError, UploadError, NewsError, ImportFailed, CoverError)) and error.args:
+    if isinstance(error, (MixError, PlaylistError, InvalidAvatar, ExtMusicError, UploadError, NewsError, ImportFailed, CoverError, ListenLaterError)) and error.args:
         return Reply.error(400, error.args[0])             # clé de texte précise (« mix.no_lastfm »…)
     if isinstance(error, (InvalidRating, InvalidPreference, ValueError)):
         return Reply.error(400, "request.invalid")
@@ -182,6 +188,9 @@ class WebApplication:
         self.discogs_catalogs = DiscogsCatalogs(self.discogs)
         self.artist_discogs = ArtistDiscogsLinks(ArtistLinkRepository(self.db), self.folders, self.artist_indexes,
                                                self.discogs, self.discogs_catalogs, self.config.subsonic_url)
+        targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key)
+        self.listen_later = ListenLater(ListenLaterRepository(self.db), targets)
+        self.recommendations = Recommendations(RecommendationRepository(self.db), targets, self.users, self.hub)
         self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
         self.lastfm = LastFm(metadata, self.config.lastfm_api_key)
         self.youtube_versions = YouTubeVersions(self.extmusic)
@@ -216,6 +225,7 @@ class WebApplication:
         mixes = MixController(self.mixes)
         playlists = PlaylistController(self.playlists)
         listening = ListeningController(self.listening)
+        listen_later = ListenLaterController(self.listen_later, self.recommendations)
         profile = ProfileController(self.avatars, self.radios, self.config.subsonic_public_url)
         lyrics = LyricsController(self.lyrics)
         facts = FactsController(self.facts, self.artist_portraits)
@@ -247,6 +257,13 @@ class WebApplication:
                               ("/api/discogs/catalog", discogs.catalog), ("/api/labels/discover", discogs.discover),
                               ("/api/labels/ranking", discogs.ranking), ("/api/labels/tracks", discogs.tracks)):
             router.add("GET", path, read(handler))
+        router.add("GET", "/api/listen-later", read(listen_later.all))
+        router.add("GET", "/api/recommendation/status", read(listen_later.status))
+        router.add("POST", "/api/recommendation/read", write(listen_later.mark_read))
+        router.add("POST", "/api/listen-later/add", write(listen_later.add))
+        router.add("POST", "/api/listen-later/remove", write(listen_later.remove))
+        router.add("POST", "/api/recommendation/send", write(listen_later.recommend))
+        router.add("POST", "/api/recommendation/remove", write(listen_later.dismiss))
         router.add("POST", "/api/preferences", write(auth.save_preferences))
         router.add("GET", "/api/discogs/artist-link", read(discogs.artist_link))
         router.add("POST", "/api/discogs/artist-link", write(discogs.choose_artist))

@@ -23,6 +23,7 @@
   des albums commentés gardent leur présentation.
 - **Recherche** (champ du haut, dès 2 lettres) : artistes, albums, titres, et section « Ailleurs » (voir `musique-ailleurs.md`).
 - **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
+- **À écouter** : marque-pages et recommandations d’artistes/albums, indépendants des cœurs. Boutons sur les fiches ; voir [listen-later](listen-later.md).
 
 ### Dossiers ou tags (`pimedia/webapp/folders.py`)
 La bibliothèque est rangée `Artiste/Album/titre` (voir `envoi-fichiers.md`) : la barre des artistes, la page artiste et la

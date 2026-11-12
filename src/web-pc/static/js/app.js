@@ -53,6 +53,8 @@ class MusicApp {
 
   async start(me) {
     App.user = me.user;
+    ListenLaterUI.reset();
+    ListenLaterUI.start();
     App.preferences = me.preferences;
     App.reactions = me.reactions;
     App.usernames = me.usernames;
@@ -159,6 +161,7 @@ class MusicApp {
     if (view === "explore" || view === "discogs") return {view, kind: rest[0], id: rest[1] || ""};
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
+    if (view === "listen-later") return {view: "listenLater"};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
         view === "account") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)

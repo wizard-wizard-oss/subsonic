@@ -49,6 +49,7 @@ const Dialogs = (() => {
   /** Réglages rapides (roue dentée) : l'affichage, les droits, et le lien vers la page « Mon compte ». */
   function settings() {
     open(App.t("settings.title"), el("div.settings", {}, display(), rights(),
+      el("a.settings-listen-later", {href: "#/listen-later", text: App.t("nav.listen_later") + " →", onclick: () => close()}),
       el("a.settings-account", {href: "#/account", text: App.t("nav.account") + " →", onclick: () => close()})));
   }
 

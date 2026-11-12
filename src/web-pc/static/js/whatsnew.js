@@ -8,12 +8,13 @@ Views.whatsnew = (() => {
 
   // [partie, icône, [[sujet, lien facultatif], …]]
   const PARTS = [
-    ["together", "chat", [["chat"], ["listening"], ["comments"], ["news", "#/news"]]],
-    ["discover", "shuffle", [["mix", "#/mix"], ["builder", "#/mix"], ["radio"], ["similar"], ["home", "#/albums/newest"]]],
+    ["together", "chat", [["chat"], ["listening"], ["comments"], ["recommendations", "#/listen-later"], ["news", "#/news"]]],
+    ["discover", "shuffle", [["mix", "#/mix"], ["builder", "#/mix"], ["radio"], ["similar"], ["home", "#/albums/newest"],
+                            ["discography"], ["credits"], ["labels"], ["bookmarks", "#/listen-later"]]],
     ["playlists", "list", [["drag"], ["community"], ["shared"], ["mixed"], ["import", "#/import"]]],
     ["elsewhere", "play", [["search"], ["sources"], ["what"], ["quota"], ["refused"], ["favorites", "#/favorites"],
                            ["likes"], ["fine_print"]]],
-    ["comfort", "mic", [["lyrics"], ["queue"], ["shortcuts"], ["download"]]],
+    ["comfort", "mic", [["lyrics"], ["queue"], ["shortcuts"], ["download"], ["covers"]]],
     ["where", "disc", [["subsonic"], ["site"]]],
   ];
 

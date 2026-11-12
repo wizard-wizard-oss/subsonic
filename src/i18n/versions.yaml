@@ -5,6 +5,21 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.9.2"
+  date: 2026-11-10
+  title: "Un point rouge pour les nouveaux conseils"
+  changes:
+    - "Le menu À écouter affiche une pastille rouge dès qu’un membre vous conseille un artiste ou un album. Elle se met à jour dans vos onglets ouverts."
+    - "Les conseils affichés sont marqués comme lus à l’ouverture de la page. Un conseil reçu pendant le chargement reste signalé jusqu’à son affichage, et un conseil identique déjà lu ne rallume pas la pastille."
+
+- version: "1.9"
+  date: 2026-11-10
+  title: "Des artistes et des albums à écouter plus tard"
+  changes:
+    - "Gardez un artiste ou un album depuis sa fiche dans la bibliothèque ou depuis Discogs, puis retrouvez-le dans la page À écouter."
+    - "Conseillez une découverte à un autre membre. Les recommandations reçues regroupent les noms de toutes les personnes qui vous conseillent le même disque ou artiste."
+    - "Gardez une recommandation dans vos marque-pages ou retirez-la indépendamment. La recherche, les favoris, la lecture et les playlists restent accessibles avec leurs boutons habituels."
+
 - version: "1.8.3"
   date: 2026-11-09
   title: "Des mix fidèles à l’artiste de départ"

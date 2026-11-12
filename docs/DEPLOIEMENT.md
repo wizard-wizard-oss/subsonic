@@ -214,6 +214,19 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 
 ## Avant de déployer
 
+La 1.9.2 ajoute la migration web 18 : marqueurs de conseils non lus et index par destinataire.
+Les conseils existants sont initialisés comme non lus ; aucune nouvelle variable ni tâche périodique.
+Sauvegarder SQLite et conserver l’image précédente avant publication.
+Publication du 10/11/2026 : sauvegarde cohérente dans ../pimedia-backups/pre-1.9.2-20261110T221310Z/, image pimedia-web:pre-1.9.2-20261110t221310z. Schéma 18 et intégrité vérifiés après publication.
+
+La 1.9 ajoute la migration web 17 (listen_later et recommendations), appliquée au démarrage.
+Sauvegarde cohérente avant publication : code/configuration archivés, SQLite copié par l'API backup,
+image précédente conservée sous une étiquette dédiée. Aucun nouveau réglage d'environnement.
+Le 10/11/2026, sauvegarde dans ../pimedia-backups/pre-1.9-20261110T202923Z/ depuis le projet distant,
+image pimedia-web:pre-1.9-20261110t202923z ; schéma 17 et intégrité vérifiés après publication.
+Les deux tables sont additives ; un retour à l'image précédente peut conserver la base actuelle et ses nouvelles
+tables inutilisées. Une restauration de la sauvegarde SQLite doit tenir compte des écritures intervenues depuis.
+
 La 1.8 ajoute la migration web 16 (`artist_discogs_links`), appliquée au démarrage. Sauvegarder la base de façon
 cohérente et conserver l’image précédente avant mise à jour. Le `.env` et le montage facultatif des statistiques
 restent ceux du serveur ; aucune nouvelle variable et aucun changement de l’édition Pi pour les fiches Discogs.

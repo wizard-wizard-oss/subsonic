@@ -65,6 +65,8 @@ Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 
 ## Où chercher quoi
+- Pastille À écouter (1.9.2) : Recommendations publie dans EventHub vers le seul destinataire ; le composant existant utilise LiveEvents, sans nouvelle connexion SSE. Les accusés de lecture passent par le dépôt et le contrôleur existants.
+- À écouter et recommandations (1.9) : résolution commune dans webapp/listening_targets.py, règles dans listen_later.py et recommendations.py, entités et dépôts SQL dédiés. Contrôleur commun, assemblage app.py. Zone web uniquement ; recherche et lecture existantes réutilisées.
 - Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;
   `youtube_matching.py` porte les règles pures de pertinence. `ExternalMusic` réutilise `server/extmusic/YouTubeSource`,
   les budgets et le dépôt de vidéos commun aux favoris. Parseur de liens mutualisé dans `webapp/external_links.py` ;

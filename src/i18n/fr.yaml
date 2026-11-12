@@ -103,6 +103,45 @@ launcher:
       "99": "Orage"
 
 webapp:
+
+  listen_later:
+    unread_label: "À écouter : nouveaux conseils reçus"
+    title: "À écouter"
+    intro: "Gardez les artistes et les albums à découvrir, et retrouvez les conseils reçus."
+    bookmarks: "Mes marque-pages"
+    recommendations: "Les recommandations reçues"
+    add_bookmark: "Garder dans À écouter"
+    remove_bookmark: "Retirer de mes marque-pages"
+    bookmark_added: "Ajouté à À écouter"
+    open_list: "Voir ma liste"
+    keep: "Garder en marque-page"
+    saved: "Dans mes marque-pages"
+    bookmark_removed: "Marque-page retiré"
+    recommend: "Conseiller à quelqu’un"
+    recipient: "Destinataire"
+    send: "Envoyer le conseil"
+    sent: "Conseil envoyé"
+    no_recipient: "Un autre compte doit s’être connecté au site pour recevoir un conseil."
+    recipient_unknown: "Ce compte n’existe pas sur le site."
+    self_recommendation: "Pour vous, utilisez le bouton marque-page."
+    recommended_by: "Conseillé par {names}"
+    dismiss: "Retirer des recommandations"
+    search_listening: "Rechercher pour écouter"
+    empty_bookmarks: "Aucun marque-page dans cette sélection. Gardez un artiste ou un album depuis sa fiche."
+    empty_recommendations: "Aucune recommandation reçue dans cette sélection."
+    loading: "Chargement de vos découvertes…"
+    retry: "Réessayer"
+    filter: "Afficher"
+    filters:
+      all: "Tout"
+      artist: "Les artistes"
+      album: "Les albums"
+    kinds:
+      artist: "Artiste"
+      album: "Album"
+    sources:
+      subsonic: "Bibliothèque"
+      discogs: "Discogs"
   title: "Musique"
   auth:
     title: "Connexion"
@@ -119,11 +158,12 @@ webapp:
     forbidden: "Action refusée"
     missing_right: "Votre compte Subsonic n'a pas ce droit (à demander à l'administrateur de Subsonic)"
   nav:
+    listen_later: "À écouter"
     home: "Accueil"
     favorites: "Favoris"
     albums: "Albums"
     mix: "Mix"
-    news: "Actualité"
+    news: "Actualités"
     whatsnew: "Nouveautés"
     upload: "Envoyer"
     search: "Rechercher un artiste, un album, un titre…"
@@ -628,7 +668,7 @@ webapp:
     title: "Nouveautés : tout ce que le site fait en plus de Subsonic"
     idea_title: "Le principe, en trois phrases"
     idea_1: "Subsonic reste la maison de notre musique : vos étoiles, vos cœurs, vos playlists et vos écoutes y sont écrits avec votre compte, donc vous les retrouvez aussi dans les applis Subsonic du téléphone."
-    idea_2: "Le site, lui, ajoute tout ce que Subsonic ne sait pas faire : écouter ensemble, papoter, se perdre dans des mix, et aller chercher ailleurs le titre qui manque."
+    idea_2: "Le site, lui, ajoute de quoi écouter ensemble, papoter, se perdre dans des mix, explorer les labels et les discographies, garder des découvertes pour plus tard et les conseiller aux autres. Et aller chercher ailleurs le titre qui manque."
     idea_3: "YouTube et SoundCloud passent par leurs lecteurs officiels, donc parfois avec les bloqueur de pub <b>mais Addblock fonctionne pas mal :-)<b/>."
     open: "J'y vais"
     versions: "Ce qui a changé, version par version"
@@ -643,9 +683,12 @@ webapp:
       comments:
         title: "On en parle sous l'album"
         text: "Chaque album a son fil de discussion, et ses étoiles : la vôtre, et la moyenne de la bande."
+      recommendations:
+        title: "Conseiller une découverte à un ami"
+        text: "Un artiste ou un album à faire découvrir ? Sur sa fiche dans la bibliothèque ou dans Discogs, cliquez sur « Conseiller à quelqu’un » et choisissez un autre membre déjà connecté au site. Il retrouve votre conseil dans « À écouter », parmi ses recommandations reçues. Si plusieurs personnes lui conseillent le même disque ou artiste, leurs noms sont réunis sur une seule carte. À lui de le garder aussi en marque-page s’il en a envie."
       news:
-        title: "Actualité : les flux RSS des webzines"
-        text: "Le site lit chaque heure les flux RSS des webzines (Les Inrocks, Mowno, New Noise…) et range leurs derniers articles dans la page Actualité. Il en manque un ? Collez l'adresse du webzine, ou de son flux RSS : le site trouve le flux tout seul, et il sert à tout le monde. Ceux qui vous barbent, décochez-les : ils disparaissent pour vous seulement. Cerise : sur la page d'un artiste, « Dans la presse » ressort les articles qui parlent de lui. On clique, et on lit l'article chez le webzine."
+        title: "Actualités : les flux RSS des webzines"
+        text: "Le site lit chaque heure les flux RSS des webzines (Les Inrocks, Mowno, New Noise…) et range leurs derniers articles dans la page Actualités. Il en manque un ? Collez l'adresse du webzine, ou de son flux RSS : le site trouve le flux tout seul, et il sert à tout le monde. Ceux qui vous barbent, décochez-les : ils disparaissent pour vous seulement. Cerise : sur la page d'un artiste, « Dans la presse » ressort les articles qui parlent de lui. On clique, et on lit l'article chez le webzine."
     discover:
       title: "Se perdre dans la musique"
       mix:
@@ -653,16 +696,28 @@ webapp:
         text: "Au hasard, vos favoris, découverte, nouveautés : quatre boutons, zéro réflexion."
       builder:
         title: "Créateur de mix"
-        text: "Pour les maniaques : un artiste de départ, des styles, des époques, 30, 60 ou 100 titres, vos favoris d'abord, ou dans l'ordre chronologique. Ça vous plaît ? Enregistrez-le en playlist."
+        text: "Pour les maniaques : un artiste de départ, des styles, des époques, 30, 60 ou 100 titres, vos favoris d'abord, ou dans l'ordre chronologique. Choisissez de 1 à 4 niveaux d’artistes proches. Le mix reste dans ce cercle, avec les styles renseignés du départ ou ceux que vous choisissez : si les titres manquent, la sélection reste plus courte. Ça vous plaît ? Enregistrez-le en playlist."
       radio:
         title: "Radio d'un artiste ou d'un titre"
         text: "Partez d'un artiste : ses titres, puis ceux qui lui ressemblent, puis les proches des proches… jusqu'à quatre niveaux. Ou, au bout d'un morceau de la bibliothèque, cliquez sur « Radio de ce titre » : ce morceau démarre, suivi de titres proches. Si Last.fm ne propose rien, on reste dans le même style, puis on pioche au hasard dans la bibliothèque."
       similar:
         title: "Artistes similaires, titres populaires"
-        text: "Sur chaque page d'artiste, merci Last.fm : ses voisins présents dans la bibliothèque et ses titres les plus connus. Avec « Membres et autres projets », suivez aussi les musiciens d'un groupe vers leurs autres aventures : les liens MusicBrainz indiquent les périodes connues."
+        text: "Sur chaque page d'artiste, merci Last.fm : ses voisins présents dans la bibliothèque et ses titres les plus connus. De quoi rebondir d’un groupe à l’autre, ou commencer par les morceaux que tout le monde connaît."
       home:
         title: "Accueil et Albums"
-        text: "Les derniers arrivés, les plus écoutés, les mieux notés par tout le monde, ceux dont on parle. Survolez une pochette : la petite flèche en haut à gauche lance l’album sans quitter la page ; le reste de la carte ouvre sa fiche. Et la page Albums pour fouiller par décennie, par genre ou de A à Z. Sur un album, « Découvrir les crédits » ouvre les labels, producteurs et musiciens : suivez leurs disques et leurs groupes grâce à MusicBrainz."
+        text: "Les derniers arrivés, les plus écoutés, les mieux notés par tout le monde, ceux dont on parle. Survolez une pochette : la petite flèche en haut à gauche lance l’album sans quitter la page ; le reste de la carte ouvre sa fiche. La page Albums permet de fouiller par décennie, par genre ou de A à Z. Quand les chiffres de Subsonic sont disponibles, l’accueil montre aussi la collection du serveur : artistes, albums, chansons, stockage, heures de musique et date du dernier scan."
+      discography:
+        title: "Les discographies Discogs"
+        text: "Depuis la fiche d’un artiste, choisissez sa fiche Discogs : votre choix est mémorisé pour votre compte, et sa discographie revient sous vos albums aux prochaines visites. Albums, EP, singles et participations, avec pochettes et dates : les rééditions sont regroupées, les disques retrouvés chez vous ont un lien vers la bibliothèque. Les boutons « Changer » et « Actualiser » permettent de corriger la fiche ou de relire le catalogue."
+      credits:
+        title: "Des crédits aux musiciens et à leurs groupes"
+        text: "Sur un album, « Crédits Discogs » propose de choisir l’édition pour retrouver ses labels, producteurs et musiciens. Les noms ouvrent leurs fiches et leurs discographies. Depuis un artiste, suivez aussi les membres du groupe vers leurs autres projets. Les crédits et relations MusicBrainz restent consultables, avec les périodes de participation connues. De quoi perdre le fil, dans le bon sens."
+      labels:
+        title: "Découvrir un label, ou explorer son Top"
+        text: "Depuis les labels d’un album, ouvrez un catalogue puis choisissez « Découvrir le label » pour varier artistes et époques, ou « Top du label » pour un classement par notes Discogs, auditeurs ou écoutes Last.fm. Le périmètre analysé est indiqué ; vous pouvez arrêter le classement et préparer les disques déjà analysés. Les titres sont cherchés dans votre bibliothèque, puis les versions YouTube manquantes sont proposées au choix. Écoutez les titres prêts ou enregistrez-les en playlist, même pendant la suite de la préparation."
+      bookmarks:
+        title: "Des marque-pages pour écouter plus tard"
+        text: "Un disque à essayer, un artiste à creuser ? Le bouton marque-page sur les fiches de la bibliothèque et de Discogs les garde dans « À écouter », sans toucher à vos cœurs. Vous y retrouvez vos marque-pages, séparés des recommandations reçues, avec un filtre artistes ou albums. « Rechercher pour écouter » prépare la recherche ; vous pouvez ensuite lancer un titre, le mettre en favori ou l’ajouter à une playlist. Un marque-page et une recommandation se retirent indépendamment."
     playlists:
       title: "Les playlists, version deluxe"
       drag:
@@ -679,7 +734,7 @@ webapp:
         text: "Un titre YouTube ou SoundCloud se glisse dans une playlist comme les autres. Sur le site, tout est mélangé ; dans les applis Subsonic du téléphone, on ne voit que les titres de la bibliothèque."
       import:
         title: "Vos playlists de Deezer, Spotify ou Apple Music"
-        text: "Collez un lien Deezer ou envoyez l'export d'une playlist Spotify ou Apple Music : chaque titre est retrouvé dans la bibliothèque, ce qui manque est cherché sur YouTube, et vous vérifiez tout avant de créer la playlist. Le guide explique comment sortir sa playlist de chaque plateforme."
+        text: "Collez un lien Deezer ou envoyez l'export d'une playlist Spotify ou Apple Music : chaque titre est retrouvé dans la bibliothèque, ce qui manque est cherché sur YouTube, et vous vérifiez tout avant de créer la playlist. Un export Apple Music contient plusieurs playlists ? Vous choisissez laquelle importer. Le guide explique comment sortir sa playlist de chaque plateforme."
     elsewhere:
       title: "YouTube, Jamendo, SoundCloud : la musique qu'on n'a pas"
       search:
@@ -713,13 +768,16 @@ webapp:
         text: "Lancez un titre, appuyez sur L (ou le bouton micro du lecteur) : les paroles prennent la place du salon. Quand elles sont synchronisées, la ligne chantée s'allume au milieu et défile pile en rythme, même si vous sautez un passage. Sinon, le texte défile tout seul à vue de nez. Micro pas fourni, chanter faux autorisé ; touche C pour revenir au salon."
       queue:
         title: "File d'attente"
-        text: "Laissez traîner la souris sur le lecteur : la file s'ouvre. Réordonnez à la souris, videz la suite, et « Annuler » rattrape les fausses manœuvres."
+        text: "Laissez traîner la souris sur le lecteur : la file s'ouvre. Réordonnez à la souris, videz la suite, et « Annuler » rattrape les fausses manœuvres. Au bout d’un titre, « Lire juste après » le place à la suite du morceau en cours. Sur un album, le menu ⋯ permet aussi de placer tout le disque juste après, de l’ajouter à la file ou de le partager dans le salon."
       shortcuts:
         title: "Raccourcis clavier"
         text: "Espace pour pause, N et P pour suivant et précédent, / pour chercher, C pour le salon, L pour les paroles, A pour la barre des artistes. Et ? pour tout voir."
       download:
         title: "Télécharger, envoyer"
         text: "Selon ce que votre compte Subsonic permet : un album en zip ou un titre seul ; et envoyer de la musique (fichiers ou zip), rangée toute seule chez son artiste."
+      covers:
+        title: "Changer la pochette d’un album"
+        text: "La pochette ne vous plaît pas ? Si votre compte permet d’envoyer de la musique, un crayon apparaît au survol de la pochette de l’album. Cherchez une autre image sur Last.fm, ou collez son adresse, puis choisissez. Elle est enregistrée dans le dossier du disque ; l’ancienne est gardée en sauvegarde."
     where:
       title: "Qui garde quoi"
       subsonic:
@@ -727,7 +785,7 @@ webapp:
         text: "Vos étoiles et vos cœurs, vos playlists avec leurs titres de la bibliothèque, vos écoutes (envoyées à Last.fm si vous avez relié votre compte dans Subsonic, Paramètres → Personnel)."
       site:
         title: "Seulement sur le site"
-        text: "Le salon et les commentaires, l'Actualité, les favoris d'ailleurs et les titres d'ailleurs de vos playlists."
+        text: "Le salon et les commentaires, les Actualités, les favoris d’ailleurs et les titres d’ailleurs de vos playlists. Vos marque-pages d’artistes et d’albums, les recommandations reçues et vos choix de fiches Discogs restent aussi sur le site, liés à votre compte."
     footer: "Une idée, un bug, un coup de cœur ? Dites-le dans le salon."
   versions:
     title: "Versions du site"
@@ -918,7 +976,7 @@ webapp:
     load_catalog: "Le catalogue doit être relu avant cette sélection. Rechargez la fiche du label."
     rank_restart: "Les chiffres conservés ont expiré. Relancez le classement depuis le début."
   news:
-    title: "Actualité"
+    title: "Actualités"
     intro: "Les derniers articles des webzines suivis par le site. Chacun peut en ajouter, pour tout le monde, et décocher ceux qu'il ne veut pas voir. Les articles s'ouvrent chez le webzine."
     all: "Tout"
     add_placeholder: "Adresse d'un webzine ou de son flux RSS"

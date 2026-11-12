@@ -21,7 +21,7 @@ class LiveEvents {
   start() {
     if (this.source || typeof EventSource === "undefined") return;
     this.source = new EventSource("/api/events");
-    for (const kind of ["message", "message_updated", "mention", "typing", "presence", "artists"]) {
+    for (const kind of ["message", "message_updated", "mention", "typing", "presence", "artists", "recommendations"]) {
       this.source.addEventListener(kind, event => {
         let data;
         try { data = JSON.parse(event.data); } catch (e) { return; }

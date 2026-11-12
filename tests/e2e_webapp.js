@@ -1005,7 +1005,7 @@ function makeEventSource(jar) {
   // --- Actualité : flux des webzines, partagés par tout le site ---
   w.location.hash = "#/news";
   check("actualité : page, « Tout » et les trois webzines de départ", await until(() => $$(".news-feed").length === 4) &&
-        $("#main h1").textContent === "Actualité" && $(".news-feed.on").textContent === "Tout" &&
+        $("#main h1").textContent === "Actualités" && $(".news-feed.on").textContent === "Tout" &&
         $$(".topnav a.active").map(a => a.getAttribute("href")).join() === "#/news");
   check("actualité : vide expliqué", $(".news-list li.muted").textContent.startsWith("Aucun article"));
   check("actualité : flux de départ, seul l'admin les retire", !$(".news-remove"));
@@ -1048,7 +1048,7 @@ function makeEventSource(jar) {
         $("#main h1").textContent.startsWith("Nouveautés")) &&
         $('.topnav a[href="#/whatsnew"]').classList.contains("active"));
   check("nouveautés : le principe puis six parties", !!$(".whatsnew-idea") && $$(".whatsnew-part").length === 6 &&
-        $$(".whatsnew-card").length === 28);
+        $$(".whatsnew-card").length === 34);
   check("nouveautés : playlists (glisser-déposer, communautaires, partagées)",
         ["Glisser-déposer", "Communautaires", "Partagées"].every(w => $$(".whatsnew-card h3").some(h => h.textContent.startsWith(w))));
   check("nouveautés : aucun texte manquant", ![...$$("#main h2, #main h3, #main p")].some(n => /whatsnew\./.test(n.textContent)));

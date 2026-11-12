@@ -18,6 +18,7 @@ faux Subsonic, mpv et jsdom).
 | [labels-et-collaborations](labels-et-collaborations.md) | crédits, labels, membres et leurs autres groupes / projets depuis l'album ou l'artiste (MusicBrainz) | oui | API oui (ABBA, Vitalic, Kyuss), interface jsdom |
 | [decouverte-labels](decouverte-labels.md) | découverte variée, Top sourcé, playlists mixtes, crédits, musiciens et discographies Discogs | oui | API Discogs/Last.fm, interface jsdom |
 | [navigation-labels](navigation-labels.md) | **brouillon** : index des labels de la bibliothèque, pages avec histoire/logo, catalogue et compléments YouTube | non | non implémenté |
+| [listen-later](listen-later.md) | artistes et albums à écouter, recommandations regroupées par conseillers | oui | simulations locales et Chrome |
 | [notes-et-commentaires](notes-et-commentaires.md) | étoiles, cœur, commentaires d'album | oui | en partie |
 | [salon](salon.md) | discussion temps réel | oui | oui (Traefik) |
 | [lecteur](lecteur.md) | lecteur, file, raccourcis | oui | jsdom seulement |

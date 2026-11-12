@@ -41,6 +41,7 @@ def main():
     # Let jsdom load all application scripts without overflowing the local TCP backlog.
     ThreadedServer.request_queue_size = 128
     fake = FakeSubsonicFull().start()
+    fake.users["charlie"] = "pw3"
     fake.api_getIndexes = slow_then_failing_once(fake.api_getIndexes)
     music = tempfile.mkdtemp(prefix="pmw-music-")                 # Incoming y est créé au premier passage
     statistics = os.path.join(music, "subsonic.properties")

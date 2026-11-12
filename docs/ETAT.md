@@ -1,5 +1,49 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Notifications des recommandations, 1.9.2 (10/11/2026, déployées et vérifiées)** :
+pastille rouge sur « À écouter » tant que des conseils restent non lus. État persistant par recommandation,
+flux SSE existant ciblé sur le destinataire, mise à jour des onglets et rattrapage à la reconnexion ou au retour
+sur la page. Les conseils réellement affichés sont acquittés par leur marqueur de livraison : une arrivée
+simultanée ou une recommandation supprimée puis recréée ne peut pas être lue par un ancien accusé.
+Les conseils existants deviennent non lus lors de la migration 18 ; un envoi identique déjà lu reste lu.
+Validation : 650 tests Python, parcours PC et parcours À écouter passent ; Chrome vérifie le vrai SSE entre
+deux onglets, les lectures synchronisées et un nouveau conseiller. Noms anglais et textes i18n.
+Publication vérifiée sur https://music2.foos.fr : HTTPS et conteneur sains, version publique 1.9.2,
+212 fichiers identiques aux sources testées, ressources versionnées et libellé accessible conformes.
+SQLite intègre au schéma 18, dix comptes et les marque-pages/conseils existants conservés.
+Statut protégé par session et accusé protégé par CSRF ; aucun conseil de production envoyé pour les contrôles.
+Sauvegarde cohérente : ../pimedia-backups/pre-1.9.2-20261110T221310Z/ ; image précédente : pimedia-web:pre-1.9.2-20261110t221310z.
+Recharger la page (Cmd+Maj+R). Voir [À écouter](features/listen-later.md).
+
+
+**Complément de la page Nouveautés (10/11/2026, déployé avec la 1.9)** : menu et page « Actualités » au pluriel.
+La présentation du site décrit désormais les discographies et choix Discogs, les crédits et groupes liés, les
+sélections et classements des labels avec versions YouTube, les marque-pages et recommandations de « À écouter ».
+Les textes du créateur de mix, de l'accueil, de l'import Apple Music, de la file, des pochettes et des données
+gardées sur le site sont complétés. Six parties, 34 cartes ; liens vers « À écouter ».
+Décision utilisateur : complément éditorial sans nouvelle version, historique `versions.yaml` conservé tel quel.
+Publié avec la version 1.9 ; textes publics et JavaScript servis vérifiés après le parcours PC de régression.
+
+**À écouter et recommandations, 1.9 (déployée et vérifiée — 10/11/2026)** :
+marque-pages personnels d'artistes et d'albums Subsonic/Discogs, recommandations séparées avec plusieurs
+conseillers et destinataire explicite, deux sections sur une même page. Recherche, lecteur, favoris et
+playlists existants réutilisés. Migration 17 : listen_later et recommendations.
+Aucune synchronisation du catalogue ou rapprochement automatique. Nomenclature en anglais.
+Validation locale : 633 tests Python, contrôles ciblés, parcours PC existant et nouveau parcours jsdom,
+syntaxe JavaScript et contenu dans Chrome. Le complément Nouveautés a aussi passé 21 tests Python et le parcours PC.
+Publication sur https://music2.foos.fr : conteneur sain, HTTPS 200, version publique 1.9,
+212 fichiers de l'image identiques aux instantanés testés, nouveaux JavaScript/CSS versionnés et textes conformes.
+Base intègre au schéma 17, deux nouvelles tables présentes et dix comptes conservés.
+Sauvegarde cohérente du code, de la configuration et de SQLite :
+../pimedia-backups/pre-1.9-20261110T202923Z/ depuis le projet distant ; image précédente conservée sous
+pimedia-web:pre-1.9-20261110t202923z.
+Le parcours interactif avec un compte réel reste à essayer ; aucun favori, marque-page ou conseil réel créé pour les contrôles.
+Recharger la page (Cmd+Maj+R), puis ouvrir « À écouter ».
+Détails, API, limites : [À écouter](features/listen-later.md).
+
+
+Mis à jour le 10/11/2026. Lire aussi `docs/CONVENTIONS.md` (règles de code) et `README.md` (organisation).
+
 **Cohérence des mix, 1.8.3 (déployée et vérifiée le 09/11/2026)** : le créateur depuis un artiste abandonne
 le remplissage global et les titres proches dont la profondeur interne échappe au choix de la page. Titres
 vérifiés par artiste ; albums locaux utilisés sans Last.fm, artistes absents ignorés. Le style renseigné du
@@ -189,7 +233,6 @@ profondeur demandée, et les décennies vont jusqu’à la décennie courante. `
 demande explicitement une review de la structure et des duplications, en plus des bugs. Vérification : 531 tests
 Python et le parcours jsdom PC passent dans l’image de test locale, sans réseau externe ; 86 tests d’exploration
 et de mix repassent après les dernières corrections, ainsi que 56 tests unitaires et d’architecture. Aucun déploiement effectué.
-Mis à jour le 07/11/2026. Lire aussi `docs/CONVENTIONS.md` (règles de code) et `README.md` (organisation).
 
 **Revue de portabilité du 07/11/2026** : recherche de chemins personnels, hôtes privés et identifiants d'exemple dans
 les 139 fichiers Python et 62 JavaScript de `src/`, plus les scripts de déploiement. Aucun autre chemin personnel

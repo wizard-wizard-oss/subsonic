@@ -265,6 +265,7 @@ const Views = (() => {
           App.setIcon(PageSections.link(App.t("artist.discogs_short"), this.discogs.root,
             () => { if (!this.discogs.identity) this.discogs.open(); }, ".button.artist-discogs-shortcut"),
             "discogs", 16, false, App.t("artist.discogs_short")));
+        App.append(actions, [ListenLaterUI.actions({kind: "artist", source: "subsonic", sourceId: data.id})]);
         App.append(main, [
           profile.root,
           actions,
@@ -357,6 +358,7 @@ const Views = (() => {
                                          onclick: () => App.player.playList(songs, 0)}), "play", 26),
       iconButton("shuffle", App.t("album.shuffle"), () => App.player.playList(songs, 0, true)),
       heart,
+      ListenLaterUI.actions({kind: "album", source: "subsonic", sourceId: data.folderId || data.id}),
       App.can("download") ? App.setIcon(el("a.icon-button.download", {title: App.t("album.download"), href: "/api/download?" +
         new URLSearchParams({album: data.id}), download: ""}), "download", 20) : null,
       el("div.album-more", {}, toggle, menu));

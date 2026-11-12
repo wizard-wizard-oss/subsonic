@@ -53,7 +53,7 @@ const DiscogsUI = (() => {
       App.cover(album.image, 180, album.title), el("strong.album-name", {text: album.title}),
       el("span.album-artist", {text: album.artist}), el("span.album-year", {
         text: [album.year || t("unknown_year"), album.format].filter(Boolean).join(" · ")})),
-      extra || null);
+      ListenLaterUI.actions({kind: "album", source: "discogs", sourceId: String(edition)}), extra || null);
   }
 
   class Discography {
@@ -145,6 +145,7 @@ const DiscogsUI = (() => {
         if (route.stale) return;
         const catalog = el("div.discography-results");
         App.append(App.clear(main), [el("h1", {text: data.name}), source(data.kind, data.id),
+          data.kind === "artist" ? ListenLaterUI.actions({kind: "artist", source: "discogs", sourceId: data.id}) : null,
           data.kind === "label" ? LabelDiscoveryUI.panel(data.name, route, data) : DiscogsCredits.connections(data),
           data.kind === "artist" ? catalog : null]);
         if (data.kind === "artist") new Discography(catalog, route).load(data);

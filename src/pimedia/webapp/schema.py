@@ -267,4 +267,47 @@ MIGRATIONS = [
     )
     """,
 
+    # 17: personal artist/album bookmarks and independently addressed recommendations.
+    """
+    CREATE TABLE listen_later (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (user_id, kind, source, library_key, source_id)
+    );
+    CREATE INDEX listen_later_by_date ON listen_later (user_id, created_at DESC, id DESC);
+    CREATE TABLE recommendations (
+        id INTEGER PRIMARY KEY,
+        sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        CHECK (sender_id != recipient_id),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (sender_id, recipient_id, kind, source, library_key, source_id)
+    );
+    CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC)
+    """,
+
+    # 18: unread recommendations, acknowledged by their unique delivery token.
+    """
+    ALTER TABLE recommendations ADD COLUMN unread_token TEXT;
+    UPDATE recommendations SET unread_token = lower(hex(randomblob(16)));
+    CREATE INDEX recommendations_unread_by_recipient
+        ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
+    """,
 ]
