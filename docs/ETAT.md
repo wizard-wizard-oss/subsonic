@@ -1,5 +1,12 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Retouche des pochettes, 1.9.3 (12/11/2026, publiée avec la 1.10)** : le bouton de lecture au survol
+passe en bas à gauche de la pochette, dans les grilles normale et compacte.
+Position calculée sur la largeur de la pochette carrée, indépendamment des textes sous l’album.
+Validation Chrome sans interface : marges gauche et basse de 6 px pour les pochettes de 170 et 120 px ;
+`git diff --check` passe.
+Publié sur les sites local et de production avec la 1.10 le 12/11/2026. Voir [Bibliothèque](features/bibliotheque.md).
+
 **Recherche des paroles, 1.9.3 (11/11/2026, publiée sur le site avec la 1.10)** :
 « Destinée ; Guy Marchand — AnyMusics » échouait parce que le nom de chaîne était utilisé comme artiste ;
 « Delirium (Ma chérie je t'écris...) — Guy Marchand » différait du titre court présent dans LRCLIB.

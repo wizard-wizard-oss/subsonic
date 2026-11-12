@@ -15,7 +15,7 @@
 - **Albums** (`#/albums/<onglet>`) : Nouveaux, Plus écoutés, Mieux notés, Écoutés récemment, Au hasard, Favoris, Par
   décennie, Par genre, De A à Z ; 40 par page, « Afficher plus ».
 - **Lecture sur les pochettes (1.7.7)** : dans les grilles de l'accueil (derniers, plus écoutés, mieux notés),
-  d'Albums, d'un artiste, de la recherche et des favoris, une petite flèche apparaît au survol en haut à gauche.
+  d'Albums, d'un artiste, de la recherche et des favoris, une petite flèche apparaît au survol en bas à gauche de la pochette (grilles normale et compacte).
   Elle réutilise l'icône `play` et le style `.play-big` du site, à 30 px. La flèche charge l'album puis le lit dans
   l'ordre, sans navigation ; le reste de la carte, dont son nom, reste un lien vers la fiche. Le bouton est distinct
   du lien (aucun bouton imbriqué dans un lien), accessible au clavier et visible sur écran tactile. Il est absent
