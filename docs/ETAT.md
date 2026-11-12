@@ -1,5 +1,19 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Crédits complets des albums corrigés, préparés en 1.7.9 et déployés avec la 1.7.10** : le filtre MusicBrainz
+accepte aussi le crédit complet et ses noms d’usage (« Fennesz + Sakamoto », « Prodigy »), en conservant les
+noms canoniques et le choix explicite de l’édition. Trois tests de régression ajoutés ; les 44 tests d’exploration
+et d’architecture passent sur les sources refactorisées. Fiche : `docs/features/labels-et-collaborations.md`.
+
+**Mutualisation des comparaisons de noms, préparée en 1.7.9 et déployée avec la 1.7.10** : une seule fonction
+`shared.text.normalize` pour l’exploration MusicBrainz, les dossiers Pi et web, les pochettes, les genres et les
+raccourcis. Casse, accents, ligatures et ponctuation suivent les mêmes règles ; les textes d’origine sont conservés.
+`MusicMetadata` devient `MusicBrainzMetadata` pour nommer sa source. SQL conservé dans le dépôt et entités
+MusicBrainz documentées. Les options des mix sont fournies par le serveur à la page ; les parcours utilisent la
+profondeur demandée, et les décennies vont jusqu’à la décennie courante. `AGENTS.md` reprend les conventions et
+demande explicitement une review de la structure et des duplications, en plus des bugs. Vérification : 531 tests
+Python et le parcours jsdom PC passent dans l’image de test locale, sans réseau externe ; 86 tests d’exploration
+et de mix repassent après les dernières corrections, ainsi que 56 tests unitaires et d’architecture. Aucun déploiement effectué.
 Mis à jour le 07/11/2026. Lire aussi `docs/CONVENTIONS.md` (règles de code) et `README.md` (organisation).
 
 **Revue de portabilité du 07/11/2026** : recherche de chemins personnels, hôtes privés et identifiants d'exemple dans

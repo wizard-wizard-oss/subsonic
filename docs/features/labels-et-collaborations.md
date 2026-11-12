@@ -9,8 +9,11 @@ changement des tags, des fichiers ou des données de Subsonic. Discogs reste une
 2. Le serveur lit l'album avec le compte Subsonic de la personne et cherche les éditions MusicBrainz par titre et
    artiste. Seuls les noms identiques après normalisation sont retenus, sans rapprochement approximatif. Depuis
    le correctif 1.7.1, les ligatures `æ` / `ae` et `œ` / `oe` sont également équivalentes (titres et artistes), sans
-   modifier la nomenclature des dossiers ni les règles du rangement. Jusqu'à
-   100 résultats de recherche sont examinés.
+   modifier les noms affichés ou stockés. Depuis la 1.7.9, cette comparaison utilise `shared.text.normalize`,
+   également employée pour retrouver les dossiers, les genres, les pochettes et les raccourcis. Jusqu'à
+   100 résultats de recherche sont examinés. Le filtre accepte les noms canoniques individuels et le crédit
+   complet affiché par MusicBrainz : « Fennesz + Sakamoto » et le nom crédité « Prodigy » (identité canonique
+   « The Prodigy ») retrouvent leurs éditions. Le titre doit toujours correspondre exactement après normalisation.
 3. La personne **choisit explicitement l'édition**, même s'il n'y en a qu'une. Date, pays, format, labels connus et
    début d'identifiant permettent de les distinguer. Les crédits et le label peuvent varier selon l'édition.
 4. Les **labels**, les **artistes principaux** et les **crédits** de l'album et des enregistrements sont cliquables :
@@ -76,6 +79,9 @@ changement des tags, des fichiers ou des données de Subsonic. Discogs reste une
 
 ## Code et tests
 - Entités : `src/pimedia/webapp/exploration_entities.py`.
+- Accès MusicBrainz nommé `MusicBrainzMetadata` ; normalisation des noms dans `shared/text.py`, sans dépendance
+  aux règles de rangement. Les requêtes SQLite restent dans le dépôt, qui renvoie `CachedMetadata`.
+  Cette entité est définie avec les autres entités d’exploration ; le service ne dépend plus du module de stockage.
 - API externe et service : `src/pimedia/webapp/exploration.py`, dépôt : `storage/exploration.py`, contrôleur :
   `controllers/exploration.py`, assemblage et routes dans `app.py`.
 - Interface : `src/web-pc/static/js/explore.js`, intégration dans `views.js` / `app.js`, styles dans `views.css` ;
@@ -87,6 +93,11 @@ changement des tags, des fichiers ou des données de Subsonic. Discogs reste une
   passent aussi ; le test de préchargement haute fidélité a nécessité un rejeu isolé après un échec intermittent.
 
 ## Limites et vérification réelle
+- Correctif des crédits complets, 1.7.9 (07/11/2026, local non déployé) : les collaborations et les noms crédités
+  sont pris en compte en plus des noms canoniques, sans sélectionner une édition automatiquement. Trois tests
+  ajoutés couvrent les collaborations, noms crédités / canoniques et crédits absents ; titres différents et
+  collaborations avec un autre partenaire restent exclus. Les 39 tests d’exploration et 5 tests d’architecture
+  passent sur les sources intégrant la normalisation commune. Source MusicBrainz simulée.
 - Version 1.7.4 (07/11/2026) : bouton intermédiaire des membres supprimé dans les crédits d'album. Les cartes
   apparaissent directement après le choix de l'édition. Parcours jsdom existant adapté à cet affichage automatique ;
   contrôle de syntaxe et de l'historique uniquement, sans relancer les suites de tests, selon la demande utilisateur.

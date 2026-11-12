@@ -39,6 +39,7 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - **Toute modification du site met à jour la version**, à chaque fois, avant le déploiement : une entrée datée en tête de
   `src/i18n/versions.yaml` (page « Versions », écrite pour les utilisateurs ; voir `docs/features/versions.md`).
   **Évolution, finition visuelle ou correction de la même fonctionnalité : troisième niveau** (1.7.1, 1.7.2,
-  1.7.3…). Décision utilisateur du 07/11/2026 : ne pas passer à 1.8 pour les évolutions des labels, membres et
-  collaborations. Réserver la version **mineure** à une fonctionnalité distincte ou à un lot significatif, et la
+  1.7.3…). Décision utilisateur du 08/11/2026 : le lot de fiches artiste/album, choix Discogs mémorisé, biographie,
+  images et raccourcis est la **1.8** ; la retouche des compteurs est la **1.7.13**, après la 1.7.12.
+  Réserver la version **mineure** à une fonctionnalité distincte ou à un lot significatif, et la
   **majeure** à un grand changement. Rien ne part en production sans cette entrée.

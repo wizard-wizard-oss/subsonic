@@ -6,8 +6,9 @@ import tempfile
 import time
 import unittest
 
+from pimedia.shared.text import normalize
 from pimedia.webapp.incoming import HOUR, IncomingSorter
-from pimedia.webapp.layout import MusicTree, capitalised, find_albums, is_disc, normalised, tracks_fit
+from pimedia.webapp.layout import MusicTree, capitalised, find_albums, is_disc, tracks_fit
 
 
 def files_under(folder):
@@ -31,15 +32,22 @@ class MusicTestCase(unittest.TestCase):
 
 
 class LayoutTest(MusicTestCase):
+    def test_ligature_matches_existing_folder_and_keeps_its_spelling(self):
+        self.write("Œdipe", "Premier", "01.flac", base=self.music)
+        album = os.path.dirname(self.write("Envoi", "Deuxième", "01.flac"))
+        self.assertEqual(self.library.place(album, "OEDIPE", "Deuxième"), "Œdipe/Deuxième")
+        self.assertEqual(files_under(os.path.join(self.music, "Œdipe")),
+                         ["Deuxième/01.flac", "Premier/01.flac"])
+
     def test_names(self):
         self.assertTrue(all(is_disc(n) for n in ("CD1", "cd 2", "Disc 1", "Disk2", "Disque 3")))
         self.assertFalse(any(is_disc(n) for n in ("Face A", "CD", "Bonus", "CD1 Bonus")))
         self.assertTrue(all(capitalised(n) for n in ("Converge", "38 Spesh", "Årabrot", "...Et Après", "Le$")))
         self.assertFalse(any(capitalised(n) for n in ("converge", "dälek", "")))
-        self.assertEqual(normalised("Dälek"), normalised("DALEK"))
-        self.assertEqual(normalised("A.A.Williams"), normalised("A.A. Williams"))
-        self.assertEqual(normalised("AC/DC"), normalised("Ac-Dc"))
-        self.assertNotEqual(normalised("!!!"), normalised("?!"))                 # rien que des signes : gardés
+        self.assertEqual(normalize("Dälek"), normalize("DALEK"))
+        self.assertEqual(normalize("A.A.Williams"), normalize("A.A. Williams"))
+        self.assertEqual(normalize("AC/DC"), normalize("Ac-Dc"))
+        self.assertNotEqual(normalize("!!!"), normalize("?!"))                 # rien que des signes : gardés
 
     def test_albums_are_the_folders_holding_tracks(self):
         self.write("Converge", "Jane Doe", "CD1", "01.flac")

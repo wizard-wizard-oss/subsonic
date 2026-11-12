@@ -37,7 +37,7 @@ from .extmusic import KEPT_SECONDS, ExternalMusic, ExtMusicError, SearchMemory
 from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
-from .exploration import Exploration, ExplorationUnavailable, MusicMetadata
+from .exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
 from .storage.exploration import ExplorationRepository
 from .folders import FolderNotFound, Folders
 from .library import Library
@@ -136,7 +136,7 @@ class WebApplication:
         self.ratings = Ratings(self.subsonic)
         self.library = Library(self.subsonic, self.ratings, self.messages)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
-        self.exploration = Exploration(MusicMetadata(ExplorationRepository(self.db)), self.folders, self.library)
+        self.exploration = Exploration(MusicBrainzMetadata(ExplorationRepository(self.db)), self.folders, self.library)
         self.artist_indexes = ArtistIndexes(self.subsonic, ArtistIndexRepository(self.db), self.users, self.hub,
                                             hidden=(self.config.incoming_name,),
                                             shortcuts=[n.strip() for n in self.config.shortcut_folders.split(",") if n.strip()])

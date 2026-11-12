@@ -13,10 +13,9 @@ from email.utils import parsedate_to_datetime
 from uuid import UUID
 
 from ..shared.external import JsonFetcher, query_url
-from .exploration_entities import (AlbumCredits, ArtistConnections, ArtistMatches, MusicArtist, MusicEdition,
+from ..shared.text import normalize
+from .exploration_entities import (AlbumCredits, ArtistConnections, ArtistMatches, CachedMetadata, MusicArtist, MusicEdition,
                                    MusicLink, MusicProfile, MusicWork)
-from .layout import normalised
-from .storage.exploration import CachedMetadata
 
 BASE = "https://musicbrainz.org/ws/2/"
 PAGE_SIZE = 25
@@ -58,21 +57,20 @@ def artist_name(raw):
 
 
 def artist_names(raw):
+    """Noms canoniques et crédit complet, qui peut employer des noms d'usage."""
     credits = raw.get("artist-credit") or []
-    return [c.get("artist", {}).get("name", c.get("name", "")) for c in credits if isinstance(c, dict)]
+    names = [c.get("artist", {}).get("name", c.get("name", "")) for c in credits if isinstance(c, dict)]
+    credit = artist_name(raw) if credits else ""
+    return [*names, credit] if credit else names
 
 
-def music_name_key(name):
-    """Comparer les métadonnées : æ / ae et œ / oe sont des écritures équivalentes.
-
-    NFKD ne développe pas ces ligatures. Cette règle reste propre à l'exploration : elle ne change ni la
-    nomenclature des dossiers ni les règles de rangement de la bibliothèque.
-    """
-    return normalised(name.casefold().replace("æ", "ae").replace("œ", "oe"))
+def search_phrase(text):
+    """Expression littérale MusicBrainz, sans guillemet ni échappement fourni par le nom."""
+    return '"' + re.sub(r'["\\]', " ", str(text))[:300] + '"'
 
 
-class MusicMetadata:
-    """API bornée aux endpoints prévus ; cache durable et déduplication des requêtes concurrentes."""
+class MusicBrainzMetadata:
+    """Réponses de MusicBrainz : cache durable, reprises bornées et déduplication des appels concurrents."""
     def __init__(self, repository, fetcher=None, clock=time.time, sleep=time.sleep):
         self.repository = repository
         self.fetcher = fetcher or JsonFetcher()
@@ -153,11 +151,11 @@ class Exploration:
         name = str(name or "").strip()
         if not name or len(name) > 300:
             raise ValueError("artist")
-        quoted = re.sub(r'["\\]', " ", name)
-        response = self.metadata.get("artist", query='artist:"%s"' % quoted, limit=25)
+        name_key = normalize(name)
+        response = self.metadata.get("artist", query="artist:" + search_phrase(name), limit=25)
         artists = [MusicArtist(mbid(a["id"]), a["name"], a.get("type") or "", a.get("country") or "",
                                a.get("disambiguation") or "") for a in response.data.get("artists", [])
-                   if music_name_key(a.get("name", "")) == music_name_key(name)]
+                   if normalize(a.get("name", "")) == name_key]
         return ArtistMatches(artists, response.stale)
 
     @staticmethod
@@ -190,12 +188,12 @@ class Exploration:
         # Les noms viennent de l'album accessible par ce compte, pas d'un nom fourni par le navigateur.
         album = self.folders.album(user, album_id)
         title, artist = album["name"], album["artist"]
-        quote = lambda text: re.sub(r'["\\]', " ", str(text))[:300]
-        response = self.metadata.get("release", query='release:"%s" AND artist:"%s"' % (quote(title), quote(artist)),
+        response = self.metadata.get("release", query='release:%s AND artist:%s' % (search_phrase(title), search_phrase(artist)),
                                      limit=100)
         data = response.data
-        candidates = [r for r in data.get("releases", []) if music_name_key(r.get("title", "")) == music_name_key(title)
-                      and music_name_key(artist) in [music_name_key(a) for a in artist_names(r)]]
+        title_key, artist_key = normalize(title), normalize(artist)
+        candidates = [r for r in data.get("releases", []) if normalize(r.get("title", "")) == title_key
+                      and artist_key in {normalize(a) for a in artist_names(r)}]
         editions = [MusicEdition(mbid(r["id"]), r["title"], artist_name(r), r.get("date", ""),
                                 r.get("country", ""), ", ".join(m.get("format", "") for m in r.get("media", [])),
                                 tuple(i.get("label", {}).get("name", "") for i in r.get("label-info", [])
@@ -270,7 +268,8 @@ class Exploration:
             raise ValueError("search")
         # Recherche limitée aux résultats autorisés pour cette personne. Pas de cache public de disponibilité.
         found = self.library.search(user, title)
-        return {"albums": [a for a in found["albums"] if music_name_key(a["name"]) == music_name_key(title)
-                           and (not artist or music_name_key(a["artist"]) == music_name_key(artist))],
-                "songs": [s for s in found["songs"] if music_name_key(s["title"]) == music_name_key(title)
-                          and (not artist or music_name_key(s["artist"]) == music_name_key(artist))]}
+        title_key, artist_key = normalize(title), normalize(artist)
+        return {"albums": [a for a in found["albums"] if normalize(a["name"]) == title_key
+                           and (not artist or normalize(a["artist"]) == artist_key)],
+                "songs": [s for s in found["songs"] if normalize(s["title"]) == title_key
+                          and (not artist or normalize(s["artist"]) == artist_key)]}

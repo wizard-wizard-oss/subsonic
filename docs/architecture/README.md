@@ -30,6 +30,7 @@ src/
 | Quoi | Où | Utilisé par |
 |---|---|---|
 | Paroles, MusicBrainz, Wikipédia, anecdotes | `pimedia/shared/external.py` | Pi (`server/external.py`), web (`webapp/lyrics.py`) |
+| Comparaison des noms musicaux (casse, accents, ligatures, ponctuation) | `pimedia/shared/text.py` | Pi (`server/folders.py`), web (exploration, rangement, pochettes, genres et raccourcis) |
 | Base SQLite + migrations (une liste par édition) | `pimedia/storage/database.py` | Pi (`storage/schema.py`), web (`webapp/schema.py`) |
 | Lecture du `.env`, réglages typés | `pimedia/envfile.py`, `settings.py` | les deux |
 | Textes | `pimedia/i18n.py`, `src/i18n/fr.yaml` | les deux |

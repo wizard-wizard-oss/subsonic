@@ -1,8 +1,6 @@
 """Mode « dossiers » : traduit les appels de l'API par tags (ID3) en appels de l'API par dossiers,
 pour retrouver le classement de l'interface Subsonic d'origine."""
-import re
-import unicodedata
-
+from ..shared.text import normalize
 from .constants import API_VERSION
 
 
@@ -16,10 +14,10 @@ def as_list(value):
 
 def normalize_name(name):
     """Nom comparable : sans accents, sans majuscules, sans « the », sans ponctuation."""
-    text = unicodedata.normalize("NFD", (name or "").lower())
-    text = re.sub(r"[̀-ͯ]", "", text)
-    text = re.sub(r"^the\s+", "", text)
-    return re.sub(r"[^a-z0-9]", "", text)
+    parts = (name or "").split(maxsplit=1)
+    if len(parts) == 2 and normalize(parts[0]) == "the":
+        return normalize(parts[1])
+    return normalize(name)
 
 
 def merge_artists(artists):

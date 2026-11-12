@@ -4,11 +4,10 @@ Les suggestions viennent de Last.fm, par Subsonic (clé Last.fm globale dans les
 getSimilarSongs2 (titres proches), getTopSongs (titres populaires d'un artiste), getArtistInfo2 (artistes proches).
 Sans Last.fm, les radios se replient sur des titres au hasard du même style."""
 import random
-import re
-import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
+from ..shared.text import normalize
 from .library import as_list, song_row, visible
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
@@ -20,12 +19,6 @@ PARALLEL = 4            # appels Subsonic simultanés : on ménage le serveur
 
 class MixError(ValueError):
     """Demande impossible (clé de texte i18n)."""
-
-
-def genre_key(name):
-    """« Hip-Hop », « Hip hop », « hiphop » -> « hiphop »."""
-    text = unicodedata.normalize("NFD", str(name if name is not None else "").lower())
-    return re.sub(r"[^a-z0-9]", "", "".join(c for c in text if not unicodedata.combining(c)))
 
 
 def spread_artists(songs, rng=random):
@@ -205,7 +198,7 @@ class Mixes:
         groups, best = {}, {}
         for genre in as_list((self._call(user, "getGenres").get("genres") or {}).get("genre")):
             name, count = str(genre.get("value", "")), genre.get("songCount", 0)
-            key = genre_key(name)
+            key = normalize(name)
             if not key or not count:                # style sans aucun titre : rien à proposer
                 continue
             group = groups.setdefault(key, GenreGroup(key, name))
@@ -234,8 +227,8 @@ class Mixes:
             return self._songs(user, "getRandomSongs", params, "randomSongs", "song")
         pool = [s for songs in self._parallel(jobs, pool_job) for s in songs]
 
-        names = {genre_key(n) for g in chosen for n in g.names}
-        in_genres = (lambda s: not names or genre_key(s.get("genre")) in names)
+        names = {normalize(n) for g in chosen for n in g.names}
+        in_genres = (lambda s: not names or normalize(s.get("genre")) in names)
         seed, near, far = [], [], []
         if options.seed_artist_id:
             seed = [s for s in self._songs(user, "getSimilarSongs2", [("id", options.seed_artist_id), ("count", 80)],

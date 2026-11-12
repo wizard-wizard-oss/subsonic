@@ -3,7 +3,7 @@
 import unittest
 
 from pimedia.webapp.app import WebApplication
-from pimedia.webapp.artist_index import ArtistIndexes
+from pimedia.webapp.artist_index import ArtistIndexes, parse_index
 from pimedia.webapp.subsonic import SLOW_TIMEOUT
 from tests.support import PROJECT
 from tests.webapp_support import WebAppTestCase, read_event
@@ -101,6 +101,14 @@ class ArtistIndexHttpTest(WebAppTestCase):
 
 
 class ArtistIndexRulesTest(unittest.TestCase):
+    def test_shortcuts_and_hidden_names_use_the_common_comparison(self):
+        raw = {"indexes": {"index": [{"name": "O", "artist": [
+            {"id": "oe", "name": "Œdipe"}, {"id": "hidden", "name": "À ranger"}]}]}}
+        index = parse_index(raw, hidden=("A RANGER",))
+        service = ArtistIndexes(None, None, None, None, shortcuts=("OEDIPE",))
+        self.assertEqual(names(index), ["Œdipe"])
+        self.assertEqual(service.shortcuts(index), [{"id": "foe", "name": "Œdipe"}])
+
     def test_the_index_waits_longer_than_other_calls(self):
         calls = []
 

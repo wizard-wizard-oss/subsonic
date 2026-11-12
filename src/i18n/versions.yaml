@@ -5,6 +5,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.7.9"
+  date: 2026-11-07
+  title: "Des noms reconnus de façon cohérente"
+  changes:
+    - "Les variantes d’accents, de majuscules et de ligatures comme Œdipe / Oedipe sont reconnues de la même façon pour les crédits, les dossiers d’artistes, les raccourcis et les styles musicaux. Les noms affichés et les noms de fichiers conservent leur orthographe."
+    - "Les choix du créateur de mix suivent directement les options acceptées par le serveur ; les décennies se prolongent automatiquement au fil des années."
+    - "Les crédits d’album reconnaissent les collaborations comme Fennesz + Sakamoto et les noms crédités comme Prodigy, même lorsque le nom canonique est The Prodigy. Vous choisissez toujours l’édition."
+
 - version: "1.7.8"
   date: 2026-11-07
   title: "Choisissez la profondeur de vos mix"

@@ -7,7 +7,8 @@ import unittest
 import urllib.error
 
 from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
-from pimedia.webapp.mixes import MixError, MixOptions, genre_key, spread_artists
+from pimedia.shared.text import normalize
+from pimedia.webapp.mixes import MixError, MixOptions, spread_artists
 from tests.fake_subsonic import PNG
 from tests.webapp_support import FakeInfoSites, FakeLyricsSites, WebAppTestCase
 
@@ -18,8 +19,8 @@ def titles(response):
 
 class MixRulesTest(unittest.TestCase):
     def test_genre_spellings_are_grouped(self):
-        self.assertEqual({genre_key(g) for g in ("Hip-Hop", "Hip hop", "hiphop", "HIP HOP")}, {"hiphop"})
-        self.assertEqual(genre_key("Électro"), "electro")
+        self.assertEqual({normalize(g) for g in ("Hip-Hop", "Hip hop", "hiphop", "HIP HOP")}, {"hiphop"})
+        self.assertEqual(normalize("Électro"), "electro")
 
     def test_no_two_songs_of_the_same_artist_in_a_row_when_possible(self):
         songs = [{"id": str(i), "artist": a} for i, a in enumerate("AAABBC")]

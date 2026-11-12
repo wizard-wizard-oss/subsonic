@@ -6,9 +6,10 @@ import unittest
 import urllib.error
 from types import SimpleNamespace
 
+from pimedia.shared.text import normalize
 from pimedia.shared.external import MusicBrainzPacer
 from pimedia.storage.database import Database
-from pimedia.webapp.exploration import Exploration, ExplorationUnavailable, MusicMetadata, music_name_key
+from pimedia.webapp.exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from tests.fake_musicbrainz import (EDITION, GROUP, LABEL, MEMBER, OTHER_RELEASE, PRODUCER, RELEASE, SIDE_GROUP,
@@ -26,7 +27,7 @@ class MetadataTest(unittest.TestCase):
         self.http = FakeMusicBrainz()
         self.now = 100
         self.sleeps = []
-        self.metadata = MusicMetadata(self.repository, self.http, clock=lambda: self.now, sleep=self.sleeps.append)
+        self.metadata = MusicBrainzMetadata(self.repository, self.http, clock=lambda: self.now, sleep=self.sleeps.append)
         self.folders = SimpleNamespace(album=lambda user, album_id: {"name": "Arrival", "artist": "ABBA"})
         self.service = Exploration(self.metadata, self.folders, None)
 
@@ -47,6 +48,37 @@ class MetadataTest(unittest.TestCase):
             "artist-credit": [{"name": "Other", "artist": {"name": "Other"}}]})]
         self.assertEqual(self.service.album(None, "local").editions, [])
 
+    def test_editions_match_the_complete_collaboration_credit_without_choosing(self):
+        self.folders.album = lambda user, album_id: {"name": "Cendre", "artist": "Fennesz + Sakamoto"}
+        credits = [{"name": "Fennesz", "artist": {"name": "Fennesz"}, "joinphrase": " + "},
+                   {"name": "Sakamoto", "artist": {"name": "Ryuichi Sakamoto"}}]
+        edition = dict(EDITION, title="Cendre", **{"artist-credit": credits})
+        self.http.editions = [edition, dict(edition, id=OTHER_RELEASE),
+                              dict(edition, id=LABEL, title="Cendre live"),
+                              dict(edition, id=PRODUCER, **{"artist-credit": [credits[0], {
+                                  "name": "Other", "artist": {"name": "Other"}}]})]
+        result = self.service.album(None, "local")
+        self.assertEqual([e.id for e in result.editions], [RELEASE, OTHER_RELEASE])
+        self.assertEqual([e.artist for e in result.editions], ["Fennesz + Sakamoto"] * 2)
+        self.assertEqual((result.selected, result.labels, result.people), ("", [], []))
+        self.assertEqual(len(self.http.urls), 1)
+
+    def test_editions_accept_credited_and_canonical_artist_names(self):
+        self.http.editions = [dict(EDITION, **{"artist-credit": [
+            {"name": "Prodigy", "artist": {"name": "The Prodigy"}}]})]
+        for artist in ("Prodigy", "The Prodigy"):
+            with self.subTest(artist=artist):
+                self.folders.album = lambda user, album_id: {"name": "Arrival", "artist": artist}
+                result = self.service.album(None, "local")
+                self.assertEqual([e.id for e in result.editions], [RELEASE])
+                self.assertEqual(result.editions[0].artist, "Prodigy")
+
+    def test_editions_without_artist_credits_are_not_matched(self):
+        self.http.editions = [{"id": RELEASE, "title": "Arrival"},
+                              dict(EDITION, **{"artist-credit": None}),
+                              dict(EDITION, **{"artist-credit": []})]
+        self.assertEqual(self.service.album(None, "local").editions, [])
+
     def test_vitalic_ligature_matches_without_confusing_episodes_or_the_box_set(self):
         self.folders.album = lambda user, album_id: {"name": "Dissidaence Episode 2", "artist": "Vitalic"}
         credits = [{"name": "Vitalic", "artist": {"name": "Vitalic", "id": GROUP}}]
@@ -60,8 +92,8 @@ class MetadataTest(unittest.TestCase):
         self.assertEqual(result.selected, "")
 
     def test_ligatures_in_artist_names_and_local_matches(self):
-        self.assertEqual(music_name_key("ŒUVRES"), music_name_key("Oeuvres"))
-        self.assertEqual(music_name_key("DISSIDÆNCE"), music_name_key("Dissidaence"))
+        self.assertEqual(normalize("ŒUVRES"), normalize("Oeuvres"))
+        self.assertEqual(normalize("DISSIDÆNCE"), normalize("Dissidaence"))
         self.folders.album = lambda user, album_id: {"name": "Arrival", "artist": "Oedipe"}
         self.http.editions = [dict(EDITION, **{"artist-credit": [{"artist": {"name": "Œdipe"}}]})]
         self.assertEqual(len(self.service.album(None, "local").editions), 1)
@@ -76,7 +108,7 @@ class MetadataTest(unittest.TestCase):
 
     def test_cache_survives_new_service_and_expires(self):
         self.metadata.get("label/" + LABEL)
-        fresh = MusicMetadata(self.repository, self.http, clock=lambda: self.now)
+        fresh = MusicBrainzMetadata(self.repository, self.http, clock=lambda: self.now)
         fresh.get("label/" + LABEL)
         self.assertEqual(len(self.http.urls), 1)
         self.now += 8 * 86400
@@ -282,7 +314,7 @@ class MetadataTest(unittest.TestCase):
 
     def test_migration_preserves_an_existing_database(self):
         path = os.path.join(self.temp.name, "old.db")
-        old = Database(path, MIGRATIONS[:-1])
+        old = Database(path, MIGRATIONS[:14])
         old.execute("INSERT INTO users (username, subsonic_salt, subsonic_token, is_admin, created_at, last_seen_at) "
                     "VALUES ('existing', 'salt', 'token', 0, 1, 1)")
         old.close()

@@ -3,7 +3,16 @@ from dataclasses import asdict, dataclass, field
 
 
 @dataclass(frozen=True)
+class CachedMetadata:
+    """Réponse publique conservée en cache, avec sa date de récupération d’origine."""
+    key: str
+    data: dict
+    fetched_at: int
+
+
+@dataclass(frozen=True)
 class MusicLink:
+    """Lien vers une identité MusicBrainz, avec son rôle et la période de la relation."""
     id: str
     name: str
     kind: str = "artist"
@@ -19,6 +28,7 @@ class MusicLink:
 
 @dataclass(frozen=True)
 class MusicEdition:
+    """Édition MusicBrainz d’un album (pays, date, support et labels)."""
     id: str
     title: str
     artist: str
@@ -33,6 +43,7 @@ class MusicEdition:
 
 @dataclass(frozen=True)
 class MusicArtist:
+    """Identité MusicBrainz ; les homonymes restent des choix distincts."""
     id: str
     name: str
     type: str = ""
@@ -79,6 +90,7 @@ class AlbumCredits:
 
 @dataclass(frozen=True)
 class MusicWork:
+    """Sortie ou enregistrement MusicBrainz figurant dans un catalogue ou un crédit."""
     id: str
     title: str
     artist: str

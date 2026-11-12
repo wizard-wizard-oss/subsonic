@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 
 from ..shared.external import USER_AGENT, query_url
-from .layout import normalised
+from ..shared.text import normalize
 from .library import text
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -102,7 +102,7 @@ class LastFmAlbums:
         found = self._call({"method": "album.search", "album": album, "limit": 30}).get("results") or {}
         matches = (found.get("albummatches") or {}).get("album") or []
         matches = [matches] if isinstance(matches, dict) else matches
-        matches.sort(key=lambda m: normalised(text(m.get("artist"))) != normalised(artist))     # tri stable
+        matches.sort(key=lambda m: normalize(text(m.get("artist"))) != normalize(artist))     # tri stable
         candidates, seen = [], set()
         for match in [exact] + matches:
             candidate = self._candidate(match)

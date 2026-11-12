@@ -15,6 +15,7 @@ from pimedia.server.webfiles import etag_matches
 class NamesTest(unittest.TestCase):
     def test_normalize_ignores_case_accents_the_and_punctuation(self):
         self.assertEqual(normalize_name("The Beatles"), normalize_name("beatles"))
+        self.assertEqual(normalize_name("THÉ\tBeatles"), normalize_name("Beatles"))
         self.assertEqual(normalize_name("Björk"), normalize_name("BJORK"))
         self.assertEqual(normalize_name("AC/DC"), "acdc")
 
