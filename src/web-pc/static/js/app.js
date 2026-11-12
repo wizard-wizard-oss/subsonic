@@ -25,6 +25,8 @@ class MusicApp {
   }
 
   showLogin(message) {
+    if (this.queueMemory) this.queueMemory.suspend();
+    if (App.queuePanel) App.queuePanel.close();
     App.live.stop();
     document.getElementById("app").hidden = true;
     document.getElementById("login").hidden = false;
@@ -52,7 +54,14 @@ class MusicApp {
   }
 
   async start(me) {
+    const changedUser = App.user && App.user.id !== me.user.id;
+    if (changedUser) {
+      App.live.stop();
+      if (this.queueMemory) this.queueMemory.suspend();
+    }
     App.user = me.user;
+    ListenLaterUI.reset();
+    ListenLaterUI.start();
     App.preferences = me.preferences;
     App.reactions = me.reactions;
     App.usernames = me.usernames;
@@ -61,7 +70,12 @@ class MusicApp {
     document.getElementById("app").hidden = false;
     App.append(App.clear(document.getElementById("me")), [App.avatar(App.user.username, 26),
                                                           App.el("span.me-name", {text: App.user.username})]);
-    if (this.started) return;          // reconnexion après une session expirée : tout est déjà en place
+    if (this.started) {
+      this.queueMemory.start();
+      if (changedUser) App.live.start();
+      this.navigate();
+      return;
+    }          // reconnexion après une session expirée : tout est déjà en place
     this.started = true;
 
     App.player = new Player(new PlaybackEngine(new Audio(), document.getElementById("video-frame")));
@@ -71,6 +85,8 @@ class MusicApp {
     setInterval(() => { if (!document.hidden) Avatars.load(); }, 10 * 60 * 1000);   // photos changées par les autres
     App.queuePanel = new QueuePanel(App.player);
     new PlayerBar(document.getElementById("player"), App.player);
+    this.queueMemory = new QueueMemory(App.player);
+    this.queueMemory.start();
     this.sidebar = new ArtistSidebar(this);
     this.playlistPanel = new PlaylistPanel(this);
     this.listeningPanel = new ListeningPanel();
@@ -91,13 +107,11 @@ class MusicApp {
     this.navigate();
   }
 
-  /** Le lien « Envoyer » n'apparaît que si le compte a le droit Subsonic d'envoyer et que le site sait où ranger les fichiers. */
-  async showUploadLink() {
-    if (!App.can("upload")) return;
-    try {
-      document.getElementById("nav-upload").hidden = !(await App.api.get("/api/upload/status")).enabled &&
-        !App.can("admin");                                   // un administrateur voit la page, et pourquoi elle ne marche pas
-    } catch (error) { /* lien absent */ }
+  /** L'historique est accessible à tous les comptes connectés. */
+  showUploadLink() {
+    const link = document.getElementById("nav-upload");
+    link.hidden = false;
+    link.textContent = App.t(App.can("upload") ? "nav.upload" : "upload.activity");
   }
 
   applyPreferences() {
@@ -121,6 +135,9 @@ class MusicApp {
     document.getElementById("open-settings").addEventListener("click", () => Dialogs.settings());
     document.getElementById("open-shortcuts").addEventListener("click", () => Dialogs.shortcuts());
     document.getElementById("logout").addEventListener("click", async () => {
+      this.queueMemory.record();
+      await this.queueMemory.flush();
+      this.queueMemory.suspend();
       try { await App.api.post("/api/logout"); } catch (e) { /* déjà déconnecté */ }
       App.player.audio.pause();
       location.hash = "#/";
@@ -156,8 +173,10 @@ class MusicApp {
   static parse(hash) {
     const [, view, ...rest] = (hash || "#/").replace(/^#/, "").split("/");
     const id = decodeURIComponent(rest.join("/") || "");
+    if (view === "explore" || view === "discogs") return {view, kind: rest[0], id: rest[1] || ""};
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
+    if (view === "listen-later") return {view: "listenLater"};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
         view === "account") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)

@@ -1,0 +1,24 @@
+/* Listening intentions share existing buttons, covers and theme colors. */
+.listening-actions { display: inline-flex; align-items: center; gap: .3rem; }
+.discogs-album > .listening-actions { padding: .35rem .5rem; }
+.listen-later-keep { display: inline-flex; align-items: center; gap: .5rem; }
+.listen-later-toggle.on { color: var(--accent); }
+.listen-later-filter-label, .recommendation-form label { display: flex; align-items: center; gap: .75rem; }
+.listen-later-list { display: grid; gap: .75rem; }
+.listen-later-card { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; min-width: 0; }
+.listen-later-artwork { position: relative; display: grid; place-items: center; width: 72px; height: 72px; flex: 0 0 72px; background: var(--bg-raised); color: var(--text-dim); border-radius: .5rem; overflow: hidden; }
+.listen-later-artwork .cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.listen-later-details { display: flex; flex: 1; flex-direction: column; gap: .25rem; min-width: 0; overflow-wrap: anywhere; }
+.listen-later-name { font-weight: 600; }
+.listen-later-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .5rem; }
+.recommendation-senders { margin: .25rem 0; }
+.recommendation-form { display: grid; gap: 1rem; }
+.recommendation-form label { flex-wrap: wrap; }
+.recommendation-form select { max-width: 100%; }
+@media (max-width: 480px) {
+  .listen-later-card { padding: .75rem; gap: .75rem; }
+  .listen-later-artwork { width: 48px; height: 48px; flex-basis: 48px; }
+}
+
+.topnav a[href="#/listen-later"] { position: relative; }
+.topnav a.recommendations-unread::after { content: ""; position: absolute; top: 2px; right: 2px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }

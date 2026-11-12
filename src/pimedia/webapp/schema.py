@@ -247,4 +247,89 @@ MIGRATIONS = [
     DROP INDEX playlist_ext_tracks_by_place;
     CREATE INDEX playlist_ext_tracks_by_place ON playlist_ext_tracks (playlist_id, after_songs, place, id)
     """,
+    # 15 : métadonnées publiques MusicBrainz (éditions, labels, crédits), jamais de résultats Subsonic partagés.
+    """
+    CREATE TABLE music_metadata (
+        cache_key TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        fetched_at INTEGER NOT NULL
+    )
+    """,
+    # 16 : choix Discogs durables, indépendants du cache public et des homonymes.
+    """
+    CREATE TABLE artist_discogs_links (
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        library_key TEXT NOT NULL,
+        artist_id TEXT NOT NULL,
+        discogs_artist_id TEXT NOT NULL,
+        selected_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, library_key, artist_id)
+    )
+    """,
+
+    # 17: personal artist/album bookmarks and independently addressed recommendations.
+    """
+    CREATE TABLE listen_later (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (user_id, kind, source, library_key, source_id)
+    );
+    CREATE INDEX listen_later_by_date ON listen_later (user_id, created_at DESC, id DESC);
+    CREATE TABLE recommendations (
+        id INTEGER PRIMARY KEY,
+        sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        CHECK (sender_id != recipient_id),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (sender_id, recipient_id, kind, source, library_key, source_id)
+    );
+    CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC)
+    """,
+
+    # 18: unread recommendations, acknowledged by their unique delivery token.
+    """
+    ALTER TABLE recommendations ADD COLUMN unread_token TEXT;
+    UPDATE recommendations SET unread_token = lower(hex(randomblob(16)));
+    CREATE INDEX recommendations_unread_by_recipient
+        ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
+    """,
+    # 19 : historique des envois réussis, attribués au compte authentifié.
+    """
+    CREATE TABLE upload_history (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+        username TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        byte_count INTEGER NOT NULL,
+        file_count INTEGER NOT NULL,
+        skipped_count INTEGER NOT NULL,
+        placed TEXT NOT NULL,
+        waiting TEXT NOT NULL,
+        uploaded_at INTEGER NOT NULL
+    );
+    CREATE INDEX upload_history_by_user ON upload_history (user_id, id DESC);
+    CREATE TABLE upload_albums (
+        library_key TEXT NOT NULL,
+        album_path TEXT NOT NULL,
+        upload_id INTEGER NOT NULL REFERENCES upload_history (id),
+        PRIMARY KEY (library_key, album_path)
+    )
+    """,
 ]

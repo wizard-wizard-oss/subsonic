@@ -51,7 +51,7 @@ class ExtMusicService:
         self.config.update(**changes)
 
     # ---------- recherche ----------
-    def search(self, source, term):
+    def search(self, source, term, allow_versions=False):
         term = (term or "").strip()
         if source not in self.sources or not self.enabled(source):
             raise DirectoryError("Source désactivée")
@@ -62,12 +62,12 @@ class ExtMusicService:
         if cached is None:
             cached = self.sources[source].search(term)
             self.cache.put(key, cached)
-        return {"items": self._filtered(cached)}
+        return {"items": self._filtered(cached, allow_versions)}
 
-    def _filtered(self, items):
+    def _filtered(self, items, allow_versions=False):
         """Filtres appliqués après le cache : un changement de réglage ou une vidéo refusée comptent tout de suite."""
         items = [i for i in items if not (i.get("youtubeId") and i["youtubeId"] in self.unplayable)]
-        if self.studio_only:
+        if self.studio_only and not allow_versions:
             items = [i for i in items if not is_alternate_version(i.get("title"))]
         return items
 

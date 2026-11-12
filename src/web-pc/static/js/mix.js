@@ -1,13 +1,11 @@
 "use strict";
 /* Page Mix (#/mix, #/mix/<artiste>) : mix rapides, et créateur de mix comme sur le Pi (artiste de départ, styles,
-   époques, nombre de titres, favoris d'abord, proches de proches, chronologique). Les titres sont choisis par le
+   époques, nombre de titres, favoris d'abord, profondeur des artistes proches, chronologique). Les titres sont choisis par le
    serveur du site (/api/mix/build) ; on les écoute tout de suite ou on les garde en playlist Subsonic. */
 
 Views.mix = (() => {
   const el = App.el, t = App.t;
   const QUICK = [["random", "shuffle"], ["favorites", "heart"], ["discover", "play"], ["newest", "plus"]];
-  const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
-  const SIZES = [30, 60, 100];
 
   /** Pastille qui s'allume et s'éteint. */
   function toggleChip(label, on, onchange, extra) {
@@ -30,8 +28,22 @@ Views.mix = (() => {
 
   return {
     async render(main, route) {
-      this.options = {genres: [], decades: [], size: 60, favoritesFirst: false, wide: true, chronological: false,
+      App.clear(main);
+      let settings;
+      try {
+        settings = await App.api.get("/api/mix/genres");
+      } catch (error) {
+        if (!route.stale) main.appendChild(el("p.error", {text: App.errorText(error)}));
+        return;
+      }
+      if (route.stale) return;
+      this.route = route;
+      this.settings = settings.options;
+      this.options = {genres: [], decades: [], size: this.settings.defaultSize, favoritesFirst: false,
+                      depth: this.settings.defaultDepth, chronological: false,
                       seedArtistId: "", seedArtistName: ""};
+      this.seedPending = !!route.id;
+      this.building = false;
       this.seedBox = el("div.mix-seed");
       this.genreBox = el("div.chips.mix-genres", {}, el("span.muted", {text: "…"}));
       App.append(App.clear(main), [
@@ -43,23 +55,26 @@ Views.mix = (() => {
         Views.heading(t("mix.builder")),
         el("p.muted", {text: t("mix.builder_help")}),
         el("h3.mix-label", {text: t("mix.seed")}), this.seedBox,
+        el("h3.mix-label", {id: "mix-depth-label", text: t("mix.depth")}),
+        el("p.muted", {id: "mix-depth-help", text: t("mix.depth_help")}), this.depthChips(),
         el("h3.mix-label", {text: t("mix.genres")}), this.genreBox,
         el("h3.mix-label", {text: t("mix.decades")}),
-        el("div.chips.mix-decades", {}, DECADES.map(year => toggleChip(t("mix.decade", {decade: String(year).slice(2)}), false,
+        el("div.chips.mix-decades", {}, this.settings.decades.map(year => toggleChip(t("mix.decade", {decade: String(year).slice(2)}), false,
           () => this.flip(this.options.decades, year)))),
         el("h3.mix-label", {text: t("mix.settings")}),
         this.sizeChips(),
         el("div.chips.mix-flags", {},
           toggleChip(t("mix.favorites_first"), false, () => (this.options.favoritesFirst = !this.options.favoritesFirst)),
-          toggleChip(t("mix.wide"), true, () => (this.options.wide = !this.options.wide)),
           toggleChip(t("mix.chronological"), false, () => (this.options.chronological = !this.options.chronological))),
         el("div.mix-actions", {},
-          App.setIcon(el("button.primary.mix-play", {type: "button", onclick: () => this.build(false)}), "play", 16, false, t("mix.play")),
-          App.can("playlist") ? App.setIcon(el("button.mix-save", {type: "button", onclick: () => this.build(true)}),
+          App.setIcon(el("button.primary.mix-play", {type: "button", disabled: this.seedPending,
+            onclick: () => this.build(false)}), "play", 16, false, t("mix.play")),
+          App.can("playlist") ? App.setIcon(el("button.mix-save", {type: "button", disabled: this.seedPending,
+            onclick: () => this.build(true)}),
                                             "plus", 16, false, t("mix.save")) : null)]);
       this.showSeed();
       if (route.id) this.loadSeed(route);
-      this.loadGenres(route);
+      this.showGenres(settings.genres);
     },
 
     flip(list, value) {
@@ -70,19 +85,32 @@ Views.mix = (() => {
 
     sizeChips() {
       const box = el("div.chips.mix-sizes");
-      const chips = SIZES.map(size => el("button.chip.toggle" + (size === this.options.size ? ".on" : ""), {type: "button",
+      const chips = this.settings.sizes.map(size => el("button.chip.toggle" + (size === this.options.size ? ".on" : ""), {type: "button",
         text: App.plural("album.tracks", size), onclick: () => {
           this.options.size = size;
-          chips.forEach((chip, i) => chip.classList.toggle("on", SIZES[i] === size));
+          chips.forEach((chip, i) => chip.classList.toggle("on", this.settings.sizes[i] === size));
         }}));
       App.append(box, chips);
       return box;
     },
 
-    async loadGenres(route) {
-      let genres;
-      try { genres = (await App.api.get("/api/mix/genres")).genres; } catch (error) { genres = []; }
-      if (route.stale) return;
+    depthChips() {
+      const box = el("div.chips.mix-depths", {role: "group", "aria-labelledby": "mix-depth-label",
+                                            "aria-describedby": "mix-depth-help"});
+      const chips = this.settings.depths.map(depth => el("button.chip.toggle" + (depth === this.options.depth ? ".on" : ""),
+        {type: "button", dataset: {depth}, text: App.plural("mix.depth_levels", depth),
+         "aria-pressed": String(depth === this.options.depth), onclick: () => {
+          this.options.depth = depth;
+          chips.forEach((chip, i) => {
+            chip.classList.toggle("on", this.settings.depths[i] === depth);
+            chip.setAttribute("aria-pressed", String(this.settings.depths[i] === depth));
+          });
+        }}));
+      App.append(box, chips);
+      return box;
+    },
+
+    showGenres(genres) {
       App.clear(this.genreBox);
       if (!genres.length) this.genreBox.appendChild(el("span.muted", {text: t("mix.no_genres")}));
       App.append(this.genreBox, genres.slice(0, 40).map(g => toggleChip(g.label, false,
@@ -90,17 +118,35 @@ Views.mix = (() => {
     },
 
     /** #/mix/<id> (bouton « Créer un mix » de la page artiste) : artiste de départ déjà choisi. */
-    async loadSeed(route) {
+    async loadSeed(route, id = route.id) {
+      this.seedPending = true;
+      this.setBusy(this.building);
       try {
-        const artist = await App.api.get("/api/artist", {id: route.id});
-        if (!route.stale) this.setSeed(artist.id, artist.name);
-      } catch (error) { /* artiste introuvable : on part sans */ }
+        const artist = await App.api.get("/api/artist", {id});
+        if (route.stale) return;
+        const musicId = artist.id3Id || (id.startsWith("f") ? "" : id);
+        if (!musicId) {
+          this.seedBox.appendChild(el("p.error", {text: t("mix.empty")}));
+          return;
+        }
+        this.setSeed(musicId, artist.name);
+      } catch (error) {
+        if (!route.stale) this.seedBox.appendChild(el("p.error", {text: App.errorText(error)}));
+      }
     },
 
     setSeed(id, name) {
       this.options.seedArtistId = id || "";
       this.options.seedArtistName = name || "";
+      this.seedPending = false;
+      this.setBusy(this.building);
       this.showSeed();
+    },
+
+    setBusy(busy) {
+      document.querySelectorAll(".mix-play, .mix-save").forEach(button => {
+        button.disabled = busy || this.seedPending;
+      });
     },
 
     /** Soit l'artiste choisi (avec ✕), soit un champ de recherche qui propose des artistes. */
@@ -112,6 +158,7 @@ Views.mix = (() => {
         return;
       }
       const results = el("div.chips.mix-seed-results");
+      const route = this.route;
       let timer = null;
       const input = el("input.mix-seed-input", {type: "search", placeholder: t("mix.seed_placeholder"), oninput: () => {
         clearTimeout(timer);
@@ -121,17 +168,23 @@ Views.mix = (() => {
           if (query.length < 2) return;
           let artists = [];
           try { artists = (await App.api.get("/api/search", {q: query})).artists; } catch (error) { return; }
-          if (input.value.trim() !== query) return;
+          if (route.stale || input.value.trim() !== query) return;
           App.append(results, artists.slice(0, 8).map(a =>
-            el("button.chip", {type: "button", text: a.name, onclick: () => this.setSeed(a.id, a.name)})));
+            el("button.chip", {type: "button", text: a.name, onclick: async () => {
+              input.disabled = true;
+              App.clear(results);
+              await this.loadSeed(route, a.id);
+              input.disabled = false;
+            }})));
         }, 250);
       }});
       App.append(this.seedBox, [input, results]);
     },
 
     async build(save) {
-      const button = document.querySelector(save ? ".mix-save" : ".mix-play");
-      if (button) button.disabled = true;
+      if (this.seedPending || this.building) return;
+      this.building = true;
+      this.setBusy(true);
       App.toast(t("mix.building"));
       try {
         const result = await App.api.post("/api/mix/build", this.options);
@@ -147,7 +200,8 @@ Views.mix = (() => {
       } catch (error) {
         App.toast(App.errorText(error), "error");
       } finally {
-        if (button) button.disabled = false;
+        this.building = false;
+        this.setBusy(false);
       }
     },
   };

@@ -7,7 +7,9 @@ Ces fonctions ont leurs routes, leur service et leurs tests, mais **aucun bouton
 | **Marque-pages** | `GET /api/bookmarks`, `POST /api/bookmark/save\|delete` | page « Marque-pages » pour reprendre à la position (les applis de téléphone en créent) |
 | **File d'attente partagée** | `GET /api/play-queue`, `POST /api/play-queue/save` | reprendre la file d'une appli, sauvegarder la sienne |
 | **Radios Internet** | `GET /api/radios`, `GET /api/radios/stream?id=` (seules les adresses de la liste Subsonic) | page radios |
-| **Radio d'un titre** | `GET /api/radio/song?id=` | bouton « Radio de ce titre » |
+
+Radio d'un titre : bouton « Radio de ce titre » ajouté dans les listes Subsonic en 1.7.6 ; voir
+[mix-et-radios](mix-et-radios.md).
 
 Photos de profil et lien Last.fm : faits le 27/10/2026, page « Mon compte » (voir `comptes-et-droits.md`).
 

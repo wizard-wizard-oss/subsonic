@@ -1,9 +1,181 @@
 # Versions du site (page « Versions », #/versions), la plus récente EN PREMIER.
 # À compléter à CHAQUE modification du site, AVANT de déployer (deploy/pc/push.sh le rappelle). Écrit pour les personnes
-# qui utilisent le site, pas pour les développeurs. Nouveauté visible : mineure (1.5 → 1.6) ; grand changement : majeure
-# (1.x → 2.0) ; correction de bug : TOUJOURS le troisième niveau (1.5 → 1.5.1, 1.5.2…).
+# qui utilisent le site, pas pour les développeurs. Évolution d'une fonctionnalité existante ou correction : troisième
+# niveau (1.7.1, 1.7.2…). Fonctionnalité distincte : mineure ; grand changement : majeure.
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
+
+- version: "1.10.1"
+  date: 2026-11-12
+  title: "Retrouver votre file d’écoute"
+  changes:
+    - "Votre file d’écoute est sauvegardée dans votre compte Subsonic : retrouvez les morceaux dans leur ordre, le titre courant et sa position après un rafraîchissement ou une reconnexion. La lecture reprend à votre demande."
+    - "Une copie dans ce navigateur conserve aussi les titres YouTube, SoundCloud et Jamendo et les changements en attente si Subsonic est injoignable. Ils sont gardés séparément pour chaque compte."
+
+- version: "1.10"
+  date: 2026-11-12
+  title: "Retrouver qui a envoyé la musique"
+  changes:
+    - "La page Envoyer garde un historique partagé : qui a envoyé quel fichier ou ZIP, à quelle date, avec le nombre de fichiers reçus et les albums rangés ou laissés dans Incoming."
+    - "L’auteur apparaît aussi sur les nouveaux albums de l’accueil et sur la fiche album. Tous les comptes connectés peuvent le voir, sans droit d’envoi ou de téléchargement."
+    - "Les nouveaux envois sont associés automatiquement au compte connecté. Les envois précédant cette version ne peuvent pas être attribués."
+
+- version: "1.9.3"
+  date: 2026-11-12
+  title: "Les paroles retrouvent les titres de YouTube"
+  changes:
+    - "Sur les pochettes d’albums, le bouton de lecture au survol se trouve désormais en bas à gauche."
+    - "Les paroles reconnaissent l’artiste indiqué dans un titre YouTube comme « Destinée ; Guy Marchand », même lorsque la chaîne porte un autre nom."
+    - "Les sous-titres entre parenthèses sont essayés avec le titre court : « Delirium (Ma chérie je t’écris…) » retrouve les paroles de « Delirium ». Les titres affichés restent conservés."
+
+- version: "1.9.2"
+  date: 2026-11-10
+  title: "Un point rouge pour les nouveaux conseils"
+  changes:
+    - "Le menu À écouter affiche une pastille rouge dès qu’un membre vous conseille un artiste ou un album. Elle se met à jour dans vos onglets ouverts."
+    - "Les conseils affichés sont marqués comme lus à l’ouverture de la page. Un conseil reçu pendant le chargement reste signalé jusqu’à son affichage, et un conseil identique déjà lu ne rallume pas la pastille."
+
+- version: "1.9.1"
+  date: 2026-11-10
+  title: "Retrouvez les artistes avec une partie de leur nom"
+  changes:
+    - "La recherche retrouve aussi les artistes présents dans la barre latérale : « gurr » suffit pour trouver Gurriers, même si les tags des fichiers ne le retrouvent pas."
+    - "Les majuscules, accents et ligatures sont reconnus. Les noms exacts et les débuts de noms apparaissent en premier, sans doublonner les résultats des tags."
+
+- version: "1.9"
+  date: 2026-11-10
+  title: "Des artistes et des albums à écouter plus tard"
+  changes:
+    - "Gardez un artiste ou un album depuis sa fiche dans la bibliothèque ou depuis Discogs, puis retrouvez-le dans la page À écouter."
+    - "Conseillez une découverte à un autre membre. Les recommandations reçues regroupent les noms de toutes les personnes qui vous conseillent le même disque ou artiste."
+    - "Gardez une recommandation dans vos marque-pages ou retirez-la indépendamment. La recherche, les favoris, la lecture et les playlists restent accessibles avec leurs boutons habituels."
+
+- version: "1.8.3"
+  date: 2026-11-09
+  title: "Des mix fidèles à l’artiste de départ"
+  changes:
+    - "Le créateur de mix reste parmi l’artiste choisi et ses proches, dans la profondeur demandée. Sans style sélectionné, les styles renseignés de l’artiste servent de repère ; les styles et époques choisis s’appliquent à tous les titres. Une sélection courte n’est plus complétée avec des morceaux sans rapport."
+    - "Depuis une fiche artiste, le créateur conserve le bon artiste et attend son chargement avant de permettre le lancement ou l’enregistrement. Ses albums restent disponibles même sans suggestions Last.fm."
+
+- version: "1.8.2"
+  date: 2026-11-08
+  title: "Écouter un label sans terminer toute l’analyse"
+  changes:
+    - "Arrêter le classement prépare la sélection des disques déjà analysés. Les pistes arrivent progressivement : vous pouvez écouter ou enregistrer les titres prêts, puis poursuivre le classement si vous le souhaitez."
+    - "La recherche YouTube reconnaît les codes catalogue et les noms de labels ajoutés aux vidéos, ainsi que de petites différences d’orthographe lorsque la durée concorde. Les titres et versions différents restent écartés."
+
+- version: "1.8.1"
+  date: 2026-11-08
+  title: "Des versions YouTube plus précises pour vos découvertes"
+  changes:
+    - "Les titres sans correspondance sûre dans votre bibliothèque sont recherchés automatiquement sur YouTube. Les liens associés à l’édition Discogs sont vérifiés en priorité."
+    - "Trois versions pertinentes au maximum, filtrées par artiste, titre, version et durée. L’avancement et les résultats sont visibles ; vous choisissez la version à écouter ou à enregistrer."
+
+- version: "1.8"
+  date: 2026-11-08
+  title: "Vos artistes et albums enrichis par Discogs"
+  changes:
+    - "Le choix de la fiche Discogs d’un artiste est mémorisé pour votre compte. Sa discographie s’affiche ensuite automatiquement sous vos albums, avec des boutons pour changer d’artiste ou actualiser le catalogue."
+    - "Des raccourcis rendent Discogs visible en haut des fiches artiste et album. La biographie retrouve sa place sous le nom ; les photos se chargent indépendamment depuis les sources disponibles. Les boutons sont plus compacts."
+
+- version: "1.7.13"
+  date: 2026-11-08
+  title: "Des chiffres plus compacts"
+  changes:
+    - "Le stockage de la bibliothèque s’affiche arrondi à l’entier, sans décimales, pour tenir plus facilement dans sa carte."
+
+- version: "1.7.12"
+  date: 2026-11-08
+  title: "Votre bibliothèque en chiffres"
+  changes:
+    - "L’accueil présente les artistes, albums, chansons, le stockage et les heures de musique de la collection, avec la date du dernier scan."
+    - "Les chiffres sont ceux déjà enregistrés par Subsonic après son scan : aucune collecte de la bibliothèque ni calcul supplémentaire. L’affichage s’active lorsque ce fichier est accessible au site."
+
+- version: "1.7.11"
+  date: 2026-11-08
+  title: "Le bon label pour vos découvertes"
+  changes:
+    - "Les fiches Discogs réservées aux sociétés, comme Sub Pop Records, sont distinguées du label musical. Un lien propose d’ouvrir le label indiqué par Discogs, comme Sub Pop."
+    - "Une sélection vide affiche une explication, sans compteur « 0 sur 0 » ni boutons d’écoute ou d’enregistrement inutilisables. L’ancienne sélection disparaît au lancement d’une nouvelle recherche."
+
+- version: "1.7.10"
+  date: 2026-11-08
+  title: "Explorez les labels et les discographies"
+  changes:
+    - "Depuis la fiche d’un label, composez une découverte variée ou un classement avec sa source : notes Discogs et votes, auditeurs ou écoutes Last.fm. Les rééditions sont regroupées et le périmètre analysé reste visible."
+    - "Retrouvez les titres chez vous en priorité, choisissez des versions YouTube pour les pistes manquantes, puis écoutez et enregistrez votre playlist mixte."
+    - "Sur la page artiste, ouvrez sa discographie Discogs : pochettes, dates, formats, participations et liens vers les albums de votre bibliothèque. Les homonymes restent au choix."
+    - "Les crédits Discogs sont proposés depuis l’album, avec choix de l’édition et liens vers les musiciens, leurs groupes et leurs discographies. MusicBrainz reste consultable."
+
+- version: "1.7.9"
+  date: 2026-11-07
+  title: "Des noms reconnus de façon cohérente"
+  changes:
+    - "Les variantes d’accents, de majuscules et de ligatures comme Œdipe / Oedipe sont reconnues de la même façon pour les crédits, les dossiers d’artistes, les raccourcis et les styles musicaux. Les noms affichés et les noms de fichiers conservent leur orthographe."
+    - "Les choix du créateur de mix suivent directement les options acceptées par le serveur ; les décennies se prolongent automatiquement au fil des années."
+    - "Les crédits d’album reconnaissent les collaborations comme Fennesz + Sakamoto et les noms crédités comme Prodigy, même lorsque le nom canonique est The Prodigy. Vous choisissez toujours l’édition."
+
+- version: "1.7.8"
+  date: 2026-11-07
+  title: "Choisissez la profondeur de vos mix"
+  changes:
+    - "Dans le créateur de mix, choisissez 1, 2, 3 ou 4 niveaux d’artistes proches. Un seul niveau reste près de l’artiste de départ ; les niveaux suivants explorent les proches de ses proches."
+    - "La limite choisie s’applique aussi aux mix enregistrés en playlist. Le réglage initial reste à 4 niveaux."
+
+- version: "1.7.7"
+  date: 2026-11-07
+  title: "Lancez vos albums depuis l’accueil"
+  changes:
+    - "Au survol d’une pochette, une petite flèche de lecture apparaît en haut à gauche : elle lance l’album sans quitter l’accueil. Le clic sur la pochette ou le nom ouvre toujours l’album."
+    - "La flèche reprend le bouton de lecture du site. Elle accompagne aussi les pochettes des pages Albums, artiste, recherche et favoris."
+
+- version: "1.7.6"
+  date: 2026-11-07
+  title: "Une radio à partir de votre morceau"
+  changes:
+    - "Dans les listes de morceaux de la bibliothèque, le bouton « Radio de ce titre » lance le morceau choisi, puis des titres proches. Si Last.fm ne propose rien, la sélection se replie sur le même style, puis sur la bibliothèque au hasard."
+    - "Le bouton indique le chargement. Si le serveur ne répond pas, votre file et votre lecture sont conservées."
+
+- version: "1.7.5"
+  date: 2026-11-07
+  title: "Les envois conservent les noms des artistes"
+  changes:
+    - "Les accents et la ponctuation des noms de dossiers et de titres sont conservés à l'envoi, notamment le dollar de Mon$rock."
+    - "Les ZIP contenant des noms en UTF-8 sans l'indiquer sont reconnus : les accents de noms comme Nán Fiero ne deviennent plus des caractères parasites. La comparaison avec les artistes déjà présents garde leurs noms de dossier."
+
+- version: "1.7.4"
+  date: 2026-11-07
+  title: "Les membres du groupe directement dans les crédits"
+  changes:
+    - "Après le choix de l'édition d'un album, les membres du groupe s'affichent directement avec les crédits, sans bouton supplémentaire. Les autres projets de chaque musicien restent dépliables."
+
+- version: "1.7.3"
+  date: 2026-11-07
+  title: "D'un groupe à ses musiciens et leurs autres projets"
+  changes:
+    - "Sur la page d'un artiste et dans les crédits d'un album, explorez les membres du groupe et, pour chacun, ses autres groupes et projets. Les noms sont cliquables pour continuer la découverte."
+    - "Les périodes de participation connues sont indiquées, les homonymes restent au choix et les liens sont chargés à la demande."
+    - "Les musiciens se présentent dans des cartes avec leurs initiales, et leurs autres projets sont regroupés en pastilles pour mieux parcourir les liens."
+
+- version: "1.7.2"
+  date: 2026-11-07
+  title: "Des crédits plus résistants aux interruptions"
+  changes:
+    - "Une erreur temporaire de MusicBrainz déclenche un nouvel essai automatique. Un échec ne bloque plus les autres recherches."
+    - "Si l'actualisation échoue, les informations conservées depuis moins de 30 jours restent consultables, avec une indication."
+
+- version: "1.7.1"
+  date: 2026-11-07
+  title: "Crédits des albums : les ligatures sont reconnues"
+  changes:
+    - "Les crédits reconnaissent les écritures æ / ae et œ / oe : « Dissidaence Episode 2 » de Vitalic retrouve désormais son édition « Dissidænce Episode 2 » sur MusicBrainz."
+
+- version: "1.7"
+  date: 2026-11-07
+  title: "Explorez les labels et les collaborations"
+  changes:
+    - "Sur un album, découvrez les crédits MusicBrainz en choisissant l'édition du disque : labels, producteurs et musiciens deviennent des liens."
+    - "Explorez le catalogue d'un label, les disques et participations d'un artiste, les membres d'un groupe et leurs autres projets. Cherchez les disques dans votre bibliothèque depuis ces pages."
 
 - version: "1.6"
   date: 2026-10-31

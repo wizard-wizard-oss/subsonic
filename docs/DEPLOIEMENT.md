@@ -18,6 +18,28 @@ Les commandes se lancent depuis le dossier `sources/` du projet, sur ton poste.
 
 ## Site web (édition PC)
 
+### Compteurs de la bibliothèque (facultatif, 1.7.12)
+
+Le site peut lire les statistiques que Subsonic a déjà enregistrées après son scan. Monter son fichier
+`subsonic.properties` en lecture seule avec `compose.statistics.yaml`, en plus des fichiers Compose habituels :
+
+```dotenv
+COMPOSE_FILE=compose.yaml:compose.subsonic.yaml:compose.statistics.yaml
+SUBSONIC_PROPERTIES_FILE=/chemin/des/donnees/subsonic.properties
+```
+
+Le chemin désigne **le fichier existant sur l’hôte Docker**, lisible par l’utilisateur du conteneur web.
+Le montage refuse de créer un dossier si ce fichier manque. Ne pas changer les permissions de la configuration
+Subsonic pour l’exposer publiquement. Le navigateur ne reçoit que les compteurs et la date du scan.
+Le fichier n’est ni copié dans l’image ni servi par HTTP, et le site ne le modifie jamais.
+Subsonic conserve déjà ces chiffres entre les redémarrages : aucune nouvelle base, tâche planifiée ou clé API.
+L’accueil prend les nouveaux chiffres lors de sa prochaine ouverture après un scan terminé.
+
+Hors Docker, régler `PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE` sur le fichier lisible en lecture seule.
+Sans cette option, le reste du site fonctionne et le bloc des compteurs reste masqué. Si le fichier monté est
+remplacé manuellement par renommage (restauration de sauvegarde), recréer le conteneur web pour renouveler ce
+montage de fichier. Les sauvegardes ordinaires de Subsonic mettent à jour le fichier en place.
+
 ### Premier déploiement
 Le site s'installe sous **le même utilisateur que Subsonic** (`music`), dans son dossier personnel : `~music/pimedia`.
 Ainsi les fichiers envoyés appartiennent à `music`, comme le reste de la musique. Le site a sa propre base (volume
@@ -55,11 +77,18 @@ ssh music@serveur 'cd pimedia && docker compose down && docker run --rm -v pimed
 ```
 
 ### Mise à jour
+La version 1.7.10 ajoute `DISCOGS_API_KEY` au `.env` et son passage à `PI_MEDIA_WEB_DISCOGS_API_KEY` dans le conteneur
+web. Jeton personnel Discogs, facultatif et strictement côté serveur ; ne pas le copier dans une commande ou un journal.
+`LASTFM_API_KEY` active les critères auditeurs/écoutes des albums en plus des pochettes. Après réglage,
+reconstruire/recréer le conteneur web pour charger la configuration. Aucun changement de schéma.
+
 ```bash
 bash deploy/pc/push.sh utilisateur@serveur
 ```
 Le script copie le code (sans toucher au `.env` du serveur ni aux données), puis relance
 `docker compose up -d --build web`. Les migrations de la base s'appliquent toutes seules au démarrage.
+Les dossiers `.git`, `.idea` et `.vscode` sont exclus : les métadonnées du dépôt et de l'éditeur ne sont pas déployées
+et les éventuelles configurations déjà présentes sur le serveur sont préservées.
 La reconstruction installe aussi les nouvelles dépendances de `requirements.txt` (ex. `ytmusicapi`, 27/10/2026).
 
 ### Vérifier, lire le journal
@@ -184,6 +213,47 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 ```
 
 ## Avant de déployer
+
+La 1.10.1 ne change ni le schéma ni la configuration. Elle relie le lecteur aux routes existantes de file
+Subsonic et ajoute une copie locale par compte. Publiée le 12/11/2026 sur https://music2.foos.fr après
+694 tests Python et les sept parcours jsdom ; les deux parcours PC ont été rejoués sur le code final.
+Sauvegarde cohérente du code, de la configuration et de SQLite : `../pimedia-backups/pre-1.10.1-20261112T200913Z`.
+Image précédente conservée : `pimedia-web:pre-1.10.1-20261112t200913z`. Publication par `deploy/pc/push.sh`,
+sans modifier le `.env` ni les volumes. Le conteneur est sain ; les 216 fichiers applicatifs correspondent
+aux sources testées. HTTPS, version, scripts versionnés et connexion publique dans jsdom vérifiés ;
+les routes de file exigent session et CSRF. SQLite reste au schéma 19, intègre, avec les compteurs inchangés.
+Aucun compte ni file de production utilisé pour les tests connectés. Recharger la page avec Cmd+Maj+R.
+
+La 1.10 ajoute la migration web 19 : `upload_history` et `upload_albums`, pour attribuer les nouveaux envois
+au compte connecté et afficher l’auteur sur les albums. Aucun nouveau réglage d’environnement.
+L’historique est initialement vide : les anciens envois ne peuvent pas être attribués rétroactivement.
+Sauvegarder SQLite via son API de backup, archiver code/configuration et conserver l’image précédente.
+Publication du 12/11/2026 : sauvegarde ../pimedia-backups/pre-1.10-20261112T180315Z/ et image
+`pimedia-web:pre-1.10-20261112t180315z`. Migration répétée sur copie sans réseau, puis schéma 19 et intégrité
+vérifiés en production ; 12 comptes et les données existantes conservés. Les tables sont additives :
+un retour à l’image précédente peut garder la base actuelle et ses tables inutilisées.
+Les sites local et production servent la 1.10, avec 215 fichiers applicatifs identiques à l’instantané testé.
+Local : service en HTTP sur 127.0.0.1:8200, démarré avec `docker compose -f compose.yaml up -d --no-build web`
+pour conserver le réseau existant ; le réseau externe Traefik `proxy` est absent de cet environnement.
+Validation finale : 691 tests Python et six parcours jsdom ; points de départ historiques des tests de migration
+figés, attente du DOM À écouter corrigée puis parcours rejoué.
+
+La 1.9.2 ajoute la migration web 18 : marqueurs de conseils non lus et index par destinataire.
+Les conseils existants sont initialisés comme non lus ; aucune nouvelle variable ni tâche périodique.
+Sauvegarder SQLite et conserver l’image précédente avant publication.
+Publication du 10/11/2026 : sauvegarde cohérente dans ../pimedia-backups/pre-1.9.2-20261110T221310Z/, image pimedia-web:pre-1.9.2-20261110t221310z. Schéma 18 et intégrité vérifiés après publication.
+
+La 1.9 ajoute la migration web 17 (listen_later et recommendations), appliquée au démarrage.
+Sauvegarde cohérente avant publication : code/configuration archivés, SQLite copié par l'API backup,
+image précédente conservée sous une étiquette dédiée. Aucun nouveau réglage d'environnement.
+Le 10/11/2026, sauvegarde dans ../pimedia-backups/pre-1.9-20261110T202923Z/ depuis le projet distant,
+image pimedia-web:pre-1.9-20261110t202923z ; schéma 17 et intégrité vérifiés après publication.
+Les deux tables sont additives ; un retour à l'image précédente peut conserver la base actuelle et ses nouvelles
+tables inutilisées. Une restauration de la sauvegarde SQLite doit tenir compte des écritures intervenues depuis.
+
+La 1.8 ajoute la migration web 16 (`artist_discogs_links`), appliquée au démarrage. Sauvegarder la base de façon
+cohérente et conserver l’image précédente avant mise à jour. Le `.env` et le montage facultatif des statistiques
+restent ceux du serveur ; aucune nouvelle variable et aucun changement de l’édition Pi pour les fiches Discogs.
 
 Lancer tous les tests (unitaires et parcours navigateur simulé) :
 ```bash

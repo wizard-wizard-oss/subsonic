@@ -1,7 +1,9 @@
 """Écoute : scrobble, en écoute maintenant, marque-pages, file d'attente partagée avec les applis."""
 from .base import ok
 from .library import item_id
-from .playlists import song_ids
+from ..listening import MAX_QUEUE_SONGS
+
+PLAY_QUEUE_BODY_LIMIT = 1024 * 1024
 
 
 def seconds(value):
@@ -37,6 +39,9 @@ class ListeningController:
 
     def save_play_queue(self, request, user, body):
         current = body.get("current")
-        self.listening.save_play_queue(user, song_ids(body.get("ids")), item_id(current) if current else "",
+        ids = body.get("ids")
+        if not isinstance(ids, list) or len(ids) > MAX_QUEUE_SONGS:
+            raise ValueError("ids")
+        self.listening.save_play_queue(user, [item_id(song) for song in ids], item_id(current) if current else "",
                                        seconds(body.get("position", 0)))
         return ok()

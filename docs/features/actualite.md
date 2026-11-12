@@ -1,7 +1,7 @@
-# Actualité : flux RSS des webzines (site web)
+# Actualités : flux RSS des webzines (site web)
 
 ## Ce que ça fait
-Page **« Actualité »** (`#/news`, lien dans le menu du haut) : les derniers articles des webzines suivis par le site,
+Page **« Actualités »** (`#/news`, lien dans le menu du haut) : les derniers articles des webzines suivis par le site,
 du plus récent au plus ancien, 40 par page avec « Afficher plus ». Pour chaque article : titre (lien vers le webzine,
 nouvel onglet), webzine, date, début du résumé (280 caractères, sans HTML). **Le site ne montre que des liens** :
 l'article se lit chez le webzine ; ni image ni contenu copié.
@@ -45,7 +45,7 @@ Routes : `GET /api/news[?feed=&beforeDate=&beforeId=]`, `GET /api/news/feeds`, `
 ## N'existe pas / pas vérifié
 - Pas de recherche dans les archives des webzines (API WordPress `wp-json/wp/v2/posts?search=`, recherche en RSS
   `?s=…&feed=rss2`) ni de Google Actualités : seulement ce qui passe dans les flux depuis leur ajout.
-- Pas de reconnaissance des artistes de la bibliothèque dans la page Actualité (pastille « parle de … »).
+- Pas de reconnaissance des artistes de la bibliothèque dans la page Actualités (pastille « parle de … »).
 - Noms courts ou communs (« Air », « Justice ») : des articles sans rapport peuvent apparaître sous l'artiste.
 - Les articles ne sont jamais effacés (sauf avec leur flux).
 - Mowno est derrière Cloudflare : son flux répond aujourd'hui, sa recherche non.

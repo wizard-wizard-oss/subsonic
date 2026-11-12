@@ -98,7 +98,7 @@ function makeEventSource(jar) {
   const key = (target, k, extra) => target.dispatchEvent(new w.KeyboardEvent("keydown", Object.assign({key: k, bubbles: true}, extra || {})));
 
   // --- connexion ---
-  await until(() => !$("#login").hidden);
+  check("écran de connexion prêt", await until(() => d.readyState === "complete" && !$("#login").hidden, 12000));
   check("page de connexion en français", $("#login h1").textContent === "Connexion");
   check("mot de passe oublié : aide cachée au départ", $("#login-forgot-help").hidden);
   $("#login-forgot").click();
@@ -133,16 +133,26 @@ function makeEventSource(jar) {
   type($("#artist-filter"), "");
   check("barre : dossiers d'artistes, sans Incoming", $$(".letter-head").map(h => h.textContent).join() === "A,B" &&
         $(".artist").getAttribute("href") === "#/artist/fdir-ar1");
+  check("collection : cinq compteurs du serveur en haut de l’accueil", await until(() => $(".library-collection")) &&
+        $("#main").firstElementChild.classList.contains("library-collection") && $$(".collection-metric").length === 5);
+  const figure = key => $("[data-metric=" + key + "] strong").textContent.replace(/\s/g, "");
+  check("collection : nombres français, stockage arrondi sans décimales et heures", figure("artists") === "5440" &&
+        figure("albums") === "11843" && figure("songs") === "137315" && figure("storage") === "1479" &&
+        figure("duration") === "9229" && $("[data-metric=storage] .collection-unit").textContent === "Gio");
+  check("collection : périmètre et dernier scan visibles", $(".collection-eyebrow").textContent === "Collection du serveur" &&
+        $(".collection-scan").textContent.startsWith("Dernier scan") && $(".collection-scan").getAttribute("datetime"));
+  check("collection : source absente, aucun bloc inventé", w.eval("LibraryStatistics.render(null)") === null);
   w.location.hash = "#/artist/ar3";                          // lien par l'identifiant des tags : ramené au dossier
   check("artiste en cours d'une lettre pas encore construite : surligné", await until(() =>
         $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar3"));
   w.location.hash = "#/";
   let reloaded = false;
   const app = w.eval("App"), listCalls = app.api.get;
+  const indexBeforeReload = app.music.sidebar.index;
   app.api.get = url => { if (url === "/api/artists") reloaded = true; return listCalls.call(app.api, url); };
   app.live.emit("artists");                                 // Subsonic a scanné : la barre se recharge seule
   check("bibliothèque changée : barre rechargée sans message d'attente", await until(() => reloaded) &&
-        !$(".sidebar-note") && await until(() => $$(".artist").length >= 1));
+        !$(".sidebar-note") && await until(() => app.music.sidebar.index !== indexBeforeReload && $$(".artist").length >= 1));
   app.api.get = async (url, params) => url === "/api/artists"          // un dossier « Compilations » épinglé
     ? Object.assign(await listCalls.call(app.api, url), {shortcuts: [{id: "fdir-ar3", name: "Compilations"}]})
     : listCalls.call(app.api, url, params);
@@ -159,6 +169,40 @@ function makeEventSource(jar) {
   check("accueil : derniers albums", await until(() => $$(".album-card").length >= 3));
   check("accueil : plus écoutés, avec « Écouté 12 fois »", await until(() => $(".most-played .play-count") &&
         $(".most-played .play-count").textContent === "Écouté 12 fois"));
+
+  // --- pochettes : la flèche existante lit l'album, la carte reste un lien séparé ---
+  const homeAlbum = $$(".album-card").find(card => card.querySelector(".album-name").textContent === "Arrival");
+  const homePlay = homeAlbum.querySelector(".album-card-play");
+  check("accueil : même flèche de lecture sur les pochettes", $$(".album-card-play").length === $$(".album-card").length &&
+        homePlay.querySelector("svg path").getAttribute("d") === w.eval("ICONS.play") &&
+        homePlay.getAttribute("aria-label") === "Lire l’album « Arrival »" && !homePlay.closest("a"));
+  const beforeAlbumPlay = app.api.get;
+  let releaseAlbumPlay, albumPlayCalls = 0;
+  const albumReady = new Promise(resolve => { releaseAlbumPlay = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/album") { albumPlayCalls++; await albumReady; }
+    return beforeAlbumPlay.call(this, url, params);
+  };
+  homePlay.click();
+  homePlay.click();
+  check("accueil : un seul chargement de l'album à la fois", homePlay.disabled && albumPlayCalls === 1);
+  releaseAlbumPlay();
+  check("accueil : l'album se lit en entier sans quitter l'accueil", await until(() => !homePlay.disabled &&
+        w.eval('App.player.current && App.player.current.id === "s1" && App.player.queue.length === 2')) &&
+        w.location.hash === "#/" && w.eval('App.player.queue.map(s => s.id).join()') === "s1,s2");
+  const albumQueue = w.eval('App.player.queue.map(s => s.id).join()');
+  app.api.get = async function(url, params) {
+    if (url === "/api/album") throw w.eval('new ApiError(503, "subsonic.unreachable")');
+    return beforeAlbumPlay.call(this, url, params);
+  };
+  homePlay.click();
+  check("accueil : erreur expliquée sans perdre la file", await until(() => !homePlay.disabled &&
+        $$(".toast.error").some(t => t.textContent === "Serveur Subsonic injoignable")) &&
+        w.eval('App.player.queue.map(s => s.id).join()') === albumQueue && w.eval('App.player.current.id') === "s1");
+  app.api.get = beforeAlbumPlay;
+  homeAlbum.querySelector(".album-name").click();
+  check("accueil : cliquer le nom ouvre la fiche de l'album", await until(() => $(".album-info h1") &&
+        $(".album-info h1").textContent === "Arrival") && w.location.hash === "#/album/al1");
 
   // --- page Albums : listes de Subsonic en onglets ---
   w.location.hash = "#/albums/frequent";
@@ -182,10 +226,10 @@ function makeEventSource(jar) {
   w.location.hash = "#/artist/ar1";
   check("artiste : titres populaires", await until(() => $$(".popular tr.song").length === 3 &&
         $(".popular .section-head h2").textContent === "Titres populaires"));
-  check("artiste : biographie (Wikipédia, photo, source)", await until(() => $(".artist-bio .bio-text p")) &&
-        $(".artist-bio h2").textContent === "Biographie" &&
+  check("artiste : biographie sous le nom, photo indépendante et source", await until(() => $(".artist-bio .bio-text p") && $(".artist-portrait img")) &&
+        $(".artist-head .artist-bio").getAttribute("aria-label") === "Biographie" &&
         $(".artist-bio .bio-text p").textContent.startsWith("ABBA est un groupe") &&
-        $(".bio-photo").getAttribute("src") === "https://upload.wikimedia.org/abba.jpg" &&
+        $(".artist-portrait img").getAttribute("src") === "https://upload.wikimedia.org/abba.jpg" &&
         $(".bio-source a").textContent === "Wikipédia");
   check("artiste : artistes similaires (Last.fm par Subsonic)", await until(() => $$(".similar a.chip").length === 1) &&
         $(".similar a.chip").getAttribute("href") === "#/artist/ar3" && $(".similar h2").textContent === "Artistes similaires");
@@ -193,7 +237,7 @@ function makeEventSource(jar) {
   check("artiste : radio lancée", await until(() => w.eval("App.player.queue.length") >= 1));
   check("artiste : « Créer un mix » mène au créateur", $(".artist-mix").getAttribute("href") === "#/mix/ar1");
   check("artiste : albums = ses dossiers, liens vers le dossier", $$(".album-card .album-name").map(n => n.textContent).join() ===
-        "Waterloo,Arrival" && $(".album-card").getAttribute("href").startsWith("#/album/fdir-"));
+        "Waterloo,Arrival" && $(".album-card .album-link").getAttribute("href").startsWith("#/album/fdir-"));
 
   // --- album, étoiles ---
   w.location.hash = "#/album/al1";
@@ -204,6 +248,205 @@ function makeEventSource(jar) {
         $("tr.song a.song-download").getAttribute("href") === "/api/download?song=s1");
   check("artiste surligné dans la barre", await until(() => $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar1"));
   check("titres de l'album", $$("tr.song").length === 2);
+  // --- radio d'un titre : API réelle du faux Subsonic, attente et erreur sans perdre la file ---
+  const songRadio = $('tr.song[data-id="s2"] .song-radio');
+  check("radio d'un titre : bouton nommé sur chaque morceau Subsonic", $$("tr.song .song-radio").length === 2 &&
+        songRadio.getAttribute("aria-label") === "Radio de ce titre");
+  const beforeSongRadio = app.api.get;
+  let releaseSongRadio, songRadioCalls = 0;
+  const radioReady = new Promise(resolve => { releaseSongRadio = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/radio/song") { songRadioCalls++; await radioReady; }
+    return beforeSongRadio.call(this, url, params);
+  };
+  songRadio.click();
+  songRadio.click();
+  check("radio d'un titre : un seul chargement à la fois", songRadio.disabled &&
+        songRadio.getAttribute("aria-busy") === "true" && songRadioCalls === 1);
+  releaseSongRadio();
+  check("radio d'un titre : le morceau choisi puis ses voisins dans la file", await until(() =>
+        !songRadio.disabled && w.eval('App.player.current.id === "s2" && App.player.queue.length === 4')) &&
+        w.eval('new Set(App.player.queue.map(s => s.id)).size === 4') && !songRadio.hasAttribute("aria-busy"));
+  const radioQueue = w.eval('App.player.queue.map(s => s.id).join()');
+  app.api.get = async function(url, params) {
+    if (url === "/api/radio/song") throw w.eval('new ApiError(503, "subsonic.unreachable")');
+    return beforeSongRadio.call(this, url, params);
+  };
+  songRadio.click();
+  check("radio d'un titre : erreur expliquée, file conservée et bouton réutilisable", await until(() =>
+        !songRadio.disabled && $$(".toast.error").some(t => t.textContent === "Serveur Subsonic injoignable")) &&
+        w.eval('App.player.queue.map(s => s.id).join()') === radioQueue && w.eval('App.player.current.id') === "s2");
+  app.api.get = beforeSongRadio;
+  const radioRoles = app.user.roles;
+  app.user.roles = radioRoles.filter(role => role !== "stream");
+  const noStreamTable = w.eval('Views.songTable([{id: "s1", title: "Dancing Queen"}])');
+  check("radio d'un titre : absente sans le droit d'écouter", !noStreamTable.querySelector(".song-radio"));
+  noStreamTable.destroy();
+  app.user.roles = radioRoles;
+
+  // --- labels et collaborations : choix d'édition, label, bibliothèque, membre et groupe ---
+  const beforeExplore = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeExplore.call(this, url, params);
+    return url.startsWith("/api/explore/") ? Object.assign(data, {stale: true}) : data;
+  };
+  check("crédits : chargement à la demande", !!$(".explore-open") && !$(".explore-edition"));
+  $(".explore-open").click();
+  check("crédits : éditions proposées sans choix arbitraire", await until(() => $$(".explore-edition option").length === 3) &&
+        $(".explore-edition").value === "" && !$(".explore-people"));
+  check("crédits : consultables malgré un premier 503, cache ancien signalé", !!$(".explore-cached") &&
+        $(".explore-cached").textContent.includes("informations conservées"));
+  $(".explore-edition").value = "00000000-0000-4000-8000-000000000001";
+  $(".explore-edition").dispatchEvent(new w.Event("change"));
+  check("crédits : label, producteur et musicien cliquables", await until(() => $$(".explore-body > .explore-people .explore-link").length === 4) &&
+        $$(".explore-link").some(a => a.textContent === "Polar") &&
+        $(".explore-body").textContent.includes("Production") && $(".explore-body").textContent.includes("guitar"));
+  check("album : membres du groupe affichés directement avec les crédits", await until(() => $(".explore-member-card")) &&
+        $(".explore-member-card").textContent.includes("Musicien test") && $(".explore-connections").textContent.includes("toutes périodes"));
+  $(".explore-member-projects").click();
+  check("album : autres groupes du membre, sans répéter le groupe de départ", await until(() => $(".explore-member-links .explore-link")) &&
+        $$(".explore-member-links .explore-link").length === 1 && $(".explore-member-links .explore-link").textContent === "Autre groupe" &&
+        $(".explore-member-links").textContent.includes("1980") && $(".explore-member-links").textContent.includes("1990"));
+  w.location.hash = $$(".explore-link").find(a => a.textContent === "Polar").getAttribute("href");
+  check("label : catalogue et source", await until(() => $("#main h1") && $("#main h1").textContent === "Polar") &&
+        $$(".explore-work").length === 1 && $(".explore-source").getAttribute("href").includes("musicbrainz.org/label/"));
+  check("label : cache ancien signalé", !$(".explore-cached").hidden);
+  $(".explore-find").click();
+  check("label : album retrouvé dans sa bibliothèque", await until(() => $(".explore-local a")) &&
+        $(".explore-local a").getAttribute("href") === "#/album/al1");
+  $(".explore-more").click();
+  check("label : catalogue paginé", await until(() => $$(".explore-work").length === 2) && $(".explore-more").hidden);
+  // Discogs : choix explicite du label, découverte variée et playlist mixte avec choix YouTube.
+  $(".label-discovery form").dispatchEvent(new w.Event("submit", {cancelable: true}));
+  check("label Discogs : homonymes au choix", await until(() => $$(".label-discovery .discogs-identity").length === 2) &&
+        $(".discovery-controls").hidden);
+  $$(".label-discovery .discogs-identity")[1].click();
+  check("label : société distinguée du label musical", await until(() => $(".discovery-related-label")) &&
+    $(".discovery-related-label").getAttribute("href") === "#/discogs/label/7" && $(".discovery-controls").hidden &&
+    !$(".discovery-chosen") && $(".discovery-label-notice").textContent.includes("société"));
+  const emptyPreview = d.createElement("div");
+  new (w.eval("DiscoveryTracks.Playlist"))(emptyPreview, {}, "").show([]);
+  check("label : sélection vide expliquée sans compteur ni boutons inutilisables", !!emptyPreview.querySelector(".discovery-empty") &&
+    !emptyPreview.querySelector(".discovery-chosen, button"));
+  $(".label-discovery .discogs-identity").click();
+  check("label Discogs : deux modes et trois critères sourcés", await until(() => $$(".discovery-mode").length === 2) &&
+        $$(".discovery-source option").length === 3);
+  $('.discovery-mode[data-mode="discover"]').click();
+  check("découverte : rééditions regroupées, pistes locales et rares", await until(() => $$(".discovery-track").length === 4) &&
+        $$(".discovery-rankings .discogs-album").length === 3 && $(".discovery-chosen").textContent === "2 titres choisis sur 4 proposés");
+  const missingLabelTrack = $$(".discovery-track").find(row => row.textContent.includes("One More Time"));
+  check("découverte : vidéos trouvées automatiquement, choix explicite et lien Discogs visible", await until(() =>
+    missingLabelTrack.querySelectorAll(".discovery-video").length === 2) && missingLabelTrack.querySelector("select").value === "-1" &&
+    missingLabelTrack.textContent.includes("lien de l’édition Discogs"));
+  const labelVersion = missingLabelTrack.querySelector("select");
+  labelVersion.value = "1";
+  labelVersion.dispatchEvent(new w.Event("change"));
+  const beforeLabelPlay = app.player.playList;
+  let labelSongs;
+  app.player.playList = songs => { labelSongs = songs; };
+  $(".discovery-play").click();
+  check("découverte : écoute mixte avec la version choisie", labelSongs.length === 3 &&
+        labelSongs.some(song => song.youtubeId === "otherone123") && labelSongs.filter(song => !song.ext).length === 2);
+  app.player.playList = beforeLabelPlay;
+  $('.discovery-mode[data-mode="top"]').click();
+  check("top : note, votes, édition source et méthode", await until(() => $$(".discovery-top li").length === 2 &&
+        !$('.discovery-mode[data-mode="top"]').disabled) && $(".discovery-method").textContent.includes("édition la plus ancienne") &&
+        $(".discovery-figures").textContent.includes("20 votes") && $(".discovery-figures a").href.includes("/release/101"));
+  $(".discovery-source").value = "lastfm_listeners";
+  $(".discovery-source").dispatchEvent(new w.Event("change"));
+  check("top Last.fm : auditeurs et écoutes croisés au catalogue", await until(() =>
+    !$('.discovery-mode[data-mode="top"]').disabled && $(".discovery-method").textContent.startsWith("Last.fm")) &&
+    $(".discovery-ranked-title").textContent.startsWith("Discovery") && $(".discovery-figures").textContent.includes("500 auditeurs"));
+  const topMissing = $$(".discovery-track").find(row => row.textContent.includes("One More Time"));
+  await until(() => topMissing.querySelectorAll("select option").length === 3);
+  topMissing.querySelector("select").value = "1";
+  topMissing.querySelector("select").dispatchEvent(new w.Event("change"));
+  $(".discovery-save").click();
+  await until(() => $(".dialog-input"));
+  $(".dialog-input").value = "Le son de Polar";
+  $(".dialog button.primary").click();
+  check("label : playlist mixte enregistrée et ouverte", await until(() => w.location.hash.startsWith("#/playlist/") &&
+    $("#main .page-head h1")) && $("#main .page-head h1").textContent === "Le son de Polar" &&
+    $$("tr.song").length === 3 && !!$('tr.song[data-id="yt-otherone123"]'));
+  w.location.hash = "#/explore/artist/00000000-0000-4000-8000-000000000003";
+  check("groupe : membres et participations", await until(() => $("#main h1") && $("#main h1").textContent === "ABBA") &&
+        $(".explore-people").textContent.includes("Membre du groupe") && $$(".explore-work").length === 2);
+  w.location.hash = $(".explore-link").getAttribute("href");
+  check("musicien : retour vers son groupe", await until(() => $("#main h1") && $("#main h1").textContent === "Musicien test") &&
+        $(".explore-link").textContent === "ABBA");
+  w.location.hash = $$(".explore-link").find(a => a.textContent === "Autre groupe").getAttribute("href");
+  check("musicien : un autre projet s'ouvre", await until(() => $("#main h1") && $("#main h1").textContent === "Autre groupe"));
+  app.api.get = beforeExplore;
+  await require("./e2e_discovery_checks")(w, app, check, until, wait);
+  await require("./e2e_label_pause_checks")(w, app, check, until, wait);
+  w.location.hash = "#/artist/ar1";
+  await until(() => $(".artist-exploration .explore-artist-open"));
+  $(".explore-artist-open").click();
+  check("page artiste : homonymes proposés sans choisir arbitrairement", await until(() => $$(".explore-artist-choice option").length === 3) &&
+        $(".explore-artist-choice").value === "" && !$(".explore-member-card"));
+  $(".explore-artist-choice").value = "00000000-0000-4000-8000-000000000003";
+  $(".explore-artist-choice").dispatchEvent(new w.Event("change"));
+  check("page artiste : membres après choix de la bonne identité", await until(() => $(".artist-exploration .explore-member-card")));
+  $(".explore-member-projects").click();
+  check("page artiste : autres groupes du membre", await until(() => $(".explore-member-links .explore-link")) &&
+        $(".explore-member-links .explore-link").textContent === "Autre groupe");
+  $(".discography-open").click();
+  await until(() => $(".dialog .discogs-search"));
+  $(".dialog .discogs-search").dispatchEvent(new w.Event("submit", {cancelable: true}));
+  check("discographie : identité choisie, pas d’homonyme imposé", await until(() => $$(".dialog .discogs-identity").length === 2) &&
+    !$(".discography .discogs-album"));
+  $(".dialog .discogs-identity").click();
+  check("discographie : cartes, source et bibliothèque prioritaire", await until(() => $(".discography-owned")) &&
+    $$(".discography .discogs-album").length === 2 && $(".discography-owned").getAttribute("href") === "#/album/al1");
+  $(".discogs-more").click();
+  check("discographie : pagination et regroupement des rééditions", await until(() => $$(".discography .discogs-album").length === 3) &&
+    !$(".discogs-more"));
+  check("Discogs : membre du groupe directement cliquable", await until(() => $(".discography-relations .discogs-person")) &&
+    $(".discography-relations .discogs-person").getAttribute("href") === "#/discogs/artist/9");
+  check("fiche artiste : bio sous le nom et Discogs après les albums", $(".artist-head .artist-bio") &&
+    !!($("#artist-albums").compareDocumentPosition($("#artist-discography")) & w.Node.DOCUMENT_POSITION_FOLLOWING));
+  const artistHash = w.location.hash;
+  $(".artist-discogs-shortcut").click();
+  check("raccourci Discogs : garde la fiche et cible sa section", w.location.hash === artistHash &&
+    w.document.activeElement === $("#artist-discography"));
+  w.location.hash = "#/";
+  await until(() => $(".home-columns"));
+  const identityGet = app.api.get;
+  let releaseIdentity;
+  app.api.get = (path, params) => {
+    const result = identityGet.call(app.api, path, params);
+    if (path !== "/api/discogs/artist-link") return result;
+    return Promise.all([result, new Promise(resolve => { releaseIdentity = resolve; })]).then(([data]) => data);
+  };
+  w.location.hash = artistHash;
+  await until(() => releaseIdentity && $(".artist-discogs-shortcut"));
+  $(".artist-discogs-shortcut").click();
+  releaseIdentity();
+  check("discographie : choix retrouvé automatiquement à la visite suivante", await until(() => $(".discography-owned")) &&
+    !$(".dialog") && $(".discography-open").hidden && $(".discography-saved").textContent === "Choix mémorisé");
+  app.api.get = identityGet;
+  check("discographie : un clic avant la fin du chargement ne redemande pas l’identité", !$(".dialog"));
+  $(".discography-refresh").click();
+  check("discographie : actualiser conserve l’identité et la sélection", await until(() => !$("#artist-discography").hasAttribute("aria-busy")) &&
+    !!$(".discography-owned") && !$(".dialog"));
+  w.location.hash = "#/album/al1";
+  await until(() => $(".discogs-credits-open"));
+  $(".discogs-credits-open").click();
+  check("crédits Discogs : éditions au choix", await until(() => $$(".discogs-edition option").length === 3) &&
+    $(".discogs-edition").value === "");
+  $(".discogs-edition").value = "101";
+  $(".discogs-edition").dispatchEvent(new w.Event("change"));
+  check("crédits Discogs : musiciens, rôle et label", await until(() => $$(".discogs-credits .discogs-person").length === 2) &&
+    $(".discogs-credits").textContent.includes("Drums") && $(".discogs-label").getAttribute("href") === "#/discogs/label/7");
+  w.location.hash = $$(".discogs-credits .discogs-person")[1].getAttribute("href");
+  check("Discogs : du musicien à ses groupes et sa discographie", await until(() => $("#main h1") &&
+    $("#main h1").textContent === "Musicien test" && $(".discogs-connections .discogs-person")) &&
+    $(".discogs-connections .discogs-person").getAttribute("href") === "#/discogs/artist/7");
+  w.location.hash = "#/discogs/label/7";
+  check("Discogs : label direct sans recherche MusicBrainz", await until(() => $$(".discovery-mode").length === 2) &&
+    !$(".label-discovery form"));
+  w.location.hash = "#/album/al1";
+  await until(() => $(".album-info h1") && $(".album-info h1").textContent === "Arrival");
   // --- pochette : crayon, recherche Last.fm, choix d'une image ---
   check("album : crayon pour changer la pochette (droit « upload »)", !!$(".cover-edit button.cover-pencil"));
   $(".cover-pencil").click();
@@ -276,6 +519,15 @@ function makeEventSource(jar) {
   key(d.body, "c");
   check("C : le salon reprend sa place", !d.body.dataset.lyrics && w.getComputedStyle($("#chat-panel")).display !== "none");
 
+  // --- recherche : nom partiel sans accent, lien vers le même dossier que la barre ---
+  type($("#search"), "bjor");
+  check("recherche : nom partiel sans accent retrouve Björk", await until(() =>
+        w.location.hash === "#/search/bjor" && $("#main .chips a[href='#/artist/fdir-ar3']")) &&
+        $("#main .chips a[href='#/artist/fdir-ar3']").textContent === "Björk");
+  $("#main .chips a[href='#/artist/fdir-ar3']").click();
+  check("recherche : le résultat ouvre le dossier artiste", await until(() =>
+        w.location.hash === "#/artist/fdir-ar3" && $(".artist-head h1") && $(".artist-head h1").textContent === "Björk"));
+
   // --- musique d'ailleurs : Jamendo, YouTube (faux lecteur officiel), vidéo refusée ---
   const yt = {players: []};
   w.YT = {Player: class {
@@ -322,6 +574,19 @@ function makeEventSource(jar) {
   check("vidéo lue ici : en tête avec « déjà lue ici », la refusée n'est plus proposée", await until(() =>
         $$(".ext-part.youtube tr.song").length === 1 && $(".ext-part.youtube .ext-played") &&
         $(".ext-part.youtube tr.song").dataset.id === "yt-otherone123"));
+  w.eval(`App.player.playList([{id: "yt-destinee", youtubeId: "otherone123", ext: "youtube",
+    title: "Destinée ; Guy Marchand", artist: "AnyMusics", duration: 275}]);`);
+  key(d.body, "l");
+  check("paroles YouTube : artiste dans le titre malgré le nom de la chaîne", await until(() =>
+        $$(".lyric-line").length === 2 && $(".lyrics-source").textContent === "Source : LRCLIB") &&
+        $(".lyrics-song").textContent === "Destinée ; Guy Marchand — AnyMusics" &&
+        w.eval("App.player.current.title") === "Destinée ; Guy Marchand");
+  w.eval(`App.player.playList([{id: "yt-delirium", youtubeId: "otherone123", ext: "youtube",
+    title: "Delirium (Ma chérie je t'écris...)", artist: "Guy Marchand", duration: 180}]);`);
+  check("paroles YouTube : sous-titre entre parenthèses reconnu, affichage conservé", await until(() =>
+        $$(".lyric-line").length === 2 && $(".lyrics-source").textContent === "Source : LRCLIB") &&
+        $(".lyrics-song").textContent === "Delirium (Ma chérie je t'écris...) — Guy Marchand");
+  key(d.body, "c");
   $(".ext-part.jamendo .row-play").click();
   check("Jamendo : son direct, fenêtre vidéo fermée", await until(() => !d.body.dataset.video &&
         w.eval("App.player.audio.audio.src").startsWith("https://prod-1.storage.jamendo.com/")));
@@ -505,24 +770,131 @@ function makeEventSource(jar) {
   $(".mix-card[data-kind=random]").click();
   check("mix rapide « Au hasard » : lancé", await until(() => w.eval("App.player.queue.length") === 4));
   check("créateur : styles de la bibliothèque", await until(() => $$(".mix-genres .chip").length >= 2));
+  const depths = $$(".mix-depths .chip");
+  check("créateur : profondeur de 1 à 4 niveaux, 4 par défaut", depths.length === 4 &&
+        depths.map(c => c.textContent).join(",") === "1 niveau,2 niveaux,3 niveaux,4 niveaux" &&
+        $(".mix-depths .on").dataset.depth === "4");
+  for (const chip of depths) {
+    chip.click();
+    chip.click();
+    check("créateur : profondeur " + chip.dataset.depth + ", choix unique accessible",
+          $$(".mix-depths .on").length === 1 && chip.classList.contains("on") &&
+          depths.every(c => c.getAttribute("aria-pressed") === String(c === chip)));
+  }
+  depths[1].click();
+  w.eval(`window.mixBuildRequests = []; window.mixOriginalPost = App.api.post;
+          App.api.post = function (url, body) {
+            if (url === "/api/mix/build") window.mixBuildRequests.push(JSON.parse(JSON.stringify(body)));
+            return window.mixOriginalPost.call(this, url, body);
+          };`);
   const pop = $$(".mix-genres .chip").find(c => c.textContent.startsWith("Pop"));
   pop.click();
   check("créateur : style choisi", pop.classList.contains("on"));
-  type($(".mix-seed-input"), "bjö");
+  type($(".mix-seed-input"), "bjor");
   check("créateur : artiste de départ proposé", await until(() => $$(".mix-seed-results .chip").length === 1));
+  const beforeManualSeed = app.api.get;
+  let releaseManualSeed;
+  const manualSeedReady = new Promise(resolve => { releaseManualSeed = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "fdir-ar3") await manualSeedReady;
+    return beforeManualSeed.call(this, url, params);
+  };
   $(".mix-seed-results .chip").click();
-  check("créateur : « Comme : Björk »", $(".mix-seed-chosen").textContent.startsWith("Comme : Björk"));
+  check("créateur : attend l'identifiant musical du résultat de recherche", $(".mix-play").disabled &&
+        $(".mix-save").disabled && $(".mix-seed-input").disabled);
+  releaseManualSeed();
+  check("créateur : « Comme : Björk »", await until(() => $(".mix-seed-chosen")) &&
+        $(".mix-seed-chosen").textContent.startsWith("Comme : Björk"));
+  app.api.get = beforeManualSeed;
   w.eval("App.player.queue = []");
   $(".mix-play").click();
   check("créateur : mix lancé", await until(() => w.eval("App.player.queue.length") >= 1));
+  check("créateur : lancement limité à 2 niveaux, artiste et style conservés",
+        w.mixBuildRequests.length === 1 && w.mixBuildRequests[0].depth === 2 &&
+        w.mixBuildRequests[0].seedArtistId === "ar3" && w.mixBuildRequests[0].seedArtistName === "Björk" &&
+        w.mixBuildRequests[0].genres.includes("pop"));
+  depths[2].click();
   $(".mix-save").click();
   check("créateur : nom de playlist proposé", await until(() => $(".dialog-input")) && $(".dialog-input").value.length > 0);
   $(".dialog-ask button.primary").click();
   check("créateur : playlist enregistrée dans Subsonic", await until(() =>
         $$(".toast").some(t => t.textContent.startsWith("Playlist « "))));
+  check("créateur : playlist construite avec 3 niveaux",
+        w.mixBuildRequests.length === 2 && w.mixBuildRequests[1].depth === 3);
+  w.eval("App.api.post = window.mixOriginalPost;");
+  // Le chargement de l'artiste de la fiche doit précéder toute construction du mix.
+  const beforeSeedLoad = app.api.get;
+  let releaseSeedLoad;
+  const seedReady = new Promise(resolve => { releaseSeedLoad = resolve; });
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "ar1") await seedReady;
+    return beforeSeedLoad.call(this, url, params);
+  };
   w.location.hash = "#/mix/ar1";
+  check("créateur depuis la fiche : attente de l’artiste avant écoute et sauvegarde", await until(() =>
+        $(".mix-seed-input") && $(".mix-play").disabled && $(".mix-save").disabled));
+  const seedQueue = w.eval("App.player.queue.map(s => s.id).join()");
+  $(".mix-play").click();
+  check("créateur depuis la fiche : aucun mix sans l’artiste pendant le chargement",
+        w.eval("App.player.queue.map(s => s.id).join()") === seedQueue);
+  releaseSeedLoad();
   check("créateur depuis la page artiste : artiste déjà choisi", await until(() =>
-        $(".mix-seed-chosen") && $(".mix-seed-chosen").textContent.startsWith("Comme : ABBA")));
+        $(".mix-seed-chosen") && $(".mix-seed-chosen").textContent.startsWith("Comme : ABBA")) &&
+        !$(".mix-play").disabled && !$(".mix-save").disabled);
+  app.api.get = beforeSeedLoad;
+
+  const beforeSeedBuild = app.api.post;
+  let releaseSeedBuild, seedBuildCalls = 0, seedBuildOptions;
+  const seedBuildReady = new Promise(resolve => { releaseSeedBuild = resolve; });
+  app.api.post = async function(url, body) {
+    if (url === "/api/mix/build") {
+      seedBuildCalls++;
+      seedBuildOptions = JSON.parse(JSON.stringify(body));
+      await seedBuildReady;
+    }
+    return beforeSeedBuild.call(this, url, body);
+  };
+  $(".mix-play").click();
+  $(".mix-save").click();
+  check("créateur : écoute et sauvegarde partagent un seul chargement",
+        $(".mix-play").disabled && $(".mix-save").disabled && seedBuildCalls === 1);
+  releaseSeedBuild();
+  check("créateur depuis la fiche : l’identifiant musical est envoyé, pas celui du dossier", await until(() =>
+        !$(".mix-play").disabled) && seedBuildOptions.seedArtistId === "ar1" &&
+        w.eval('App.player.queue.length === 3 && App.player.queue.every(s => s.artistId === "ar1")'));
+  const loadedSeedQueue = w.eval("App.player.queue.map(s => s.id).join()");
+  app.api.post = beforeSeedBuild;
+
+  app.api.get = async function(url, params) {
+    if (url === "/api/artist" && params.id === "missing") throw w.eval('new ApiError(404, "mix.empty")');
+    return beforeSeedLoad.call(this, url, params);
+  };
+  w.location.hash = "#/mix/missing";
+  check("créateur depuis la fiche : erreur visible sans repli vers un mix quelconque", await until(() =>
+        $(".mix-seed .error")) && $(".mix-play").disabled && $(".mix-save").disabled &&
+        w.eval("App.player.queue.map(s => s.id).join()") === loadedSeedQueue);
+  type($(".mix-seed-input"), "bjö");
+  check("créateur : un autre artiste peut remplacer celui qui manque", await until(() =>
+        $$(".mix-seed-results .chip").length === 1));
+  $(".mix-seed-results .chip").click();
+  check("créateur : choix manuel après erreur réactive les actions", await until(() => $(".mix-seed-chosen")) &&
+        !$(".mix-play").disabled && !$(".mix-save").disabled &&
+        !$(".mix-seed .error"));
+  app.api.get = beforeSeedLoad;
+
+  const beforeMixSettings = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeMixSettings.call(this, url, params);
+    if (url !== "/api/mix/genres") return data;
+    return Object.assign({}, data, {options: {depths: [1, 2], defaultDepth: 2,
+      sizes: [30, 100], defaultSize: 100, decades: [1980]}});
+  };
+  w.location.hash = "#/mix";
+  check("créateur : choix et valeurs initiales fournis par le serveur", await until(() =>
+        $$(".mix-depths .chip").length === 2) && $(".mix-depths .on").dataset.depth === "2" &&
+        $$(".mix-sizes .chip").length === 2 && $(".mix-sizes .on").textContent.startsWith("100") &&
+        $$(".mix-decades .chip").length === 1 && w.eval("Views.mix.options.size") === 100);
+  app.api.get = beforeMixSettings;
 
   // --- playlists : onglet de la barre, création, glisser-déposer, communautaires ---
   const shared = (await (await alice.post("/api/playlist/create", {name: "Soirée à tous", songIds: ["s1"], community: true})).json()).playlist;
@@ -583,6 +955,8 @@ function makeEventSource(jar) {
   check("playlist mélangée : le titre d'ailleurs après le titre Subsonic", await until(() => $$("#main tr.song").length === 2) &&
         $$("#main tr.song")[1].dataset.id === "sc-29912345" && $$("#main tr.song")[1].querySelector("td.album").textContent === "SoundCloud" &&
         !$$("#main tr.song")[1].querySelector(".song-download"));
+  check("radio d'un titre : proposée seulement pour le morceau Subsonic de la playlist",
+        !!$$("#main tr.song")[0].querySelector(".song-radio") && !$$("#main tr.song")[1].querySelector(".song-radio"));
   const order = () => $$("#main tr.song").map(r => r.dataset.id).join();
   const before = order();
   check("sa playlist : poignée pour changer l'ordre", $$("#main td.grip").length === 2);
@@ -656,17 +1030,44 @@ function makeEventSource(jar) {
   check("envoi : Subsonic invité à scanner", await until(() => $(".upload-summary").textContent.startsWith("2 fichiers envoyés. Subsonic scanne"), 5000));
   check("envoi : fichier seul signalé hors nomenclature", $$(".upload-row.done .upload-state").every(s => s.textContent.includes("à ranger")));
   // un album en zip, rangé Artiste/Album (2 titres et une pochette) : décompressé sur le serveur, nomenclature respectée
-  const albumZip = "UEsDBBQAAAAAANVtWl3sfd8UGAAAABgAAAAWAAAAQWJiYS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAADVbVpd7H3fFBgAAAAYAAAAFgAAAEFiYmEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAA1W1aXeka6EYDAAAAAwAAABYAAABBYmJhL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAA1W1aXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFiYmEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAADVbVpd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQWJiYS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAANVtWl3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBYmJhL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
+  const albumZip = "UEsDBBQAAAAAAHmVbF3sfd8UGAAAABgAAAAWAAAAQUJCQS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAEFCQkEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAeZVsXeka6EYDAAAAAwAAABYAAABBQkJBL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAeZVsXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAHmVbF3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
   w.eval(`Views.upload.add([new File([Uint8Array.from(atob("${albumZip}"), c => c.charCodeAt(0))], "Album.zip")])`);
   check("envoi : zip décompressé et album rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
-        s.textContent === "Décompressé : 3 fichiers — rangé dans Abba/Arrival"), 5000));
+        s.textContent === "Décompressé : 3 fichiers — rangé dans ABBA/Arrival"), 5000));
   check("envoi : barre du lot entier, terminée", await until(() => !$(".upload-total").hidden &&
         $(".upload-total progress").value === 1 && $(".upload-total .upload-state").textContent === "Terminé", 5000));
+
+  check("historique : auteur, fichier et résultat du ZIP", await until(() =>
+    $$(".upload-history tbody tr").some(row => row.children[1].textContent === "bob" &&
+      row.children[2].textContent === "Album.zip" && row.children[3].textContent === "3" &&
+      row.children[4].textContent.includes("ABBA/Arrival")), 5000));
+  check("historique : seuls les envois réussis apparaissent", $$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "Essai.flac") && !$$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "virus.exe"));
+  w.location.hash = "#/news";
+  await until(() => !$(".upload-history"));
+  w.location.hash = "#/upload";
+  check("historique : conservé en revenant sur la page", await until(() =>
+    $$(".upload-history tbody tr").some(row => row.children[2].textContent === "Album.zip"), 5000));
+
+  w.location.hash = "#/";
+  check("accueil : auteur discret sur le nouvel album", await until(() =>
+    $$(".album-card .album-uploader").some(node => node.textContent === "Envoyé par bob"), 5000));
+  w.location.hash = "#/album/al1";
+  check("album : auteur de l'envoi", await until(() => $(".album-info .album-uploader") &&
+    $(".album-info .album-uploader").textContent === "Envoyé par bob", 5000));
+
+  const uploadRoles = w.eval("App.user.roles.slice()");
+  w.eval('App.user.roles = App.user.roles.filter(role => role !== "upload" && role !== "download"); App.music.showUploadLink()');
+  w.location.hash = "#/upload";
+  check("historique : accessible sans droits d'envoi ou téléchargement", await until(() =>
+    $$(".upload-history tbody tr").length > 0) && !$(".upload-zone") && $("#nav-upload").textContent === "Envois");
+  w.eval("App.user.roles = " + JSON.stringify(uploadRoles) + "; App.music.showUploadLink()");
 
   // --- Actualité : flux des webzines, partagés par tout le site ---
   w.location.hash = "#/news";
   check("actualité : page, « Tout » et les trois webzines de départ", await until(() => $$(".news-feed").length === 4) &&
-        $("#main h1").textContent === "Actualité" && $(".news-feed.on").textContent === "Tout" &&
+        $("#main h1").textContent === "Actualités" && $(".news-feed.on").textContent === "Tout" &&
         $$(".topnav a.active").map(a => a.getAttribute("href")).join() === "#/news");
   check("actualité : vide expliqué", $(".news-list li.muted").textContent.startsWith("Aucun article"));
   check("actualité : flux de départ, seul l'admin les retire", !$(".news-remove"));
@@ -709,7 +1110,7 @@ function makeEventSource(jar) {
         $("#main h1").textContent.startsWith("Nouveautés")) &&
         $('.topnav a[href="#/whatsnew"]').classList.contains("active"));
   check("nouveautés : le principe puis six parties", !!$(".whatsnew-idea") && $$(".whatsnew-part").length === 6 &&
-        $$(".whatsnew-card").length === 28);
+        $$(".whatsnew-card").length === 34);
   check("nouveautés : playlists (glisser-déposer, communautaires, partagées)",
         ["Glisser-déposer", "Communautaires", "Partagées"].every(w => $$(".whatsnew-card h3").some(h => h.textContent.startsWith(w))));
   check("nouveautés : aucun texte manquant", ![...$$("#main h2, #main h3, #main p")].some(n => /whatsnew\./.test(n.textContent)));

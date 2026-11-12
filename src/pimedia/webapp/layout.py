@@ -5,7 +5,8 @@ espaces ni de la ponctuation (« Dalek » rejoint « Dälek », « A.A.Williams 
 dossier est gardé. Rien n'est jamais écrasé : un album déjà présent (même nom, aux mêmes détails près) n'est pas rangé."""
 import os
 import re
-import unicodedata
+
+from ..shared.text import normalize
 
 EXTENSIONS = ("mp3", "flac", "m4a", "aac", "ogg", "oga", "opus", "wav", "aiff", "aif")
 DISC = re.compile(r"(cd|dis[ck]|disque)\s*\d+", re.IGNORECASE)
@@ -23,13 +24,6 @@ def is_disc(name):
 def capitalised(name):
     """Commence par une majuscule (ou un chiffre, un signe : « 38 Spesh », « ...Et Après »)."""
     return bool(name) and (not name[0].isalpha() or name[0].isupper())
-
-
-def normalised(name):
-    """Pour comparer deux noms : sans majuscules, accents, espaces ni ponctuation (« A.A.Williams » = « A.A. Williams »,
-    « AC/DC » = « Ac-Dc ») ; un nom fait seulement de signes (« !!! ») les garde."""
-    plain = "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c)).casefold().strip()
-    return "".join(c for c in plain if c.isalnum()) or plain
 
 
 def tracks_fit(album):
@@ -60,7 +54,7 @@ class MusicTree:
         (nomenclature non respectée, album déjà présent)."""
         if not (capitalised(artist) and capitalised(album) and tracks_fit(folder)):
             return None
-        if normalised(artist) == normalised(os.path.basename(self.incoming)):
+        if normalize(artist) == normalize(os.path.basename(self.incoming)):
             return None                                         # un artiste nommé comme Incoming : à la main
         artist_dir = os.path.join(self.music_dir, self._same(self.music_dir, artist) or artist)
         if os.path.isdir(artist_dir) and self._same(artist_dir, album):
@@ -77,7 +71,7 @@ class MusicTree:
 
     def _same(self, parent, name):
         """Dossier de parent qui porte ce nom, majuscules et accents mis à part (Incoming exclu)."""
-        wanted = normalised(name)
+        wanted = normalize(name)
         return next((entry for entry in sorted(os.listdir(parent))
-                     if normalised(entry) == wanted and not entry.startswith(".")
+                     if normalize(entry) == wanted and not entry.startswith(".")
                      and os.path.join(parent, entry) != self.incoming), None)

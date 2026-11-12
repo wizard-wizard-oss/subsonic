@@ -1,6 +1,6 @@
 """Petits réglages en ligne de commande (sur le Pi ou le serveur, sans ouvrir l'application).
 
-  python3 -m pimedia.cli set SUBSONIC_URL=https://… SUBSONIC_USER=thomas SUBSONIC_PASS=…
+  python3 -m pimedia.cli set SUBSONIC_URL=https://… SUBSONIC_USER=utilisateur SUBSONIC_PASS=…
   python3 -m pimedia.cli show            (affiche les clés du .env, secrets masqués)
   python3 -m pimedia.cli migrate         (reprend secrets et clés API de l'ancien config.json dans le .env)
 """

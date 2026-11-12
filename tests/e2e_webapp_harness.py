@@ -5,10 +5,14 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 
 from pimedia.webapp.app import WebApplication
+from pimedia.server.transport import ThreadedServer
 from pimedia.webapp.covers import LastFmAlbums
 from tests.fake_subsonic import FakeSubsonicFull
+from tests.fake_musicbrainz import FakeMusicBrainz
+from tests.fake_discogs import FakeDiscogs, FakeLastFm as FakeDiscoveryLastFm
 from tests.support import PROJECT, youtube_music_down
 from tests.test_podcasts import FakeHttp
 from tests.test_webapp_covers import FakeDownloader, FakeLastFm
@@ -34,12 +38,27 @@ def slow_then_failing_once(answer):
 
 
 def main():
+    # Let jsdom load all application scripts without overflowing the local TCP backlog.
+    ThreadedServer.request_queue_size = 128
     fake = FakeSubsonicFull().start()
+    fake.users["charlie"] = "pw3"
     fake.api_getIndexes = slow_then_failing_once(fake.api_getIndexes)
     music = tempfile.mkdtemp(prefix="pmw-music-")                 # Incoming y est créé au premier passage
-    app = WebApplication(PROJECT, environ=dict(KEYS, PI_MEDIA_WEB_SUBSONIC_URL=fake.url, PI_MEDIA_WEB_MUSIC_DIR=music),
+    statistics = os.path.join(music, "subsonic.properties")
+    with open(statistics, "w", encoding="iso-8859-1") as source:
+        source.write("LastScanned=1794150239000\nMediaLibraryStatistics=5440 11843 137315 1587931675620 33224428\n")
+    app = WebApplication(PROJECT, environ=dict(KEYS, PI_MEDIA_WEB_SUBSONIC_URL=fake.url, PI_MEDIA_WEB_MUSIC_DIR=music,
+                                               PI_MEDIA_WEB_SUBSONIC_STATISTICS_FILE=statistics),
                          data_dir=tempfile.mkdtemp(prefix="pmw-e2e-"))
     app.lyrics.finder.fetcher = FakeLyricsSites()
+    app.exploration.metadata.fetcher = FakeMusicBrainz()
+    app.discogs.api_key = "discogs-test"
+    app.lastfm.api_key = "lastfm-test"
+    app.discogs.http, app.lastfm.http = FakeDiscogs(), FakeDiscoveryLastFm()
+    app.discogs.sleep = app.lastfm.sleep = lambda seconds: None
+    app.exploration.metadata.sleep = lambda seconds: None
+    app.exploration.metadata.fetcher.failures = [urllib.error.HTTPError(
+        "https://musicbrainz.org", 503, "busy", {}, None)]
     use_fake_info_sites(app)
     app.avatars.gravatar = FakeGravatar()
     covers_music = tempfile.mkdtemp(prefix="pmw-covers-")        # musique à part (l'envoi de zip range déjà « Abba/Arrival »)
@@ -56,7 +75,8 @@ def main():
     app.ext_favorites.http = ext_http
     app.extmusic.youtube.music = youtube_music_down()
     app.imports.reader.http = FakeHttp({"playlist/77/tracks": DEEZER_TRACKS, "playlist/77": DEEZER_PLAYLIST})   # Deezer simulé
-    server = app.make_server("127.0.0.1", 0)
+    server = app.make_server(os.environ.get("PI_MEDIA_DEMO_BIND", "127.0.0.1"),
+                             int(os.environ.get("PI_MEDIA_DEMO_PORT", 0)))
     threading.Thread(target=server.serve_forever, args=(0.05,), daemon=True).start()
     print(server.server_address[1], flush=True)
     time.sleep(float(sys.argv[1]) if len(sys.argv) > 1 else 120)

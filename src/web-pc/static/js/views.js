@@ -19,16 +19,40 @@ const Views = (() => {
       if (album.plays) meta.appendChild(el("span.play-count", {text: playCount(album.plays)}));
       if (album.comments) meta.appendChild(el("span.comment-count", {title: App.plural("album.comments_count", album.comments)},
                                               App.icon("chat", 12), " " + album.comments));
-      const card = el("a.album-card", {href: "#/album/" + encodeURIComponent(album.id), title: album.name},
-        App.cover(album.coverId, 180, album.name),
-        el("strong.album-name", {text: album.name}),
-        options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
-        album.year ? el("span.album-year", {text: album.year}) : null,
-        meta);
+      const play = App.can("stream") ? App.setIcon(el("button.play-big.album-card-play", {
+        type: "button", title: App.t("album.play_named", {name: album.name}),
+        "aria-label": App.t("album.play_named", {name: album.name}),
+        onclick: e => { e.stopPropagation(); playAlbum(album, e.currentTarget); }}), "play", 16) : null;
+      const card = el("div.album-card", {},
+        el("a.album-link", {href: "#/album/" + encodeURIComponent(album.id), title: album.name},
+          App.cover(album.coverId, 180, album.name),
+          el("strong.album-name", {text: album.name}),
+          options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
+          album.year ? el("span.album-year", {text: album.year}) : null,
+          album.uploadedBy ? el("span.album-uploader.muted", {text: App.t("upload.by", {name: album.uploadedBy.username})}) : null,
+          meta), play);
       if (App.can("playlist")) Dnd.source(card, {albumId: album.id, label: album.name});      // vers une playlist
       grid.appendChild(card);
     }
     return grid;
+  }
+
+  /** La flèche lit l'album sans navigation ; le lien de la carte ouvre toujours sa fiche. */
+  async function playAlbum(album, button) {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    try {
+      const data = await App.api.get("/api/album", {id: album.id});
+      const songs = data.songs.map(song => Object.assign({}, song, {coverId: song.coverId || data.coverId}));
+      if (!songs.length) { App.toast(App.t("mix.empty"), "error"); return; }
+      App.player.playList(songs, 0);
+    } catch (error) {
+      App.toast(App.errorText(error), "error");
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 
   /** « Écouté 18 719 fois », comme dans Subsonic. */
@@ -85,6 +109,10 @@ const Views = (() => {
            App.can("download") && !song.ext ? el("a.link-button.song-download", {                // droit Subsonic « télécharger »
              href: "/api/download?" + new URLSearchParams({song: song.id}), download: "", title: App.t("album.download_song"),
              ondblclick: e => e.stopPropagation()}, App.icon("download", 16)) : null,
+           App.can("stream") && !song.ext ? el("button.link-button.song-radio", {
+             type: "button", title: App.t("album.song_radio"), "aria-label": App.t("album.song_radio"),
+             onclick: e => { e.stopPropagation(); playSongRadio(song, e.currentTarget); },
+             ondblclick: e => e.stopPropagation()}, App.icon("radio", 16)) : null,
            el("button.link-button.song-play-next", {type: "button", title: App.t("album.play_next"),
                                      onclick: e => { e.stopPropagation(); App.player.playNext([song]); App.toast("→ " + song.title); }},
               App.icon("next", 16)),
@@ -109,6 +137,24 @@ const Views = (() => {
     const table = el("table.songs", {}, body);
     table.destroy = off;
     return table;
+  }
+
+  /** Le serveur choisit les titres proches ; une erreur laisse la file et la lecture actuelles en place. */
+  async function playSongRadio(song, button) {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    App.toast(App.t("mix.building"));
+    try {
+      const {songs} = await App.api.get("/api/radio/song", {id: song.id});
+      App.player.playList(songs, 0);
+      App.toast(App.plural("album.tracks", songs.length));
+    } catch (error) {
+      App.toast(App.errorText(error), "error");
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
   }
 
   /** Ligne déplaçable dans son tableau : glissée (dépôt au-dessus ou au-dessous de la ligne visée, selon la moitié
@@ -184,6 +230,7 @@ const Views = (() => {
         if (route.stale) return;           // on a changé de page entre-temps
         App.clear(main);
         App.append(main, [
+          LibraryStatistics.render(data.statistics),
           el("section", {}, heading(App.t("home.newest")), albumGrid(data.newest)),
           el("section.most-played", {}, heading(App.t("home.most_played")), albumGrid(data.mostPlayed)),
           el("div.home-columns", {},
@@ -204,50 +251,41 @@ const Views = (() => {
         App.bus.emit("route", route);
         App.clear(main);
         const heart = heartButton(data, 24, () => toggleFavorite("folder", data, heart));
-        const bio = el("section.artist-bio"), popular = el("section.popular"), similar = el("section.similar"),
+        const profile = new ArtistProfile(data, route, heart);
+        this.discogs = new ArtistDiscography(data, route, () => profile.loadImage());
+        const popular = el("section.popular"), similar = el("section.similar"),
               press = el("section.press");
+        const albums = PageSections.section("artist-albums");
+        App.append(albums, [heading(App.t("artist.albums")), albumGrid(data.albums, {hideArtist: true})]);
         // radio, mix et artistes proches passent par l'artiste ID3 (tags) : absents s'il n'a aucun titre
-        const actions = data.id3Id ? el("div.artist-actions", {},
+        const actions = el("div.artist-actions", {}, data.id3Id ? [
           App.setIcon(el("button.primary.artist-radio", {type: "button", onclick: () => this.radio(data)}),
                       "play", 16, false, App.t("artist.radio")),
           App.setIcon(el("a.button.artist-mix", {href: "#/mix/" + encodeURIComponent(data.id3Id)}),
-                      "shuffle", 16, false, App.t("artist.mix"))) : null;
+                      "shuffle", 16, false, App.t("artist.mix_short"))] : null,
+          App.setIcon(PageSections.link(App.t("artist.discogs_short"), this.discogs.root,
+            () => { if (!this.discogs.identity) this.discogs.open(); }, ".button.artist-discogs-shortcut"),
+            "discogs", 16, false, App.t("artist.discogs_short")));
+        App.append(actions, [ListenLaterUI.actions({kind: "artist", source: "subsonic", sourceId: data.id})]);
         App.append(main, [
-          el("header.page-head", {}, el("h1", {text: data.name}), heart),
+          profile.root,
           actions,
-          bio,
+          PageSections.nav([{text: App.t("artist.albums"), section: albums},
+            {text: App.t("artist.discogs_short"), section: this.discogs.root,
+              open: () => { if (!this.discogs.identity) this.discogs.open(); }, className: ".discogs-section-link"},
+            {text: App.t("discovery.members_and_groups"), section: this.discogs.relations}]),
           popular,
-          heading(App.t("artist.albums")), albumGrid(data.albums, {hideArtist: true}),
+          albums,
+          this.discogs.root,
+          this.discogs.relations,
+          AlbumExploration.artistPanel(data.name, route),
           similar,
           press]);
-        this.loadBio(bio, data, route);
+        profile.load();
         this.loadPopular(popular, data.name, route);
         News.pressSection(press, data.name, route);                 // articles des webzines suivis qui le citent
         if (data.id3Id) this.loadSimilar(similar, data.id3Id, route);
       } catch (error) { failed(main, error); }
-    },
-    /** Biographie (Wikipédia en français, sinon Last.fm par Subsonic) : chargée après la page, repliée à quelques
-        lignes avec « Lire la suite ». */
-    async loadBio(section, data, route) {
-      let bio;
-      try { bio = await App.api.get("/api/artist/bio", {name: data.name, id: data.id3Id || ""}); } catch (error) { return; }
-      if (route.stale || !bio.text) return;
-      const text = el("div.bio-text", {}, bio.text.split(/\n+/).map(p => el("p", {text: p})));
-      const more = el("button.link-button.bio-more", {type: "button", text: App.t("artist.bio_more"), onclick: () => {
-        const open = section.classList.toggle("open");
-        more.textContent = App.t(open ? "artist.bio_less" : "artist.bio_more");
-      }});
-      const source = bio.url
-        ? el("a", {href: bio.url, target: "_blank", rel: "noopener noreferrer", text: bio.src})
-        : bio.src;
-      App.append(section, [
-        heading(App.t("artist.bio")),
-        el("div.bio-body", {},
-          bio.img ? el("img.bio-photo", {src: bio.img, alt: data.name, loading: "lazy", referrerPolicy: "no-referrer"}) : null,
-          text),
-        el("div.bio-foot", {}, more, el("small.bio-source", {}, App.t("artist.bio_source"), source))]);
-      // texte court : rien à déplier
-      setTimeout(() => { if (text.scrollHeight <= text.clientHeight + 2) more.hidden = true; }, 0);
     },
     /** Titres populaires (Last.fm, par Subsonic) : chargés après la page ; 5, puis 10 avec « Afficher plus ». */
     async loadPopular(section, name, route) {
@@ -280,7 +318,11 @@ const Views = (() => {
         App.player.playList((await App.api.get("/api/radio/artist", {id: data.id3Id, name: data.name})).songs, 0);
       } catch (error) { App.toast(App.errorText(error), "error"); }
     },
-    destroy() { if (this.table && this.table.destroy) this.table.destroy(); this.table = null; },
+    destroy() {
+      if (this.table && this.table.destroy) this.table.destroy();
+      if (this.discogs) this.discogs.destroy();
+      this.table = this.discogs = null;
+    },
   };
 
   /** Couleur moyenne de la pochette, posée en `--tint` sur l'en-tête (dégradé du fond). Sans effet si le navigateur
@@ -317,6 +359,7 @@ const Views = (() => {
                                          onclick: () => App.player.playList(songs, 0)}), "play", 26),
       iconButton("shuffle", App.t("album.shuffle"), () => App.player.playList(songs, 0, true)),
       heart,
+      ListenLaterUI.actions({kind: "album", source: "subsonic", sourceId: data.folderId || data.id}),
       App.can("download") ? App.setIcon(el("a.icon-button.download", {title: App.t("album.download"), href: "/api/download?" +
         new URLSearchParams({album: data.id}), download: ""}), "download", 20) : null,
       el("div.album-more", {}, toggle, menu));
@@ -356,6 +399,9 @@ const Views = (() => {
       cover.addEventListener("load", () => tintFromCover(cover), {once: true});
       const coverBox = App.can("upload") ? coverWithPencil(cover, data) : cover;
       this.table = songTable(songs, {albumArtist: data.artist});
+      const credits = new DiscogsCredits.Album(data.folderId || data.id, route);
+      const tracks = PageSections.section("album-tracks");
+      tracks.appendChild(this.table);
       this.thread = new ChatThread("album:" + data.id, {mode: "comments", isVisible: () => !document.hidden,
                                                          readOnly: !App.can("comment")});
       App.append(main, [
@@ -366,9 +412,16 @@ const Views = (() => {
             el("h1", {text: data.name}),
             el("a.album-artist-link", {href: "#/artist/" + encodeURIComponent(data.artistId), text: data.artist}),
             el("p.muted", {text: facts}),
+            data.uploadedBy ? el("p.album-uploader.muted", {text: App.t("upload.by", {name: data.uploadedBy.username}),
+              title: App.fullDate(data.uploadedBy.uploadedAt)}) : null,
             el("div.album-rating", {}, el("span.label", {text: App.t("album.your_rating")}), stars.element))),
         albumActions(data, songs, heart),
-        this.table,
+        PageSections.nav([{text: App.t("search.songs"), section: tracks},
+          {text: App.t("discovery.credits_short"), section: credits.root, open: () => credits.open(), className: ".discogs-section-link"},
+          {text: App.t("explore.labels"), section: credits.labels, open: () => credits.open()}]),
+        tracks,
+        credits.root,
+        AlbumExploration.panel(data.folderId || data.id, route),
         el("section.comments", {}, heading(App.t("album.comments")), this.thread.element)]);
       this.thread.load();
     },

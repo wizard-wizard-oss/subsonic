@@ -30,6 +30,7 @@ src/
 | Quoi | Où | Utilisé par |
 |---|---|---|
 | Paroles, MusicBrainz, Wikipédia, anecdotes | `pimedia/shared/external.py` | Pi (`server/external.py`), web (`webapp/lyrics.py`) |
+| Comparaison des noms musicaux (casse, accents, ligatures, ponctuation) | `pimedia/shared/text.py` | Pi (`server/folders.py`), web (exploration, rangement, pochettes, genres et raccourcis) |
 | Base SQLite + migrations (une liste par édition) | `pimedia/storage/database.py` | Pi (`storage/schema.py`), web (`webapp/schema.py`) |
 | Lecture du `.env`, réglages typés | `pimedia/envfile.py`, `settings.py` | les deux |
 | Textes | `pimedia/i18n.py`, `src/i18n/fr.yaml` | les deux |
@@ -56,10 +57,27 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
    déplacement vers `shared/` sera fait.
 
 ## Couches dans chaque édition
+L'exploration des labels et collaborations (07/11/2026) est propre au site (`webapp/exploration*`, dépôt et contrôleur).
+Elle réutilise `shared/external.JsonFetcher` ; ses appels MusicBrainz, comme ceux des anecdotes des deux éditions,
+partagent désormais un régulateur par processus (1,05 seconde entre départs). Aucun module n'a changé de zone.
+
 Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement), assemblés à **un seul endroit**
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 
 ## Où chercher quoi
+- Pastille À écouter (1.9.2) : Recommendations publie dans EventHub vers le seul destinataire ; le composant existant utilise LiveEvents, sans nouvelle connexion SSE. Les accusés de lecture passent par le dépôt et le contrôleur existants.
+- À écouter et recommandations (1.9) : résolution commune dans webapp/listening_targets.py, règles dans listen_later.py et recommendations.py, entités et dépôts SQL dédiés. Contrôleur commun, assemblage app.py. Zone web uniquement ; recherche et lecture existantes réutilisées.
+- Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;
+  `youtube_matching.py` porte les règles pures de pertinence. `ExternalMusic` réutilise `server/extmusic/YouTubeSource`,
+  les budgets et le dépôt de vidéos commun aux favoris. Parseur de liens mutualisé dans `webapp/external_links.py` ;
+  adaptation HTTP dans le contrôleur Discogs, assemblage `app.py`. Aucun nouveau service externe ou déplacement de zone.
+- Associations Discogs (1.8) : `webapp/artist_discogs.py`, entités `artist_entities.py`, SQL dans
+  `storage/artist_links.py` (migration 16). Visuels indépendants dans `artist_portraits.py`, cache public existant
+  conservé séparément. Petits contrôleurs Discogs/Facts, assemblage `app.py` ; aucune dépendance nouvelle côté Pi.
+- Découverte et discographies (1.7.10) : fournisseurs séparés `webapp/discogs.py` et `webapp/lastfm.py`, objets typés ;
+  transport/cache dans `music_metadata.py`, SQL dans `storage/exploration.py`. Services de catalogue, crédits et
+  sélection dans `discogs_catalogs.py`, `discogs_exploration.py` et `label_discovery.py` ; contrôleur limité au HTTP.
+  Assemblage dans `app.py`, aucun déplacement vers le Pi ou `shared/`.
 - Fonctionnalités, ce qui existe / n'existe pas : `docs/features/` (une fiche par fonctionnalité).
 - Où en est-on, décisions : `docs/ETAT.md`. Reprise par une autre IA : `docs/REPRISE.md`.
 - Déployer : `docs/DEPLOIEMENT.md`.

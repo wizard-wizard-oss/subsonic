@@ -2,8 +2,8 @@
 
 ## Message à coller tel quel
 
-> Projet Pi Media Station, dans `/Users/thomasfoos/Documents/perso/sub2/sources` (le reste de `sub2/` est ancien,
-> ignore-le). Lis d'abord `docs/ETAT.md`, puis `docs/CONVENTIONS.md` : contexte, décisions et règles de code.
+> Projet Pi Media Station : travaille à la racine du dépôt ouvert, celle qui contient `README.md`,
+> `compose.yaml`, `src/` et `tests/`. Lis d'abord `docs/ETAT.md`, puis `docs/CONVENTIONS.md` : contexte, décisions et règles de code.
 > Subsonic d'origine (pas Navidrome), API Subsonic standard uniquement. Deux éditions séparées (Pi et PC), aucun
 > « if serveur ». Je m'occupe surtout de l'édition PC (le site). Interface : s'inspirer de Spotify/Deezer.
 > Continue la liste « Reste à faire » d'ETAT.md, en commençant par la prochaine étape conseillée en haut du fichier.

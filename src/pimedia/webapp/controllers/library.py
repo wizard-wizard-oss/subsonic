@@ -15,21 +15,26 @@ class DownloadReply(StreamReply):
 
 def item_id(value):
     value = value or ""
-    if not ITEM_ID.match(value):
+    if not isinstance(value, str) or not ITEM_ID.fullmatch(value):
         raise ValueError("identifiant")
     return value
 
 
 class LibraryController:
-    def __init__(self, library, folders, artist_indexes, ratings, subsonic):
+    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics, upload_attribution):
+        self.upload_attribution = upload_attribution
         self.library = library
         self.folders = folders
         self.artist_indexes = artist_indexes
         self.ratings = ratings
         self.subsonic = subsonic
+        self.statistics = statistics
 
     def home(self, request, user):
-        return ok(self.library.home(user))
+        data = self.library.home(user)
+        self.upload_attribution.annotate(user, data["newest"])
+        statistics = self.statistics.get()
+        return ok(dict(data, statistics=statistics.to_api() if statistics else None))
 
     def artists(self, request, user):
         index = self.artist_indexes.for_user(user)
@@ -48,7 +53,9 @@ class LibraryController:
         return ok({"artists": self.library.similar_artists(user, item_id(request.param("id")))})
 
     def album(self, request, user):
-        return ok(self.folders.album(user, item_id(request.param("id"))))
+        album = self.folders.album(user, item_id(request.param("id")))
+        self.upload_attribution.annotate(user, [album])
+        return ok(album)
 
     def albums(self, request, user):
         page = request.param("page", "0")

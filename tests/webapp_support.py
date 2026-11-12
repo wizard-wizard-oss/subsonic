@@ -5,10 +5,12 @@ import shutil
 import tempfile
 import threading
 import unittest
+import urllib.parse
 
 from pimedia.webapp.app import WebApplication
 from pimedia.webapp.avatars import GravatarUnreachable
 from tests.fake_subsonic import PNG, FakeSubsonicFull
+from tests.fake_musicbrainz import FakeMusicBrainz
 from tests.support import HttpClient, youtube_music_down
 
 PROJECT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
@@ -38,8 +40,18 @@ class FakeLyricsSites:
 
     def try_get(self, url, timeout=8):
         self.urls.append(url)
+        address = urllib.parse.urlsplit(url)
+        query = urllib.parse.parse_qs(address.query)
+        title = query.get("track_name", [""])[0]
+        if address.hostname == "lrclib.net" and query.get("artist_name") == ["Guy Marchand"]:
+            durations = {"Destinée": 275, "Delirium": 180}
+            if title in durations:
+                song = {"trackName": title, "artistName": "Guy Marchand", "duration": durations[title],
+                        "syncedLyrics": self.LRC, "plainLyrics": "Première ligne\nDeuxième ligne"}
+                return song if address.path.endswith("/get") else [song]
         if "lrclib.net/api/get" in url and ("Army+of+Me" in url or "Knowing+Me" in url):
-            return {"syncedLyrics": self.LRC, "plainLyrics": "Première ligne\nDeuxième ligne", "duration": 235}
+            return {"trackName": title, "artistName": query["artist_name"][0],
+                    "syncedLyrics": self.LRC, "plainLyrics": "Première ligne\nDeuxième ligne", "duration": 235}
         if "lyrics.ovh" in url and "Waterloo" in url:
             return {"lyrics": "My my, at Waterloo"}
         return None
@@ -107,6 +119,8 @@ class WebAppTestCase(unittest.TestCase):
         self.app = WebApplication(PROJECT, environ=dict(self.environ, PI_MEDIA_WEB_SUBSONIC_URL=self.subsonic.url),
                                   data_dir=self.tmp)
         self.app.lyrics.finder.fetcher = FakeLyricsSites()          # jamais les vrais sites pendant les tests
+        self.app.exploration.metadata.fetcher = FakeMusicBrainz()
+        self.app.exploration.metadata.sleep = lambda seconds: None
         use_fake_info_sites(self.app)
         self.app.extmusic.youtube.music = youtube_music_down()      # ni YouTube Music
         self.app.avatars.gravatar = FakeGravatar()                  # ni gravatar.com

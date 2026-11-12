@@ -58,8 +58,8 @@ App.errorText = function (error) {
 };
 
 App.api = {
-  async request(method, path, body) {
-    const options = {method, credentials: "same-origin", headers: {}};
+  async request(method, path, body, extra = {}) {
+    const options = {...extra, method, credentials: "same-origin", headers: {}};
     if (method !== "GET") {
       options.headers["X-Requested-With"] = "pmw";       // protection CSRF : demandé par le serveur
       options.headers["Content-Type"] = "application/json";
@@ -84,7 +84,7 @@ App.api = {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
     return this.request("GET", path + query);
   },
-  post(path, body) { return this.request("POST", path, body); },
+  post(path, body, options) { return this.request("POST", path, body, options); },
 };
 App.onSessionLost = function () {};        // remplacé par app.js
 
@@ -195,5 +195,9 @@ App.local = {
     try { const v = localStorage.getItem("pmw." + key); return v === null ? fallback : JSON.parse(v); }
     catch (e) { return fallback; }
   },
-  set(key, value) { try { localStorage.setItem("pmw." + key, JSON.stringify(value)); } catch (e) { /* rien */ } },
+  set(key, value) {
+    try { localStorage.setItem("pmw." + key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  },
+  remove(key) { try { localStorage.removeItem("pmw." + key); } catch (e) { /* stockage refusé */ } },
 };

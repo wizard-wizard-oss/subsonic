@@ -105,14 +105,14 @@ class ExternalMusic:
         """Sources utilisables (clé présente dans le .env) ; les clés ne sont jamais renvoyées."""
         return {name: self.service.enabled(name) for name in ("jamendo", "youtube")}
 
-    def search(self, user, source, term):
+    def search(self, user, source, term, allow_versions=False):
         term = (term or "").strip()[:200]
         if source not in ("jamendo", "youtube") or not self.service.enabled(source):
             raise ExtMusicError("ext.disabled")
         if source == "youtube" and len(term) >= 2 and self.service.cache.get("youtube:" + term.lower()) is None:
             self.budget.spend(user.username)          # une recherche déjà faite (par n'importe qui) ne coûte rien
         try:
-            items = self.service.search(source, term)["items"]
+            items = self.service.search(source, term, allow_versions)["items"]
         except DirectoryError:
             raise ExtMusicError("ext.unreachable")
         return self._played_first(items) if source == "youtube" else items
@@ -122,6 +122,34 @@ class ExternalMusic:
         if not self.service.enabled("youtube"):
             return []
         return self._played_first(self.service._filtered(self.videos.find((term or "").strip()[:200])))
+
+    def linked(self, user, video_ids):
+        """Liens suggérés par un catalogue : métadonnées YouTube vérifiées et cache commun, sans search.list."""
+        if not self.service.enabled("youtube"):
+            raise ExtMusicError("ext.disabled")
+        ids = list(dict.fromkeys(self._video(v) for v in video_ids))[:50]
+        ids = [v for v in ids if v not in self.videos]
+        tracks = self.video_tracks(ids, lambda: self.budget.spend(user.username))
+        return self._played_first(self.service._filtered(tracks, allow_versions=True))
+
+    def video_tracks(self, ids, before_fetch=lambda: None):
+        """Métadonnées communes aux liens Discogs et favoris ; lectures par lots de 50, cache existant réutilisé."""
+        ids = list(dict.fromkeys(ids))
+        known = {}
+        for start in range(0, len(ids), 200):
+            known.update((t["youtubeId"], t) for t in self.videos.tracks(ids[start:start + 200]))
+        unknown = [v for v in ids if v not in known]
+        for start in range(0, len(unknown), 50):
+            before_fetch()
+            try:
+                tracks, gone = self.youtube.recheck(unknown[start:start + 50])
+            except DirectoryError:
+                raise ExtMusicError("ext.unreachable")
+            self.videos.remember(tracks)
+            for video_id in gone:
+                self.videos.add(video_id, "100")
+            known.update((t["youtubeId"], t) for t in tracks)
+        return [known[v] for v in ids if v in known]
 
     def recheck(self, batches=20):
         """Relit les vidéos gardées depuis 30 jours (1 unité de quota par lot de 50) : titres mis à jour,

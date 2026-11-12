@@ -15,6 +15,8 @@ JOURNEYS = [   # (parcours, serveur de test)
     ("e2e_queue.js", PI_HARNESS),
     ("e2e_hifi.js", PI_HARNESS),
     ("e2e_webapp.js", PC_HARNESS),
+    ("e2e_webapp_queue.js", PC_HARNESS),
+    ("e2e_listen_later.js", PC_HARNESS),
 ]
 TIMEOUT = 300
 

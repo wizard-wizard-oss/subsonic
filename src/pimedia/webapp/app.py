@@ -11,6 +11,8 @@ from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
 from .artist_index import ArtistIndexes
+from .artist_discogs import ArtistDiscogsLinks
+from .artist_portraits import ArtistPortraits
 from .avatars import Avatars, InvalidAvatar
 from .chat import Chat, ChatError
 from .covers import CoverError, Covers, ImageDownloader, LastFmAlbums
@@ -23,7 +25,10 @@ from .controllers.library import LibraryController
 from .controllers.extmusic import ExtMusicController
 from .controllers.imports import ImportController
 from .controllers.facts import FactsController
-from .controllers.listening import ListeningController
+from .controllers.exploration import ExplorationController
+from .controllers.discogs import DiscogsController
+from .controllers.listening import PLAY_QUEUE_BODY_LIMIT, ListeningController
+from .controllers.listen_later import ListenLaterController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
 from .controllers.news import NewsController
@@ -36,9 +41,24 @@ from .extmusic import KEPT_SECONDS, ExternalMusic, ExtMusicError, SearchMemory
 from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
+from .exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
+from .discogs import Discogs
+from .discogs_catalogs import CatalogError, DiscogsCatalogs
+from .discogs_exploration import DiscogsExploration
+from .lastfm import LastFm
+from .label_discovery import LabelDiscovery
+from .youtube_versions import YouTubeVersions
+from .music_metadata import MusicSourceError
+from .storage.exploration import ExplorationRepository
 from .folders import FolderNotFound, Folders
 from .library import Library
+from .library_statistics import SubsonicStatistics
 from .listening import Listening
+from .listen_later import ListenLater
+from .recommendations import Recommendations
+from .listening_targets import ListeningTargets, ListenLaterError
+from .storage.listen_later import ListenLaterRepository
+from .storage.recommendations import RecommendationRepository
 from .lyrics import Lyrics
 from .mixes import MixError, Mixes
 from .news import News, NewsError
@@ -48,6 +68,7 @@ from .radios import Radios
 from .ratings import InvalidRating, Ratings
 from .schema import MIGRATIONS
 from .storage.artist_index import ArtistIndexRepository
+from .storage.artist_links import ArtistLinkRepository
 from .storage.avatars import AvatarRepository
 from .storage.community import CommunityRepository
 from .storage.ext_favorites import ExtFavoriteRepository, PlaylistExtRepository
@@ -55,9 +76,11 @@ from .storage.youtube import ExtSearchRepository, YouTubeVideoRepository
 from .storage.messages import MessageRepository
 from .storage.news import NewsRepository
 from .storage.preferences import PreferenceRepository
+from .storage.uploads import UploadRepository
 from .storage.users import SessionRepository, UserRepository
 from .incoming import IncomingSorter
 from .layout import MusicTree
+from .upload_attribution import UploadAttribution
 from .uploads import UploadError, Uploads, incoming_dir
 from .versions import read_releases
 from .subsonic import SubsonicError, SubsonicServer, SubsonicUnreachable
@@ -67,7 +90,9 @@ from .subsonic import SubsonicError, SubsonicServer, SubsonicUnreachable
 SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'self'; "
                                "img-src 'self' data: https://i.ytimg.com https://*.jamendo.com https://*.sndcdn.com "
-                               "https://upload.wikimedia.org https://thumb.wikimedia.org https://lastfm-img.freetls.fastly.net; "
+                               "https://upload.wikimedia.org https://thumb.wikimedia.org https://lastfm-img.freetls.fastly.net "
+                               "https://lastfm.freetls.fastly.net "
+                               "https://i.discogs.com; "
                                "media-src 'self' https://*.jamendo.com; style-src 'self'; "
                                "script-src 'self' https://www.youtube.com https://w.soundcloud.com; "
                                "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://w.soundcloud.com; "
@@ -85,6 +110,12 @@ IMPORT_CREATE_LIMIT = 1024 * 1024
 
 def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
+    if isinstance(error, ExplorationUnavailable):
+        return Reply.error(503, "explore.unavailable")
+    if isinstance(error, MusicSourceError):
+        return Reply.error(429 if error.args[0] == "discovery.rate_limited" else 503, error.args[0])
+    if isinstance(error, CatalogError):
+        return Reply.error(400, error.args[0])
     if isinstance(error, Unauthorized):
         return Reply.error(401, "auth.required")
     if isinstance(error, MissingRight):
@@ -99,7 +130,7 @@ def error_reply(error):
         return Reply.error(404 if error.code == 70 else 502, "subsonic.error")
     if isinstance(error, SubsonicUnreachable):
         return Reply.error(503, "subsonic.unreachable")
-    if isinstance(error, (MixError, PlaylistError, InvalidAvatar, ExtMusicError, UploadError, NewsError, ImportFailed, CoverError)) and error.args:
+    if isinstance(error, (MixError, PlaylistError, InvalidAvatar, ExtMusicError, UploadError, NewsError, ImportFailed, CoverError, ListenLaterError)) and error.args:
         return Reply.error(400, error.args[0])             # clé de texte précise (« mix.no_lastfm »…)
     if isinstance(error, (InvalidRating, InvalidPreference, ValueError)):
         return Reply.error(400, "request.invalid")
@@ -129,18 +160,21 @@ class WebApplication:
         self.accounts = Accounts(self.subsonic, self.users, self.sessions)
         self.preferences = Preferences(PreferenceRepository(self.db))
         self.ratings = Ratings(self.subsonic)
-        self.library = Library(self.subsonic, self.ratings, self.messages)
-        self.folders = Folders(self.subsonic, self.library, self.ratings)
         self.artist_indexes = ArtistIndexes(self.subsonic, ArtistIndexRepository(self.db), self.users, self.hub,
                                             hidden=(self.config.incoming_name,),
                                             shortcuts=[n.strip() for n in self.config.shortcut_folders.split(",") if n.strip()])
+        self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
+        self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
+        self.folders = Folders(self.subsonic, self.library, self.ratings)
+        self.exploration = Exploration(MusicBrainzMetadata(ExplorationRepository(self.db)), self.folders, self.library)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
         self.listening = Listening(self.subsonic)
         self.avatars = Avatars(AvatarRepository(self.db), self.users, self.subsonic)
         self.radios = Radios(self.subsonic)
         library = MusicTree(self.config.music_dir, incoming_dir(self.config.music_dir, self.config.incoming_name))
-        self.uploads = Uploads(self.subsonic, self.users, library)
+        self.uploads = Uploads(self.subsonic, self.users, library, UploadRepository(self.db))
+        self.upload_attribution = UploadAttribution(self.uploads, self.subsonic)
         self.covers = Covers(self.folders, self.config.music_dir, LastFmAlbums(JsonFetcher(), self.config.lastfm_api_key),
                              ImageDownloader())
         self.incoming = IncomingSorter(library, self.config.incoming_wait_hours, self.uploads.scan_as_admin)
@@ -152,9 +186,23 @@ class WebApplication:
                                    PlaylistExtRepository(self.db), self.ext_favorites)
         self.imports = PlaylistImport(self.subsonic, self.extmusic, self.playlists, self.ext_favorites,
                                       DeezerReader(JsonHttp()))
+        metadata = ExplorationRepository(self.db)
+        self.discogs = Discogs(metadata, self.config.discogs_api_key)
+        self.discogs_catalogs = DiscogsCatalogs(self.discogs)
+        self.artist_discogs = ArtistDiscogsLinks(ArtistLinkRepository(self.db), self.folders, self.artist_indexes,
+                                               self.discogs, self.discogs_catalogs, self.config.subsonic_url)
+        targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key)
+        self.listen_later = ListenLater(ListenLaterRepository(self.db), targets)
+        self.recommendations = Recommendations(RecommendationRepository(self.db), targets, self.users, self.hub)
+        self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
+        self.lastfm = LastFm(metadata, self.config.lastfm_api_key)
+        self.youtube_versions = YouTubeVersions(self.extmusic)
+        self.label_discovery = LabelDiscovery(self.discogs_catalogs, self.discogs, self.lastfm, self.imports,
+                                               youtube_versions=self.youtube_versions)
         self.lyrics = Lyrics(LyricsFinder(JsonFetcher(), lambda artist, title: ""))    # sans Subsonic
         fetcher = JsonFetcher()
         self.facts = Facts(self.subsonic, MusicBrainz(fetcher), Wikipedia(fetcher))
+        self.artist_portraits = ArtistPortraits(self.artist_discogs, self.discogs, self.subsonic, self.facts.wikipedia)
         self.news = News(NewsRepository(self.db))
         self.releases = read_releases(os.path.join(code_dir, "i18n", "versions.yaml"))
 
@@ -174,14 +222,19 @@ class WebApplication:
         read, write = guard.reader, guard.writer
         auth = AuthController(self.accounts, self.preferences, self.chat, self.users, self.config.secure_cookie,
                               self.config.trust_proxy)
-        library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic)
+        library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic,
+                                    self.library_statistics, self.upload_attribution)
         chat = ChatController(self.chat, self.hub)
         mixes = MixController(self.mixes)
         playlists = PlaylistController(self.playlists)
         listening = ListeningController(self.listening)
+        listen_later = ListenLaterController(self.listen_later, self.recommendations)
         profile = ProfileController(self.avatars, self.radios, self.config.subsonic_public_url)
         lyrics = LyricsController(self.lyrics)
-        facts = FactsController(self.facts)
+        facts = FactsController(self.facts, self.artist_portraits)
+        exploration = ExplorationController(self.exploration)
+        discogs = DiscogsController(self.discogs, self.discogs_catalogs, self.label_discovery, self.discogs_exploration,
+                                   self.artist_discogs)
         extmusic = ExtMusicController(self.extmusic, self.ext_favorites)
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
@@ -197,7 +250,29 @@ class WebApplication:
         router.add("POST", "/api/login", auth.login)
         router.add("POST", "/api/logout", auth.logout)
         router.add("GET", "/api/me", read(auth.me))
+        router.add("GET", "/api/explore/album", read(exploration.album))
+        router.add("GET", "/api/explore/profile", read(exploration.profile))
+        router.add("GET", "/api/explore/artists", read(exploration.artists))
+        router.add("GET", "/api/explore/connections", read(exploration.connections))
+        router.add("GET", "/api/explore/local", read(exploration.local))
+        for path, handler in (("/api/discogs/status", discogs.status), ("/api/discogs/search", discogs.search),
+                              ("/api/discogs/identity", discogs.identity), ("/api/discogs/album", discogs.album),
+                              ("/api/discogs/catalog", discogs.catalog), ("/api/labels/discover", discogs.discover),
+                              ("/api/labels/ranking", discogs.ranking), ("/api/labels/tracks", discogs.tracks)):
+            router.add("GET", path, read(handler))
+        router.add("GET", "/api/listen-later", read(listen_later.all))
+        router.add("GET", "/api/recommendation/status", read(listen_later.status))
+        router.add("POST", "/api/recommendation/read", write(listen_later.mark_read))
+        router.add("POST", "/api/listen-later/add", write(listen_later.add))
+        router.add("POST", "/api/listen-later/remove", write(listen_later.remove))
+        router.add("POST", "/api/recommendation/send", write(listen_later.recommend))
+        router.add("POST", "/api/recommendation/remove", write(listen_later.dismiss))
         router.add("POST", "/api/preferences", write(auth.save_preferences))
+        router.add("GET", "/api/discogs/artist-link", read(discogs.artist_link))
+        router.add("POST", "/api/discogs/artist-link", write(discogs.choose_artist))
+        router.add("POST", "/api/discogs/artist-refresh", write(discogs.refresh_artist))
+        router.add("POST", "/api/labels/versions", write(discogs.versions))
+        router.add("GET", "/api/artist/image", read(facts.artist_image))
 
         for path, handler in (("/api/home", library.home), ("/api/artists", library.artists),
                               ("/api/artist", library.artist), ("/api/artist/top", library.top_songs),
@@ -241,7 +316,6 @@ class WebApplication:
         for path, handler in (("/api/mix/build", mixes.build),
                               ("/api/scrobble", listening.scrobble), ("/api/bookmark/save", listening.save_bookmark),
                               ("/api/bookmark/delete", listening.delete_bookmark),
-                              ("/api/play-queue/save", listening.save_play_queue),
                               ("/api/avatar/delete", profile.remove_avatar), ("/api/avatar/gravatar", profile.gravatar),
                               ("/api/ext/alternative", extmusic.alternative), ("/api/ext/unplayable", extmusic.unplayable),
                               ("/api/ext/played", extmusic.played), ("/api/ext/favorite", extmusic.favorite),
@@ -249,8 +323,10 @@ class WebApplication:
                               ("/api/news/feed/add", news.add), ("/api/news/feed/remove", news.remove),
                               ("/api/news/feed/show", news.show)):
             router.add("POST", path, write(handler))
+        router.add("POST", "/api/play-queue/save", write(listening.save_play_queue, PLAY_QUEUE_BODY_LIMIT))
         router.add("POST", "/api/avatar/upload", write(profile.upload_avatar, AVATAR_BODY_LIMIT))
         # envoi de fichiers dans Incoming (droit Subsonic « upload ») : le fichier (ou un zip) est le corps brut de la requête
+        router.add("GET", "/api/upload/history", read(uploads.history))
         router.add("GET", "/api/upload/status", read(uploads.status, right="upload"))
         router.add("POST", "/api/upload", guard.raw_writer(uploads.upload, right="upload"))
         router.add("POST", "/api/upload/finish", write(uploads.finish, right="upload"))

@@ -34,7 +34,7 @@ class MixController:
         return songs_or_error(self.mixes.artist_radio(user, item_id(request.param("id")), request.param("name")[:200]))
 
     def genres(self, request, user):
-        return ok({"genres": [g.to_api() for g in self.mixes.genre_groups(user)]})
+        return ok({"genres": [g.to_api() for g in self.mixes.genre_groups(user)], "options": MixOptions.choices()})
 
     def build(self, request, user, body):
         options = MixOptions.parse(body)

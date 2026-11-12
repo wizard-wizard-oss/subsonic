@@ -1,4 +1,5 @@
 """Règles de dépendances entre les parties du code, vérifiées à chaque passage des tests."""
+import ast
 import os
 import re
 import unittest
@@ -7,6 +8,19 @@ from tests.support import PROJECT
 
 PACKAGE = os.path.join(PROJECT, "pimedia")
 IMPORT = re.compile(r"^\s*(?:from|import)\s+([\w.]+)", re.M)
+PERSONAL_HOME = re.compile(r"(?:^|[\s=\"'])/(?:Users|home)(?:/|$)|[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/]")
+
+
+def runtime_strings(source):
+    """Chaînes Python, hors documentation : une adresse citée en commentaire n'est pas un réglage exécuté."""
+    tree = ast.parse(source)
+    docstrings = {id(node.body[0].value) for node in ast.walk(tree)
+                  if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+                  and node.body and isinstance(node.body[0], ast.Expr)
+                  and isinstance(node.body[0].value, ast.Constant)
+                  and isinstance(node.body[0].value.value, str)}
+    return [(node.lineno, node.value) for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings]
 
 
 def imports_of(part):
@@ -17,7 +31,9 @@ def imports_of(part):
             path = os.path.join(directory, name)
             package = os.path.relpath(directory, PROJECT).replace(os.sep, ".")
             modules = []
-            for module in IMPORT.findall(open(path, encoding="utf-8").read()):
+            with open(path, encoding="utf-8") as source:
+                imported = IMPORT.findall(source.read())
+            for module in imported:
                 if module.startswith("."):
                     dots = len(module) - len(module.lstrip("."))
                     base = package.split(".")[:len(package.split(".")) - dots + 1]
@@ -25,6 +41,31 @@ def imports_of(part):
                 modules.append(module)
             found[os.path.relpath(path, PACKAGE)] = modules
     return found
+
+
+class PortablePathsTest(unittest.TestCase):
+    def test_runtime_python_contains_no_personal_absolute_path(self):
+        for directory, _, names in os.walk(PROJECT):
+            for name in (name for name in names if name.endswith(".py")):
+                path = os.path.join(directory, name)
+                with open(path, encoding="utf-8") as source:
+                    values = runtime_strings(source.read())
+                for line, value in values:
+                    self.assertIsNone(PERSONAL_HOME.search(value),
+                                      "%s:%d contient un chemin personnel codé en dur" %
+                                      (os.path.relpath(path, PROJECT), line))
+
+    def test_personal_paths_are_detected_without_scanning_docstrings(self):
+        # Exemples fictifs : vérifier les syntaxes POSIX et Windows ainsi que les chaînes de commandes.
+        paths = ("/Users/example/project", "/home/example/music", r"C:\Users\example\Music",
+                 "command --directory=/home/example/music")
+        for path in paths:
+            source = repr(path) + '\nROOT = ' + repr(path)
+            values = runtime_strings(source)
+            self.assertEqual(len(values), 1)
+            self.assertIsNotNone(PERSONAL_HOME.search(values[0][1]))
+        for value in ("/api/home", "https://service.example/home", "~/.local/share/pimedia", "relative/path"):
+            self.assertIsNone(PERSONAL_HOME.search(value))
 
 
 class DependencyRulesTest(unittest.TestCase):

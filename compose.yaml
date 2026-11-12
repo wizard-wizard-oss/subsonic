@@ -29,6 +29,7 @@ services:
       PI_MEDIA_WEB_EXT_YOUTUBE_KEY: ${EXT_YOUTUBE_KEY:-}
       PI_MEDIA_WEB_EXT_YOUTUBE_REGION: ${EXT_YOUTUBE_REGION:-FR}
       PI_MEDIA_WEB_LASTFM_API_KEY: ${LASTFM_API_KEY:-}          # recherche de pochettes (changer la pochette d'un album)
+      PI_MEDIA_WEB_DISCOGS_API_KEY: ${DISCOGS_API_KEY:-}        # catalogues, discographies et découverte des labels
       PI_MEDIA_WEB_MUSIC_DIR: /music                            # envoi de fichiers et rangement dans la bibliothèque
       PI_MEDIA_WEB_INCOMING_NAME: ${INCOMING_NAME:-Incoming}
       PI_MEDIA_WEB_INCOMING_WAIT_HOURS: ${INCOMING_WAIT_HOURS:-1}

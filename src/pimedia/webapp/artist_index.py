@@ -12,6 +12,7 @@ changé). Subsonic peut limiter les dossiers de musique d'un compte : il y a une
 import threading
 import time
 
+from ..shared.text import normalize
 from .entities import ArtistIndex
 from .folders import folder_ref
 from .library import TtlCache, as_list, mac_leftover, text
@@ -25,11 +26,11 @@ CHECK_EVERY = 600
 def parse_index(raw, hidden=()):
     """Réponse de getIndexes -> lettres et dossiers d'artistes, sans rien de propre à un compte (ni favoris ni notes).
     hidden : noms de dossiers à ne pas montrer (Incoming), majuscules mises à part ; ni les restes de macOS (__MACOSX)."""
-    hidden = {name.casefold() for name in hidden}
+    hidden = {normalize(name) for name in hidden}
     groups = [{"letter": text(group.get("name"), "#"),
                "artists": [{"id": folder_ref(a["id"]), "name": text(a.get("name"), "?")}
                            for a in as_list(group.get("artist"))
-                           if text(a.get("name")).casefold() not in hidden and not mac_leftover(a)]}
+                           if normalize(a.get("name")) not in hidden and not mac_leftover(a)]}
               for group in as_list((raw.get("indexes") or {}).get("index"))]
     return [group for group in groups if group["artists"]]
 
@@ -45,8 +46,8 @@ class ArtistIndexes:
 
     def shortcuts(self, index):
         """Dossiers épinglés en haut de la barre (« Compilations ») qui existent dans cette liste, dans l'ordre réglé."""
-        found = {a["name"].casefold(): a for group in index for a in group["artists"]}
-        return [found[name.casefold()] for name in self.shortcut_names if name.casefold() in found]
+        found = {normalize(a["name"]): a for group in index for a in group["artists"]}
+        return [found[normalize(name)] for name in self.shortcut_names if normalize(name) in found]
 
     def for_user(self, user):
         """La liste que voit ce compte. Seul le tout premier calcul (rien en base) fait attendre."""
