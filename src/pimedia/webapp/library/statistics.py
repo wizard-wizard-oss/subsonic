@@ -6,7 +6,7 @@ expiration ou recalcul : LastScanned décide seul du remplacement du dernier ré
 import os
 import threading
 
-from .entities import LibraryStatistics
+from ..entities import LibraryStatistics
 
 MAX_PROPERTIES_BYTES = 1024 * 1024
 MAX_SCAN_MS = 8_640_000_000_000_000  # limite des dates du navigateur

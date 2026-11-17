@@ -2,7 +2,7 @@
 aux deux éditions (Wikipédia, MusicBrainz). La biographie Last.fm vient de Subsonic (getArtistInfo2, Last.fm réglé sur le
 serveur) : seulement si Wikipédia n'a pas de page en français. Gardées un jour en mémoire."""
 from ..shared.external import FactsBuilder, sentences
-from .library import TtlCache
+from .library.cache import TtlCache
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 

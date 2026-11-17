@@ -38,7 +38,11 @@ dossiers d’un artiste et albums les mieux notés (genre du dossier, sinon du p
 Si le style manque, aucune mention de remplacement ni compteur d’écoutes n’est ajouté. Aucun appel Subsonic
 supplémentaire, changement de tags ou migration. Les cartes Discogs gardent leurs métadonnées propres.
 
-Code : `webapp/library.py`, `folders.py`, `ratings.py`, `web-pc/static/js/views.js` et `static/css/views.css`.
+Code : `webapp/library/catalog.py`, `library/folders.py`, `ratings.py`, `web-pc/static/js/views.js` et `static/css/views.css`.
+Depuis la préparation de la 1.10.3, le package `webapp/library/` regroupe les accès : catalogue, dossiers,
+index des artistes, statistiques, accès aux fichiers, Incoming et règles de nommage. `Library` consulte Subsonic ;
+`LibraryFiles` range les albums et délègue les noms à `LibraryNaming`. Le SQL reste dans les dépôts existants,
+et le transport dans `subsonic.py` ; aucun second catalogue musical n’est ajouté. Détail : `docs/architecture/README.md`.
 Tests : `tests/test_webapp.py` (style de toutes les listes, genres absents ou numériques), `tests/e2e_webapp.js`
 (accueil, onglets et pagination, artiste, recherche, favoris, étoiles/commentaires et écoutes sur la fiche).
 Validation locale : 71 tests Python ciblés et 344 contrôles du parcours PC passent. Rendu Chrome vérifié avec
@@ -48,7 +52,7 @@ Déployée le 17/11/2026 sur https://music2.foos.fr : santé HTTPS et conteneur 
 SQLite reste intègre au schéma 19 et les données sont conservées ; sauvegarde et image précédente disponibles.
 Le parcours connecté à la production n’a pas été rejoué. Recharger la page avec Cmd+Maj+R.
 
-### Dossiers ou tags (`pimedia/webapp/folders.py`)
+### Dossiers ou tags (`pimedia/webapp/library/folders.py`)
 La bibliothèque est rangée `Artiste/Album/titre` (voir `envoi-fichiers.md`) : la barre des artistes, la page artiste et la
 page album suivent ces **dossiers** (`getIndexes`, `getMusicDirectory`). Ainsi « Dälek » n'apparaît qu'une fois même si
 des tags disent « Dalek ». Le reste de Subsonic parle en tags (ID3) ; le site fait le lien :
@@ -76,7 +80,7 @@ collecte du catalogue ni scan Subsonic. Incoming et les restes macOS sont exclus
 Si cette liste est indisponible, les résultats des tags restent utilisables. Les albums et les titres continuent
 de venir de `search3`, avec les limites existantes (12 albums et 30 titres). Pas de correction des fautes de frappe.
 
-Code : `webapp/library.py` (`search`, `_search_artists`), dépendance `artist_indexes` assemblée dans `app.py`.
+Code : `webapp/library/catalog.py` (`search`, `_search_artists`), dépendance `artist_indexes` assemblée dans `app.py`.
 Tests : `tests/test_webapp_search.py` (Gurriers sans résultat ID3, variantes de noms, classement, doublons, tags seuls,
 cache, périmètres des comptes, exclusions, indisponibilité de l'index, albums/titres/requête vide),
 `tests/e2e_webapp.js` (saisie du nom partiel sans accent puis ouverture du dossier artiste).
@@ -108,7 +112,7 @@ renvoyés dans `/api/home`, jamais le contenu des autres propriétés ni le chem
 La prochaine visite de l’accueil prend le résultat du nouveau scan ; pas de mise à jour automatique d’une page restée
 ouverte. Pas de migration, de minuterie, d’identifiants supplémentaires ni de changement de Subsonic.
 
-Code : `webapp/library_statistics.py`, entité `LibraryStatistics` dans `entities.py`, assemblage dans `app.py`,
+Code : `webapp/library/statistics.py`, entité `LibraryStatistics` dans `entities.py`, assemblage dans `app.py`,
 `controllers/library.py` ; composant `web-pc/static/js/library-statistics.js` et sa feuille CSS.
 Tests : `tests/test_library_statistics.py` (format natif, cache, changement de scan, redémarrage, source absente ou
 incomplète, remplacement de fichier, HTTP authentifié et absence de collecte/secrets), `tests/e2e_webapp.js`
@@ -138,7 +142,7 @@ Depuis la version 1.7.3, la page artiste propose aussi « Membres et autres proj
 depuis un album, les membres de ses artistes principaux s'ouvrent dans les crédits. Chaque musicien permet de
 retrouver ses autres groupes / projets et d'ouvrir leurs fiches musicales (toutes périodes, dates connues affichées).
 
-`pimedia/webapp/library.py`, `folders.py` (pages artiste et album par dossiers), `controllers/library.py` ; page :
+`pimedia/webapp/library/catalog.py`, `library/folders.py` (pages artiste et album par dossiers), `controllers/library.py` ; page :
 `web-pc/static/js/views.js`, `stars.js`.
 
 ## Tests

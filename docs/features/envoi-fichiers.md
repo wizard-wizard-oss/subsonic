@@ -35,7 +35,7 @@ d’une attente du DOM. Sauvegarde et image de retour arrière consignées dans 
 Validation : `UploadHistoryTest` (attribution, accès, ZIP, échecs, persistance, pagination et envois simultanés) et parcours jsdom PC
 (tableau, auteur, résultat et retour sur la page).
 
-## La nomenclature (`pimedia/webapp/layout.py`)
+## La nomenclature (`pimedia/webapp/library/naming.py`)
 La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous-dossier par album :
 
 ```
@@ -45,20 +45,33 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 <racine>/Incoming/                           ce qui attend d'être rangé à la main
 ```
 
-- L'artiste et l'album **commencent par une majuscule** (ou un chiffre, un signe : « 38 Spesh », « ...Et Après »).
+- Les nouveaux dossiers d'artistes et d'albums reçoivent **une majuscule à chaque mot** (séparateur : espace ou
+  tiret), sans abaisser les autres lettres : « jean-michel jarre » devient « Jean-Michel Jarre », « DJ NaZe »
+  reste « DJ NaZe ». Les chiffres, accents et signes sont conservés (« 38 Spesh », « ...Et Après »).
 - Un sous-dossier d'album n'est accepté que s'il s'agit d'un **disque** : `CD1`, `CD 2`, `Disc 1`, `Disk 2`, `Disque 3`
   (majuscules indifférentes). « Face A » ou « Bonus » ne le sont pas.
 - **Un seul dossier par artiste** : un artiste déjà présent est retrouvé **sans tenir compte des majuscules, des
   accents, des espaces ni de la ponctuation** (« Dalek » rejoint « Dälek », « DJ NaZe » rejoint « DJ Naze »,
-  « A.A.Williams » rejoint « A.A. Williams ») ; le nom du dossier existant est gardé.
+  « A.A.Williams » rejoint « A.A. Williams ») ; la recherche précède la mise en majuscules des initiales et le nom
+  du dossier existant est gardé, même si sa casse ne suit pas la règle des nouveaux dossiers.
   Depuis la 1.7.9, les ligatures sont également équivalentes (`Œdipe` / `Oedipe`, `æ` / `ae`) via la comparaison
-  commune `shared.text.normalize`. Le nettoyage des chemins d’envoi reste distinct de cette clé de comparaison.
+  commune `shared.text.normalize` (utilisée par `LibraryNaming.comparison_key` pour le rangement).
+  `LibraryNaming.normalize_artist` et `normalize_album` appliquent la nomenclature aux nouveaux dossiers ;
+  `LibraryFiles.find_matching_folder` retrouve les
+  dossiers existants en comparant les clés, sans changer leurs noms. AnyASCII 0.3.3 complète les lettres latines
+  non décomposables (`ø/o`, `ł/l`, `đ/d`) ; les noms exacts et les clés Unicode natives sont prioritaires.
+  Une correspondance ambiguë attend dans Incoming. Les autres alphabets restent en Unicode : les écritures
+  arabes ne sont pas transformées en noms latins pour décider automatiquement d’un rangement.
+  Le nettoyage des chemins d’envoi reste distinct de cette clé de comparaison.
+  Décision du 18/11/2026 : les futurs rapprochements entre alphabets (par exemple arabe/latin) issus d’une
+  même translittération seront proposés pour validation explicite, sans fusion ni rangement automatique sur
+  cette seule base. La génération et l’interface de ces suggestions ne sont pas encore implémentées.
 - **Rien n'est jamais écrasé** : un album déjà présent chez l'artiste (même nom, aux mêmes détails près) n'est
   pas rangé, il attend dans Incoming.
-- Aucun nom n'est corrigé automatiquement (pas de majuscule ajoutée, pas d'accent retiré).
-- Les noms de dossiers restent ceux d'origine : les accents et la ponctuation (`Mon$rock`, `[Deluxe]`, `!!!`) sont
-  conservés. La simplification des noms sert uniquement à retrouver un artiste ou un album déjà présent ; elle ne
-  renomme jamais le dossier existant.
+- La seule correction automatique des noms est la mise en majuscules des initiales des nouveaux dossiers.
+  Les accents et la ponctuation (`Mon$rock`, `[Deluxe]`, `!!!`) sont conservés. La simplification des noms sert
+  uniquement à retrouver un artiste ou un album déjà présent ; elle ne renomme jamais le dossier existant.
+  Aucune recherche de l'orthographe officielle sur un service externe et aucune modification des tags audio.
 - **Compilations** : le dossier `Compilations` se range comme un artiste (`Compilations/Album/titre`) : un zip
   `Compilations/Mon album/…` rejoint le dossier existant. Il a un raccourci en haut de la barre (`barre-gauche.md`).
 
@@ -78,8 +91,9 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
    sans perdre les accents combinés ; les anciens noms CP437 restent pris en charge. 4 Go décompressés au plus,
    300 Mo par titre. Zip abîmé, chiffré, ou sans aucun titre : refusé, rien ne reste.
 6. **Rangement immédiat** : chaque dossier qui contient des titres est un album (le dossier au-dessus pour un dossier de
-   disque) ; le dossier qui contient l'album est l'artiste. Si la nomenclature est respectée, l'album est déplacé d'un coup
-   dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié), le dossier de l'artiste étant créé s'il n'existe pas.
+   disque) ; le dossier qui contient l'album est l'artiste. L'artiste existant est recherché avec la comparaison commune.
+   Les initiales des mots du nouvel album et, si nécessaire, du nouvel artiste sont mises en majuscules, puis l'album
+   est déplacé d'un coup dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié).
 7. **Ce qui reste** rejoint Incoming tel qu'il était organisé dans le zip (fusionné avec les dossiers déjà là, jamais
    d'écrasement : « titre (2).flac »). Des titres à la racine du zip sont réunis dans un dossier au nom du zip. Le zip est
    effacé.
@@ -88,7 +102,7 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
    la main dans Incoming : … ».
 10. En fin de lot (`POST /api/upload/finish`), le site lance `startScan` : avec le compte de la personne, sinon avec un
     administrateur connu du site (jusqu'à 3). Le scan est réservé aux administrateurs de Subsonic.
-11. **Rattrapage d'Incoming** (`pimedia/webapp/incoming.py`, toutes les 10 minutes) : un album corrigé à la main sur place,
+11. **Rattrapage d'Incoming** (`pimedia/webapp/library/incoming.py`, toutes les 10 minutes) : un album corrigé à la main sur place,
     en `Incoming/Artiste/Album`, est rangé de la même façon une fois resté `INCOMING_WAIT_HOURS` heures sans changement
     (1 par défaut ; 0 = jamais), puis Subsonic scanne (avec un administrateur connu du site). Le dossier d'artiste vidé
     quitte Incoming. Ce qui a été rangé est écrit dans le journal du conteneur.
@@ -105,7 +119,8 @@ Bibliothèque de départ : `Dälek/Absence/`, `Converge/Axe to Fall/`.
 | `Mes envois/Chat Pile/Cool World/01.flac` | `<racine>/Chat Pile/Cool World/` | dossier en trop autour, ignoré |
 | `Converge/Jane Doe/…` + `Dälek/Precipice/…` | les deux rangés | chaque album est traité à part |
 | `Converge/axe to fall/01.flac` | `Incoming/Converge/axe to fall/` | album déjà présent |
-| `converge/Jane Doe/01.flac` | `Incoming/converge/Jane Doe/` | pas de majuscule |
+| `converge/jane doe/01.flac` | `<racine>/Converge/Jane Doe/` | artiste existant conservé, initiales de l'album mises en majuscules |
+| `jean-michel jarre/nouvel album/01.flac` | `<racine>/Jean-Michel Jarre/Nouvel Album/` | nouvel artiste et album : majuscule à chaque mot |
 | `Converge/Live/Face A/01.flac` | `Incoming/Converge/Live/Face A/` | « Face A » n'est pas un disque, et « Converge » est un artiste connu : doute |
 | `Jane Doe/01.flac` | `Incoming/Jane Doe/` | album sans artiste |
 | `01.flac` à la racine de `Jane Doe.zip` | `Incoming/Jane Doe/01.flac` | idem |
@@ -127,10 +142,12 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
   `apache-exemple.conf`). Détails : `docs/DEPLOIEMENT.md`.
 
 ## Où est le code
-- `pimedia/webapp/layout.py` : nomenclature (`is_disc`, `capitalised`, `normalised`, `tracks_fit`, `find_albums`) et
-  `MusicTree.place` (ranger un album chez son artiste).
+- `pimedia/webapp/library/naming.py` : `LibraryNaming`, règles de noms d’artistes et d’albums, et clés de comparaison
+  déléguées à la normalisation Unicode commune.
+- `pimedia/webapp/library/files.py` : accès aux fichiers (`is_disc`, `tracks_fit`, `find_albums`) et
+  `LibraryFiles.place` (ranger un album chez son artiste).
 - `pimedia/webapp/uploads.py` : réception, décompression, rangement des albums du zip, scan.
-- `pimedia/webapp/incoming.py` : rattrapage d'Incoming (tâche lancée par `app.py`).
+- `pimedia/webapp/library/incoming.py` : rattrapage d'Incoming (tâche lancée par `app.py`).
 - `pimedia/webapp/controllers/uploads.py`, `controllers/base.py` (`raw_writer`), `config.py` (`music_dir`, `incoming_name`,
   `incoming_wait_hours`).
 - Page : `web-pc/static/js/upload.js`, styles `web-pc/static/css/views.css` (`.upload-*`), textes `i18n/fr.yaml`
@@ -138,7 +155,15 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
 - `compose.yaml`, `docker/web/Dockerfile`, `.env.example`, `deploy/pc/*-exemple.conf`.
 
 ## Tests
-- `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, majuscules), jamais d'écrasement,
+
+Correctif 1.10.3 préparé localement le 17/11/2026 : les 725 tests Python complets et les trois parcours PC jsdom
+(389 contrôles) passent sous Python 3.12.14 et jsdom 25.0.1. Docker local indisponible. AnyASCII 0.3.3 est testé
+comme dépendance PC ; les clés natives, les ambiguïtés et les destinations déjà occupées sont couvertes.
+Pas encore déployé ; aucun album de production déplacé.
+
+- `tests/test_library_naming.py` : initiales, caractères latins non décomposables, arabe, autres alphabets et signes conservés.
+- `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, casse reçue quelconque),
+  initiales des nouveaux artistes et albums, jamais d'écrasement,
   rattrapage d'Incoming et son délai.
 - `tests/test_webapp_upload.py` : envoi HTTP, droits, refus, zip (rangement immédiat, dossiers en trop, cas laissés dans
   Incoming, chemins piégés, zip abîmé), scan ; conservation des accents et de la ponctuation, UTF-8 sans marqueur,

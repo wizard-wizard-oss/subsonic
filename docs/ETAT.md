@@ -1,5 +1,35 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Décision sur les rapprochements entre alphabets (18/11/2026)** : une même translittération pour un nom arabe
+et un nom latin doit produire une proposition à vérifier, jamais une fusion ni un rangement automatique sur cette
+seule base. Les noms et dossiers d’origine restent conservés. Le rangement actuel respecte déjà cette limite ;
+la génération et l’interface de ces propositions restent à implémenter.
+
+**Nomenclature et organisation de la bibliothèque, 1.10.3 (17/11/2026, préparation locale)** : les accès à la
+bibliothèque du site sont regroupés dans le package `webapp/library/` : catalogue Subsonic, navigation par dossiers,
+index des artistes, statistiques, fichiers, rangement d’Incoming et nomenclature. `Library` reste le catalogue
+consulté via l’API ; `LibraryFiles` porte les opérations sur les fichiers ; `LibraryNaming` sépare normalisation
+artistique, normalisation des albums et clé de comparaison commune (`shared.text.normalize`). Les services
+consommateurs et les tests importent les sous-modules explicitement ; aucun ancien module ni façade de compatibilité.
+Le rangement retrouve l’artiste quelle que soit la casse reçue et conserve exactement son dossier existant.
+Les nouveaux dossiers d’artistes et d’albums reçoivent une initiale majuscule à chaque mot séparé par un espace
+ou un tiret ; accents, ponctuation et autres majuscules sont conservés. Décision utilisateur : cette règle
+s’applique aussi aux albums. Les métadonnées musicales restent dans les fichiers audio et sont lues via Subsonic ;
+aucune copie de tags ni second catalogue en base, aucun accès direct supplémentaire aux fichiers.
+Cause réelle de l’incident Trentemøller : `Incoming/Trentemøller/trentemøller/` contient dix MP3 ; le nom d’album
+était refusé parce qu’il commence par une minuscule. Les deux noms portent le même ø U+00F8, sans espace caché.
+AnyASCII 0.3.3 complète maintenant les lettres latines des clés du rangement (`ø/o`, `ł/l`, `đ/d`), après la
+normalisation partagée et sans toucher au Pi. Les noms exacts puis les clés natives restent prioritaires ; une
+ambiguïté laisse l’album dans Incoming. Les alphabets non latins restent natifs, sans fusion arabe/latin automatique.
+Aucune bibliothèque de correspondance approximative ajoutée : les suggestions RapidFuzz ne sont pas implémentées.
+Validation finale : 725 tests Python complets passent sous Python 3.12.14, ainsi que les trois parcours PC jsdom
+(389 contrôles). Tests multilingues, priorité des correspondances, ambiguïtés et collisions avec des fichiers à
+destination couverts. La garde de destination conserve l’envoi dans Incoming au lieu de perdre son staging.
+Docker local indisponible ; dépendance AnyASCII 0.3.3 isolée pour les tests, déclarée dans requirements.txt.
+`git diff --check` passe. Ni déplacement de l’album ni déploiement effectués.
+Fiches : [Envoi de fichiers](features/envoi-fichiers.md), [Bibliothèque](features/bibliotheque.md),
+[Architecture](architecture/README.md). Les anciens chemins cités plus bas dans l’historique reflètent les versions de l’époque.
+
 **Style sur les cartes d’albums, 1.10.2 (17/11/2026, déployée et vérifiée)** : les grilles
 de l’accueil, d’Albums, des artistes, de la recherche et des favoris affichent le style musical à la place
 des écoutes. Compteurs conservés uniquement dans les deux vues « Plus écoutés » et dans la fiche album.

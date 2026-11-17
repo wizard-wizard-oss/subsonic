@@ -10,7 +10,7 @@ from ..server.podcasts.relevance import normalize
 from .entities import ImportedTrack
 from .extmusic import ExtMusicError
 from .import_readers import ImportFailed
-from .library import as_list, song_row
+from .library.catalog import as_list, song_row
 from .playlists import MAX_EXT_TRACKS, MAX_SONGS
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 

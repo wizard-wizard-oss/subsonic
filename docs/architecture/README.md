@@ -65,6 +65,32 @@ Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 
 ## Où chercher quoi
+
+### Accès à la bibliothèque du site
+
+Le package `pimedia/webapp/library/` regroupe le noyau d’accès à la bibliothèque. Le transport Subsonic reste dans
+`webapp/subsonic.py`, le SQL dans les dépôts `webapp/storage/`, et les contrôleurs HTTP dans `webapp/controllers/`.
+
+| Module | Responsabilité |
+|---|---|
+| `catalog.py` — `Library` | Consultation du catalogue par l’API Subsonic : albums, titres, recherche et données propres au site. |
+| `folders.py` — `Folders` | Navigation par dossiers via Subsonic et résolution des identifiants de dossiers/ID3. |
+| `artists.py` — `ArtistIndexes` | Index des artistes et raccourcis, avec le dépôt et les événements existants. |
+| `statistics.py` — `SubsonicStatistics` | Lecture limitée aux compteurs déjà calculés par Subsonic. |
+| `files.py` — `LibraryFiles` | Arborescence, recherche des dossiers existants et placement des albums sur le disque. |
+| `incoming.py` — `IncomingSorter` | Albums en attente, délai sans modification, rangement puis demande de scan. |
+| `naming.py` — `LibraryNaming` | Noms conformes pour les nouveaux artistes/albums et clés de comparaison déléguées à `shared.text.normalize`. |
+| `cache.py` — `TtlCache` | Cache mémoire réutilisé par les accès Subsonic et les services consommateurs. |
+
+`Uploads` reçoit et décompresse les fichiers puis appelle `LibraryFiles`, comme `IncomingSorter`. Tous deux utilisent
+donc le même placement et la même politique de nommage. Les fonctionnalités telles que les pochettes et les
+playlists restent dans leurs services et consomment ces accès. `app.py` assemble les objets, dont la politique de
+nommage injectable dans `LibraryFiles`. Les sous-modules s’importent explicitement ; `__init__.py` reste descriptif.
+Aucun déplacement de zone Pi/web/shared ni modification de base. AnyASCII 0.3.3 est une dépendance PC utilisée
+uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi restent sans cette dépendance.
+
+### Autres fonctionnalités
+
 - Pastille À écouter (1.9.2) : Recommendations publie dans EventHub vers le seul destinataire ; le composant existant utilise LiveEvents, sans nouvelle connexion SSE. Les accusés de lecture passent par le dépôt et le contrôleur existants.
 - À écouter et recommandations (1.9) : résolution commune dans webapp/listening_targets.py, règles dans listen_later.py et recommendations.py, entités et dépôts SQL dédiés. Contrôleur commun, assemblage app.py. Zone web uniquement ; recherche et lecture existantes réutilisées.
 - Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;

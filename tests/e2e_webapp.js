@@ -1076,10 +1076,10 @@ function makeEventSource(jar) {
   check("envoi : fichiers envoyés un par un", await until(() => $$(".upload-row.done").length === 2, 5000));
   check("envoi : Subsonic invité à scanner", await until(() => $(".upload-summary").textContent.startsWith("2 fichiers envoyés. Subsonic scanne"), 5000));
   check("envoi : fichier seul signalé hors nomenclature", $$(".upload-row.done .upload-state").every(s => s.textContent.includes("à ranger")));
-  // un album en zip, rangé Artiste/Album (2 titres et une pochette) : décompressé sur le serveur, nomenclature respectée
-  const albumZip = "UEsDBBQAAAAAAHmVbF3sfd8UGAAAABgAAAAWAAAAQUJCQS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAEFCQkEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAeZVsXeka6EYDAAAAAwAAABYAAABBQkJBL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAeZVsXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAHmVbF3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
+  // Album reçu en minuscules : rangé Artiste/Album avec son initiale majuscule (2 titres et une pochette).
+  const albumZip = "UEsDBBQAAAAAAK+tcV3sfd8UGAAAABgAAAAWAAAAQUJCQS9hcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAEFCQkEvYXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAr61xXeka6EYDAAAAAwAAABYAAABBQkJBL2Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAr61xXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvYXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9hcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAK+tcV3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL2Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
   w.eval(`Views.upload.add([new File([Uint8Array.from(atob("${albumZip}"), c => c.charCodeAt(0))], "Album.zip")])`);
-  check("envoi : zip décompressé et album rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
+  check("envoi : album reçu en minuscules, initiale corrigée et rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
         s.textContent === "Décompressé : 3 fichiers — rangé dans ABBA/Arrival"), 5000));
   check("envoi : barre du lot entier, terminée", await until(() => !$(".upload-total").hidden &&
         $(".upload-total progress").value === 1 && $(".upload-total .upload-state").textContent === "Terminé", 5000));

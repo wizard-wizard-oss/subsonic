@@ -3,7 +3,7 @@ et seules les adresses de la liste Subsonic sont relayées (rien d'autre ne peut
 import urllib.parse
 import urllib.request
 
-from .library import as_list
+from .library.catalog import as_list
 from .subsonic import Credentials
 
 

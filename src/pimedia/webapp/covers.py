@@ -12,7 +12,7 @@ import urllib.request
 
 from ..shared.external import USER_AGENT, query_url
 from ..shared.text import normalize
-from .library import text
+from .library.catalog import text
 from .lastfm import LASTFM_BLANK
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024

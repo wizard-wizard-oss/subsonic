@@ -3,8 +3,9 @@ from concurrent.futures import ThreadPoolExecutor
 import posixpath
 import unicodedata
 
-from .layout import is_disc
-from .library import TtlCache, as_list, text
+from .library.files import is_disc
+from .library.cache import TtlCache
+from .library.catalog import as_list, text
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 

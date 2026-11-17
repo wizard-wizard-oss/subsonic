@@ -1,6 +1,6 @@
 """Paroles du titre en cours, cherchées directement sur Internet (LRCLIB, version synchronisée si possible, puis
 lyrics.ovh) par la classe commune aux deux éditions. Pas de détour par Subsonic. Gardées un jour en mémoire."""
-from .library import TtlCache
+from .library.cache import TtlCache
 
 
 class InvalidSong(ValueError):

@@ -1,7 +1,7 @@
 """Envoi de fichiers audio : déposés dans le dossier « Incoming » de la musique de Subsonic, puis Subsonic est invité à
 scanner. L'API Subsonic n'a pas d'envoi de fichiers : le site écrit donc directement dans le dossier de musique (MUSIC_DIR
 dans le .env), monté en écriture dans le conteneur. Un zip est décompressé, puis chaque album trouvé dedans prend
-aussitôt sa place dans la bibliothèque (<racine>/Artiste/Album, voir layout.py), même entouré de dossiers en trop ; ce qui
+aussitôt sa place dans la bibliothèque (<racine>/Artiste/Album, voir library/files.py), même entouré de dossiers en trop ; ce qui
 ne peut pas être placé (artiste inconnu, nomenclature non respectée, album déjà présent) reste dans Incoming, tel qu'il
 était organisé, pour être rangé à la main. Seuls les fichiers audio et les images (pochettes) d'un zip sont gardés."""
 import hashlib
@@ -13,7 +13,7 @@ import threading
 import uuid
 import zipfile
 
-from .layout import EXTENSIONS, extension_of, find_albums
+from .library.files import EXTENSIONS, extension_of, find_albums
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 IMAGES = ("jpg", "jpeg", "png")                  # pochettes gardées à côté des titres d'un zip

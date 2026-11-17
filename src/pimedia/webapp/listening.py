@@ -6,7 +6,7 @@
 - file d'attente retrouvée (getPlayQueue / savePlayQueue), partagée avec les applis qui la gèrent."""
 import time
 
-from .library import as_list, song_row
+from .library.catalog import as_list, song_row
 from .subsonic import Credentials
 
 MAX_QUEUE_SONGS = 5000

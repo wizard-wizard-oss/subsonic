@@ -10,7 +10,7 @@ from ..server.webfiles import WebFiles
 from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
-from .artist_index import ArtistIndexes
+from .library.artists import ArtistIndexes
 from .artist_discogs import ArtistDiscogsLinks
 from .artist_portraits import ArtistPortraits
 from .avatars import Avatars, InvalidAvatar
@@ -50,9 +50,9 @@ from .label_discovery import LabelDiscovery
 from .youtube_versions import YouTubeVersions
 from .music_metadata import MusicSourceError
 from .storage.exploration import ExplorationRepository
-from .folders import FolderNotFound, Folders
-from .library import Library
-from .library_statistics import SubsonicStatistics
+from .library.folders import FolderNotFound, Folders
+from .library.catalog import Library
+from .library.statistics import SubsonicStatistics
 from .listening import Listening
 from .listen_later import ListenLater
 from .recommendations import Recommendations
@@ -78,8 +78,8 @@ from .storage.news import NewsRepository
 from .storage.preferences import PreferenceRepository
 from .storage.uploads import UploadRepository
 from .storage.users import SessionRepository, UserRepository
-from .incoming import IncomingSorter
-from .layout import MusicTree
+from .library.incoming import IncomingSorter
+from .library.files import LibraryFiles
 from .upload_attribution import UploadAttribution
 from .uploads import UploadError, Uploads, incoming_dir
 from .versions import read_releases
@@ -172,12 +172,12 @@ class WebApplication:
         self.listening = Listening(self.subsonic)
         self.avatars = Avatars(AvatarRepository(self.db), self.users, self.subsonic)
         self.radios = Radios(self.subsonic)
-        library = MusicTree(self.config.music_dir, incoming_dir(self.config.music_dir, self.config.incoming_name))
-        self.uploads = Uploads(self.subsonic, self.users, library, UploadRepository(self.db))
+        library_files = LibraryFiles(self.config.music_dir, incoming_dir(self.config.music_dir, self.config.incoming_name))
+        self.uploads = Uploads(self.subsonic, self.users, library_files, UploadRepository(self.db))
         self.upload_attribution = UploadAttribution(self.uploads, self.subsonic)
         self.covers = Covers(self.folders, self.config.music_dir, LastFmAlbums(JsonFetcher(), self.config.lastfm_api_key),
                              ImageDownloader())
-        self.incoming = IncomingSorter(library, self.config.incoming_wait_hours, self.uploads.scan_as_admin)
+        self.incoming = IncomingSorter(library_files, self.config.incoming_wait_hours, self.uploads.scan_as_admin)
         videos = YouTubeVideoRepository(self.db, KEPT_SECONDS)
         self.extmusic = ExternalMusic(self.config, SearchMemory(ExtSearchRepository(self.db, KEPT_SECONDS),
                                                                 ExtSearchRepository(self.db, None), videos), videos)

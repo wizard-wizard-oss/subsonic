@@ -5,6 +5,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.10.3"
+  date: 2026-11-18
+  title: "Les envois retrouvent leurs artistes"
+  changes:
+    - "Les albums envoyés ou en attente dans Incoming rejoignent leur artiste même si le nom reçu est en minuscules. Le dossier de l’artiste garde son nom."
+    - "Les nouveaux dossiers d’artistes et d’albums reçoivent une majuscule à chaque mot, en conservant les accents et les autres majuscules."
+    - "Les variantes latines comme ø/o sont reconnues. Si plusieurs dossiers correspondent, l’album reste dans Incoming pour être vérifié."
+
 - version: "1.10.2"
   date: 2026-11-17
   title: "Le style sous les albums"

@@ -20,7 +20,7 @@ recherche est désactivée (message dans la fenêtre) ; l'adresse d'image marche
 ## Où est le code
 - `pimedia/webapp/covers.py` : `Covers` (dossier de l'album, écriture, copie de secours), `LastFmAlbums` (`album.getinfo` +
   `album.search`), `ImageDownloader` (garde-fous).
-- `Folders.album_path` (`folders.py`) : chemin « Artiste/Album » lu sur le `path` des titres ou dossiers de disques de Subsonic.
+- `Folders.album_path` (`library/folders.py`) : chemin « Artiste/Album » lu sur le `path` des titres ou dossiers de disques de Subsonic.
 - `controllers/covers.py` ; routes `GET /api/cover/status`, `GET /api/cover/search?artist=&album=`, `POST /api/cover/save`
   `{albumId, url}` (droit `upload`, CSRF). Erreurs : clés `cover.*` (`i18n/fr.yaml`, section `webapp.cover`).
 - Interface : `web-pc/static/js/cover.js` (fenêtre), crayon dans `views.js` (`coverWithPencil`), styles dans `views.css`.

@@ -1,39 +1,11 @@
 """Bibliothèque Subsonic (API ID3 ; pages artiste et album : voir folders.py) vue par l'utilisateur connecté : notes et écoutes viennent de Subsonic,
 les commentaires de la base du site."""
-import threading
-import time
 from datetime import date
 
-from ..shared.text import normalize
-from .entities import album_topic
-from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
-
-
-class TtlCache:
-    """Petit cache mémoire : la liste des artistes ne change pas à chaque clic."""
-
-    def __init__(self, seconds, clock=time.time):
-        self.seconds, self.clock = seconds, clock
-        self._items = {}
-        self._lock = threading.Lock()
-
-    def get(self, key, compute):
-        now = self.clock()
-        with self._lock:
-            hit = self._items.get(key)
-            if hit and now - hit[0] < self.seconds:
-                return hit[1]
-        value = compute()
-        with self._lock:
-            self._items[key] = (now, value)
-            if len(self._items) > 2000:
-                self._items.clear()
-        return value
-
-    def forget(self, prefix):
-        with self._lock:
-            for key in [k for k in self._items if k[0] == prefix]:
-                del self._items[key]
+from ...shared.text import normalize
+from ..entities import album_topic
+from ..subsonic import Credentials, SubsonicError, SubsonicUnreachable
+from .cache import TtlCache
 
 
 def as_list(value):

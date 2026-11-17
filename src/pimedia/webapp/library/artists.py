@@ -12,11 +12,12 @@ changé). Subsonic peut limiter les dossiers de musique d'un compte : il y a une
 import threading
 import time
 
-from ..shared.text import normalize
-from .entities import ArtistIndex
+from ...shared.text import normalize
+from ..entities import ArtistIndex
+from ..subsonic import SLOW_TIMEOUT, Credentials, SubsonicError, SubsonicUnreachable
+from .cache import TtlCache
+from .catalog import as_list, mac_leftover, text
 from .folders import folder_ref
-from .library import TtlCache, as_list, mac_leftover, text
-from .subsonic import SLOW_TIMEOUT, Credentials, SubsonicError, SubsonicUnreachable
 
 # Marge pour la première comparaison : l'horloge de Subsonic peut avoir un peu d'avance sur la nôtre.
 CLOCK_MARGIN_MS = 10 * 60 * 1000

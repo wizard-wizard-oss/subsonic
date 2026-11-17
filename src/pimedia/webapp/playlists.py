@@ -6,7 +6,7 @@ connexion) et note de son côté qui a ajouté chaque titre, que Subsonic ne sai
 
 Titres d'ailleurs (YouTube, SoundCloud, Jamendo) : Subsonic ne peut pas les garder. Le site les garde à côté et les
 montre à leur place ; les applications Subsonic ne voient que les titres Subsonic de la playlist."""
-from .library import as_list, song_row
+from .library.catalog import as_list, song_row
 from .subsonic import Credentials, SubsonicError
 
 BAD_CREDENTIALS = 40

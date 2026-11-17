@@ -82,5 +82,14 @@ class DependencyRulesTest(unittest.TestCase):
         self.assert_never_imports("server", ["pimedia.webapp"])
         self.assert_never_imports("menu", ["pimedia.webapp"])
 
+    def test_library_access_does_not_depend_on_http_or_upload_workflows(self):
+        self.assert_never_imports("webapp/library", ["pimedia.webapp.app", "pimedia.webapp.controllers",
+                                                     "pimedia.webapp.uploads"])
+
+    def test_library_naming_does_not_depend_on_files_or_catalogue(self):
+        modules = imports_of("webapp/library")["webapp/library/naming.py"]
+        self.assertFalse(any(module.startswith("pimedia.webapp.") for module in modules), modules)
+        self.assertIn("pimedia.shared.text", modules)
+
     def test_the_rule_is_really_checked(self):
         self.assertIn("pimedia.shared.external", imports_of("server")["server/external.py"])

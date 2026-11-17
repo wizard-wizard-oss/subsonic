@@ -13,6 +13,15 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
   Un seul endroit assemble tout (`app.py`).
 
 ## Données
+- **API Subsonic en priorité** : pour la bibliothèque musicale et les fonctions gérées par Subsonic, utiliser son API
+  au maximum (navigation, recherche, métadonnées, lecture, mix, favoris, notes, playlists…). Réutiliser les clients
+  existants ; éviter un accès direct à ses fichiers ou à sa base interne lorsqu'une opération est couverte par l'API.
+- **Les tags restent dans les fichiers audio**, puis sont indexés et exposés par Subsonic. Ne pas créer dans la base
+  du site une copie des tags, un historique de leurs valeurs ou un second catalogue musical sans décision explicite.
+  Les données propres au site et les caches techniques existants gardent leurs responsabilités distinctes.
+- Si l'API ne couvre pas une opération nécessaire, limiter l'accès aux fichiers à ce besoin : par exemple l'écriture
+  des tags, avec lecture ciblée des champs que l'API n'expose pas et préservation des autres métadonnées. Après une
+  correction, demander une réindexation à Subsonic, puis relire et vérifier les données par son API.
 - Tables et colonnes en anglais, migrations numérotées (`schema.py`), jamais modifier une migration publiée.
 - Entités en dataclasses avec `to_api()` ; pas de dictionnaires qui traînent entre les couches.
 - Secrets dans `.env` (hors code, hors archive) ; jamais de mot de passe en base (jeton Subsonic seulement).

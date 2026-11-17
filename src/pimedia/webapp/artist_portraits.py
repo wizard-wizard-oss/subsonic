@@ -3,7 +3,7 @@ import urllib.parse
 
 from .artist_entities import ArtistImage
 from .lastfm import LASTFM_BLANK
-from .library import TtlCache
+from .library.cache import TtlCache
 from .music_metadata import MusicSourceError
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 

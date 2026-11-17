@@ -7,7 +7,8 @@ est le « parent » de ses titres ; pour un album en plusieurs disques (CD1/, CD
 from concurrent.futures import ThreadPoolExecutor
 
 from .entities import RatingSummary
-from .library import TtlCache, as_list, text
+from .library.cache import TtlCache
+from .library.catalog import as_list, text
 from .subsonic import Credentials
 
 PARALLEL = 4            # appels Subsonic simultanés : on ménage le serveur

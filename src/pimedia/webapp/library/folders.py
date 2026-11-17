@@ -1,5 +1,5 @@
 """Pages artiste et album tirées des DOSSIERS de la bibliothèque (getMusicDirectory), pas des tags ID3 : un dossier par
-artiste (Artiste/Album/titre, voir layout.py), donc un seul « Dälek » même si les tags disent aussi « Dalek ».
+artiste (Artiste/Album/titre, voir files.py), donc un seul « Dälek » même si les tags disent aussi « Dalek ».
 
 Les identifiants de dossier sont préfixés « f » (« f123 ») : dans Subsonic d'origine, dossiers et éléments ID3 ont des
 numéros indépendants qui peuvent se croiser. Un identifiant ID3 (lien venu d'une liste d'albums, d'une recherche, d'un
@@ -8,8 +8,9 @@ garde son identifiant ID3 (commentaires, favori, note, téléchargement, partage
 la radio, le mix et les artistes proches."""
 from concurrent.futures import ThreadPoolExecutor
 
-from .library import TtlCache, song_row, text, visible
-from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
+from ..subsonic import Credentials, SubsonicError, SubsonicUnreachable
+from .cache import TtlCache
+from .catalog import song_row, text, visible
 
 PREFIX = "f"
 NOT_FOUND = 70

@@ -1,5 +1,5 @@
 """Rattrapage d'Incoming : ce qui y attend (envoyé hors nomenclature, ou déposé à la main) et qu'on a corrigé sur place en
-Incoming/Artiste/Album prend sa place dans la bibliothèque (layout.MusicTree), sans attendre un nouvel envoi. Un album n'est
+Incoming/Artiste/Album prend sa place dans la bibliothèque (files.LibraryFiles), sans attendre un nouvel envoi. Un album n'est
 rangé qu'une fois resté sans changement pendant le délai réglé (on est peut-être encore en train de le renommer).
 Après un rangement, Subsonic scanne."""
 import os

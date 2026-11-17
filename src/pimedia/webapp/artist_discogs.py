@@ -4,7 +4,7 @@ import time
 
 from .artist_entities import ArtistContext, ArtistDiscogsLink
 from .discogs import discogs_id
-from .folders import FolderNotFound
+from .library.folders import FolderNotFound
 from .music_metadata import MusicSourceError
 
 

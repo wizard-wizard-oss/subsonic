@@ -214,6 +214,13 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 
 ## Avant de déployer
 
+La 1.10.3 en préparation regroupe les accès du site dans `pimedia/webapp/library/` et ajoute `anyascii==0.3.3`
+aux dépendances PC pour compléter les comparaisons des lettres latines. Reconstruire l’image web avec le script
+habituel ; les déplacements de modules nécessitent d’envoyer l’arbre complet, pas une copie isolée de `layout.py`.
+Aucune migration, aucune variable de configuration ni modification des dépendances du Pi. Le code partagé reste
+sans dépendance à AnyASCII. Les noms dans les autres alphabets sont conservés. Version non déployée à ce stade.
+
+
 La 1.10.2 remplace les écoutes par le style sur les cartes d’albums, sauf dans « Plus écoutés » ; la fiche
 album garde les écoutes. Aucun changement de schéma, de configuration ou de dépendance.
 Publiée le 17/11/2026 sur https://music2.foos.fr par `deploy/pc/push.sh`, après 71 tests Python ciblés,

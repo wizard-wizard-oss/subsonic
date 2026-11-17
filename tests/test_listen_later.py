@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from pimedia.storage.database import Database
-from pimedia.webapp.folders import FolderNotFound
+from pimedia.webapp.library.folders import FolderNotFound
 from pimedia.webapp.listen_later_entities import ListeningTarget
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.recommendations import READ_BATCH_SIZE

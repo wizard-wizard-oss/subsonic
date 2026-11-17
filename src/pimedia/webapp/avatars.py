@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 
 from ..shared.external import USER_AGENT
-from .library import TtlCache
+from .library.cache import TtlCache
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 MAX_BYTES = 300 * 1024
