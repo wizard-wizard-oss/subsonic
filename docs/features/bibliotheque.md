@@ -25,6 +25,29 @@
 - **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
 - **À écouter** : marque-pages et recommandations d’artistes/albums, indépendants des cœurs. Boutons sur les fiches ; voir [listen-later](listen-later.md).
 
+### Style sur les cartes d’albums (1.10.2)
+
+Dans les grilles de l’accueil, des artistes, d’Albums (y compris les pages suivantes), de la recherche et des favoris,
+le style musical remplace le nombre d’écoutes. Les deux vues « Plus écoutés » (accueil et onglet Albums) conservent
+le compteur à cet emplacement. La fiche album garde son style et « Écouté N fois ». Étoiles et commentaires restent
+visibles ; le style occupe une ligne entière pour rester lisible aussi en grille compacte. Les styles longs sont
+tronqués avec leur texte complet au survol.
+
+Le style vient du champ `genre` fourni par Subsonic, transmis dans les trois sources de cartes : listes ID3,
+dossiers d’un artiste et albums les mieux notés (genre du dossier, sinon du premier titre déjà chargé).
+Si le style manque, aucune mention de remplacement ni compteur d’écoutes n’est ajouté. Aucun appel Subsonic
+supplémentaire, changement de tags ou migration. Les cartes Discogs gardent leurs métadonnées propres.
+
+Code : `webapp/library.py`, `folders.py`, `ratings.py`, `web-pc/static/js/views.js` et `static/css/views.css`.
+Tests : `tests/test_webapp.py` (style de toutes les listes, genres absents ou numériques), `tests/e2e_webapp.js`
+(accueil, onglets et pagination, artiste, recherche, favoris, étoiles/commentaires et écoutes sur la fiche).
+Validation locale : 71 tests Python ciblés et 344 contrôles du parcours PC passent. Rendu Chrome vérifié avec
+styles longs, étoiles et commentaires, en grilles normale et compacte à 1440, 390 et 320 px.
+Déployée le 17/11/2026 sur https://music2.foos.fr : santé HTTPS et conteneur vérifiés, version publique 1.10.2,
+216 fichiers conformes aux sources testées, JavaScript/CSS servis avec leur nouvelle empreinte de cache.
+SQLite reste intègre au schéma 19 et les données sont conservées ; sauvegarde et image précédente disponibles.
+Le parcours connecté à la production n’a pas été rejoué. Recharger la page avec Cmd+Maj+R.
+
 ### Dossiers ou tags (`pimedia/webapp/folders.py`)
 La bibliothèque est rangée `Artiste/Album/titre` (voir `envoi-fichiers.md`) : la barre des artistes, la page artiste et la
 page album suivent ces **dossiers** (`getIndexes`, `getMusicDirectory`). Ainsi « Dälek » n'apparaît qu'une fois même si

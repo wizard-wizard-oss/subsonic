@@ -78,7 +78,7 @@ def visible(items):
 def album_card(raw):
     return {"id": raw.get("id"), "name": text(raw.get("name") or raw.get("title"), "?"), "artist": text(raw.get("artist")),
             "artistId": raw.get("artistId", ""), "year": raw.get("year"), "coverId": raw.get("coverArt", ""),
-            "songCount": raw.get("songCount", 0), "starred": bool(raw.get("starred")),
+            "songCount": raw.get("songCount", 0), "starred": bool(raw.get("starred")), "genre": text(raw.get("genre")),
             "plays": int(raw.get("playCount") or 0)}
 
 

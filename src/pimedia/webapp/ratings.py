@@ -73,7 +73,7 @@ class Ratings:
         return {"id": song["albumId"], "name": text(folder.get("album") or folder.get("title"), "?"),
                 "artist": text(folder.get("artist")), "artistId": song.get("artistId", ""), "year": folder.get("year"),
                 "coverId": folder.get("coverArt", ""), "songCount": 0, "starred": bool(folder.get("starred")),
-                "plays": int(folder.get("playCount") or 0),
+                "genre": text(folder.get("genre") or song.get("genre")), "plays": int(folder.get("playCount") or 0),
                 "rating": RatingSummary(song["albumId"], int(folder.get("userRating") or 0),
                                         float(folder.get("averageRating") or 0)).to_api()}
 

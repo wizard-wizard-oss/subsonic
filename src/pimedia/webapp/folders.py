@@ -70,7 +70,7 @@ class Folders:
         return {"id": folder_ref(child["id"]), "name": text(child.get("title") or child.get("album"), "?"),
                 "artist": text(artist_dir.get("name")), "artistId": folder_ref(artist_folder), "year": child.get("year"),
                 "coverId": child.get("coverArt", ""), "songCount": 0, "starred": bool(child.get("starred")),
-                "plays": int(child.get("playCount") or 0), "comments": 0}
+                "genre": text(child.get("genre")), "plays": int(child.get("playCount") or 0), "comments": 0}
 
     def _artist_folder(self, user, id3_artist):
         """Dossier d'un artiste ID3 : celui qui contient le dossier de son premier album."""

@@ -214,6 +214,19 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 
 ## Avant de déployer
 
+La 1.10.2 remplace les écoutes par le style sur les cartes d’albums, sauf dans « Plus écoutés » ; la fiche
+album garde les écoutes. Aucun changement de schéma, de configuration ou de dépendance.
+Publiée le 17/11/2026 sur https://music2.foos.fr par `deploy/pc/push.sh`, après 71 tests Python ciblés,
+344 contrôles du parcours PC jsdom et rendu Chrome (grilles normale/compacte, 1440/390/320 px).
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.10.2-20261117T202115Z` ;
+image précédente : `pimedia-web:pre-1.10.2-20261117t202115z`.
+SSH utilise la clé déjà prévue par le projet avec `UseKeychain=yes`, sans modifier la configuration SSH.
+Le conteneur et HTTPS sont sains ; version 1.10.2, 216 fichiers applicatifs et ressources publiques vérifiés.
+JavaScript/CSS servis avec l’empreinte `a94804d512`. SQLite reste au schéma 19, intègre ; comptes et
+données existantes conservés. Aucun compte ou jeton utilisateur utilisé pour ces vérifications.
+La suite complète, les autres parcours et la navigation connectée en production n’ont pas été rejoués.
+Recharger avec Cmd+Maj+R.
+
 La 1.10.1 ne change ni le schéma ni la configuration. Elle relie le lecteur aux routes existantes de file
 Subsonic et ajoute une copie locale par compte. Publiée le 12/11/2026 sur https://music2.foos.fr après
 694 tests Python et les sept parcours jsdom ; les deux parcours PC ont été rejoués sur le code final.

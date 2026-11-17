@@ -169,6 +169,9 @@ function makeEventSource(jar) {
   check("accueil : derniers albums", await until(() => $$(".album-card").length >= 3));
   check("accueil : plus écoutés, avec « Écouté 12 fois »", await until(() => $(".most-played .play-count") &&
         $(".most-played .play-count").textContent === "Écouté 12 fois"));
+  check("accueil : style à la place des écoutes sur les derniers albums",
+    $$("#main > section:not(.most-played) .album-genre").map(n => n.textContent).join() === "Electronic,Pop,Pop" &&
+    $$(".album-card .play-count").every(n => n.closest(".most-played")) && !$(".most-played .album-genre"));
 
   // --- pochettes : la flèche existante lit l'album, la carte reste un lien séparé ---
   const homeAlbum = $$(".album-card").find(card => card.querySelector(".album-name").textContent === "Arrival");
@@ -210,13 +213,47 @@ function makeEventSource(jar) {
         $(".tabs .tab.active").textContent === "Plus écoutés"));
   check("albums : triés par écoutes", await until(() => $$(".album-card .album-name").map(n => n.textContent).join() ===
         "Arrival,Post,Waterloo"));
+  check("albums : compteurs conservés uniquement dans Plus écoutés",
+    $$(".album-card .play-count").map(n => n.textContent).join() === "Écouté 12 fois,Écouté 7 fois,Écouté 3 fois" &&
+    !$(".album-genre"));
   check("albums : lien Albums surligné", $$(".topnav a.active").map(a => a.getAttribute("href")).join() === "#/albums/newest");
+  w.location.hash = "#/albums/newest";
+  check("albums : style sur les nouveautés, sans nombre d'écoutes", await until(() =>
+    $$(".album-genre").map(n => n.textContent).join() === "Electronic,Pop,Pop") && !$(".play-count"));
+  const beforeAlbumPage = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeAlbumPage.call(this, url,
+      url === "/api/albums" ? Object.assign({}, params, {page: 0}) : params);
+    return url === "/api/albums" ? Object.assign({}, data, {hasMore: params.page === 0}) : data;
+  };
+  for (const kind of ["frequent", "recent"]) {
+    w.location.hash = "#/albums/" + kind;
+    await until(() => $(".tabs .tab.active").getAttribute("href") === "#/albums/" + kind &&
+      $$(".album-card").length === 3 && !$("button.more").hidden);
+    $("button.more").click();
+    check("albums : pagination conserve " + (kind === "frequent" ? "les écoutes" : "le style"),
+      await until(() => $("button.more").hidden && $$(".album-card").length === 6) &&
+      $$(kind === "frequent" ? ".play-count" : ".album-genre").length === 6 &&
+      !$(kind === "frequent" ? ".album-genre" : ".play-count"));
+  }
+  app.api.get = async function(url, params) {
+    const data = await beforeAlbumPage.call(this, url, params);
+    return url === "/api/albums" ? Object.assign({}, data, {
+      albums: data.albums.map(a => Object.assign({}, a, {genre: ""}))}) : data;
+  };
+  w.location.hash = "#/albums/random";
+  check("albums : style absent, aucune mention ni écoutes de remplacement", await until(() =>
+    $(".tabs .tab.active").getAttribute("href") === "#/albums/random" && $$(".album-card").length === 3) &&
+    !$(".album-genre") && !$(".play-count"));
+  app.api.get = beforeAlbumPage;
   w.location.hash = "#/albums/genre";
   check("albums : genres en pastilles, avec leur nombre", await until(() => $$(".chips.big .chip").length === 2) &&
         $(".chips.big .chip").textContent === "Pop 2");
   $(".chips.big .chip").click();
   w.location.hash = $(".chips.big .chip").getAttribute("href");
   check("albums : un genre", await until(() => $$(".album-card").length === 2 && $(".section-head h2").textContent === "Pop"));
+  check("albums : style aussi dans la liste par genre", $$(".album-genre").every(n => n.textContent === "Pop") &&
+    $$(".album-genre").length === 2 && !$(".play-count"));
   w.location.hash = "#/albums/decade/1970";
   check("albums : années 1970", await until(() => $(".section-head h2") && $(".section-head h2").textContent === "Années 1970" &&
         $$(".album-card").length === 2));
@@ -238,6 +275,7 @@ function makeEventSource(jar) {
   check("artiste : « Créer un mix » mène au créateur", $(".artist-mix").getAttribute("href") === "#/mix/ar1");
   check("artiste : albums = ses dossiers, liens vers le dossier", $$(".album-card .album-name").map(n => n.textContent).join() ===
         "Waterloo,Arrival" && $(".album-card .album-link").getAttribute("href").startsWith("#/album/fdir-"));
+  check("artiste : style sous les albums", $$(".album-genre").map(n => n.textContent).join() === "Pop,Pop" && !$(".play-count"));
 
   // --- album, étoiles ---
   w.location.hash = "#/album/al1";
@@ -758,9 +796,18 @@ function makeEventSource(jar) {
   key(d.body, "Escape");
   w.location.hash = "#/search/post";
   check("recherche : album trouvé", await until(() => $$(".album-card").some(c => c.textContent.includes("Post"))));
+  check("recherche : style sans nombre d'écoutes", $(".album-genre").textContent === "Electronic" && !$(".play-count"));
+  await app.api.post("/api/favorite", {kind: "album", id: "al3", on: true});
+  w.location.hash = "#/favorites";
+  check("favoris : style sous l'album", await until(() => $(".album-genre") &&
+    $(".album-genre").textContent === "Electronic") && !$(".play-count"));
+  await app.api.post("/api/favorite", {kind: "album", id: "al3", on: false});
   w.location.hash = "#/";
   check("accueil : album commenté listé", await until(() => $$(".discussed-row").length === 1));
   check("accueil : mieux notés", $$(".album-card .stars").length >= 1);
+  check("accueil : style, étoiles et commentaires conservés sur les mieux notés",
+    $(".home-columns .album-genre").textContent === "Pop" && $(".home-columns .album-meta .stars") &&
+    $(".home-columns .album-meta .comment-count") && !$(".home-columns .play-count"));
 
   // --- Mix : mix rapides et créateur (comme sur le Pi) ---
   w.location.hash = "#/mix";

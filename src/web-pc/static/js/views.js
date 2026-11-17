@@ -9,14 +9,18 @@ const Views = (() => {
     return el("div.section-head", {}, el("h2", {text}), extra || null);
   }
 
-  /** Grille de pochettes ; sous chaque album : moyenne des étoiles (si connue), écoutes et commentaires. */
-  function albumGrid(albums, options) {
+  /** Grille de pochettes : style, étoiles et commentaires ; écoutes uniquement pour « Plus écoutés ». */
+  function albumGrid(albums, options = {}) {
     const grid = el("div.album-grid" + (App.preferences.album_grid === "small" ? ".small" : ""));
     if (!albums.length) grid.appendChild(el("p.muted", {text: App.t("home.empty")}));
     for (const album of albums) {
       const meta = el("div.album-meta");
       if (album.rating && album.rating.average) meta.appendChild(new StarRating(album.rating, {readonly: true, small: true}).element);
-      if (album.plays) meta.appendChild(el("span.play-count", {text: playCount(album.plays)}));
+      if (options.showPlays) {
+        if (album.plays) meta.appendChild(el("span.play-count", {text: playCount(album.plays)}));
+      } else if (album.genre) {
+        meta.appendChild(el("span.album-genre", {text: album.genre, title: album.genre}));
+      }
       if (album.comments) meta.appendChild(el("span.comment-count", {title: App.plural("album.comments_count", album.comments)},
                                               App.icon("chat", 12), " " + album.comments));
       const play = App.can("stream") ? App.setIcon(el("button.play-big.album-card-play", {
@@ -27,7 +31,7 @@ const Views = (() => {
         el("a.album-link", {href: "#/album/" + encodeURIComponent(album.id), title: album.name},
           App.cover(album.coverId, 180, album.name),
           el("strong.album-name", {text: album.name}),
-          options && options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
+          options.hideArtist ? null : el("span.album-artist", {text: album.artist || ""}),
           album.year ? el("span.album-year", {text: album.year}) : null,
           album.uploadedBy ? el("span.album-uploader.muted", {text: App.t("upload.by", {name: album.uploadedBy.username})}) : null,
           meta), play);
@@ -232,7 +236,7 @@ const Views = (() => {
         App.append(main, [
           LibraryStatistics.render(data.statistics),
           el("section", {}, heading(App.t("home.newest")), albumGrid(data.newest)),
-          el("section.most-played", {}, heading(App.t("home.most_played")), albumGrid(data.mostPlayed)),
+          el("section.most-played", {}, heading(App.t("home.most_played")), albumGrid(data.mostPlayed, {showPlays: true})),
           el("div.home-columns", {},
             el("section", {}, heading(App.t("home.top_rated")), albumGrid(data.topRated)),
             el("section", {}, heading(App.t("home.discussed")), discussedList(data.discussed)))]);
@@ -489,7 +493,7 @@ const Views = (() => {
       try {
         const data = await App.api.get("/api/albums", {kind, value: route.value || "", page: this.page});
         if (route.stale) return;
-        const cards = albumGrid(data.albums);
+        const cards = albumGrid(data.albums, {showPlays: kind === "frequent"});
         if (this.page === 0) {
           this.grid.replaceWith(cards);
           this.grid = cards;

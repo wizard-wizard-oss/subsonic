@@ -1,5 +1,25 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Style sur les cartes d’albums, 1.10.2 (17/11/2026, déployée et vérifiée)** : les grilles
+de l’accueil, d’Albums, des artistes, de la recherche et des favoris affichent le style musical à la place
+des écoutes. Compteurs conservés uniquement dans les deux vues « Plus écoutés » et dans la fiche album.
+Champ `genre` transmis par les listes ID3, les dossiers et les mieux notés, sans requête supplémentaire ;
+style absent laissé vide et styles longs tronqués avec texte complet au survol. Le style dispose d’une ligne entière,
+y compris en grille compacte ; étoiles et commentaires conservés.
+Validation : 71 tests Python ciblés passent, ainsi que les 344 contrôles du parcours PC jsdom. Rendu Chrome
+vérifié en grilles normale et compacte à 1440, 390 et 320 px, avec styles longs, étoiles et commentaires.
+`git diff --check` passe. Version et fiche [Bibliothèque](features/bibliotheque.md) mises à jour.
+La suite complète et les autres parcours n’ont pas été rejoués.
+Publication sur https://music2.foos.fr : conteneur sain, HTTPS et version publique 1.10.2 vérifiés ;
+216 fichiers applicatifs identiques aux sources testées, seuls les six fichiers attendus changent.
+JavaScript et CSS publics conformes, servis avec l’empreinte `a94804d512`. Listes protégées par session,
+aucune erreur de démarrage. SQLite intègre au schéma 19 inchangé ; 13 comptes, 167 messages, quatre
+marque-pages, cinq recommandations et les six envois/six albums attribués conservés.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.10.2-20261117T202115Z` ;
+image précédente : `pimedia-web:pre-1.10.2-20261117t202115z`. Déploiement par `deploy/pc/push.sh`,
+avec la clé prévue via le trousseau macOS ; aucune configuration SSH persistante ajoutée.
+Parcours connecté à la production non rejoué ; aucun jeton de compte utilisé. Recharger avec Cmd+Maj+R.
+
 **Persistance de la file d'écoute, 1.10.1 (12/11/2026, déployée et vérifiée)** : vérification de l'API officielle
 Subsonic (`getPlayQueue` / `savePlayQueue`, depuis 1.12.0) et branchement des routes existantes au lecteur web.
 Liste, ordre, titre courant et position restaurés en pause après rafraîchissement ou reconnexion, y compris depuis

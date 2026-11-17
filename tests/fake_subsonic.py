@@ -248,7 +248,8 @@ class FakeSubsonicId3(FakeSubsonic):
         if artist:
             return {"id": folder_id, "name": artist["name"], "starred": "2026-01-01" if folder_id in self.starred_folders else None,
                     "child": [{"id": album_folder(a["id"]), "isDir": True, "title": a["name"], "parent": folder_id,
-                               "year": a.get("year"), "coverArt": a.get("coverArt"), "playCount": PLAY_COUNTS.get(a["id"], 0)}
+                               "year": a.get("year"), "genre": a.get("genre"), "coverArt": a.get("coverArt"),
+                               "playCount": PLAY_COUNTS.get(a["id"], 0)}
                               for a in artist["album"]]}
         album_id, _, disc = folder_id[len("dir-"):].partition("-")
         album = _id3_album(album_id)
@@ -286,7 +287,7 @@ class FakeSubsonicId3(FakeSubsonic):
                 if folder.get("averageRating"):
                     rated.append({"id": folder["id"], "parent": folder["parent"], "isDir": True,
                                   "title": album["name"], "album": album["name"], "artist": album["artist"],
-                                  "year": album.get("year"), "coverArt": album.get("coverArt"),
+                                  "year": album.get("year"), "genre": album.get("genre"), "coverArt": album.get("coverArt"),
                                   "playCount": folder["playCount"], **self._rating_attributes(folder["id"], p.get("u"))})
         rated.sort(key=lambda f: -f["averageRating"])
         h.reply_json({"albumList": {"album": rated[:int(p.get("size", "10"))]}})
