@@ -5,7 +5,7 @@ et un nom latin doit produire une proposition à vérifier, jamais une fusion ni
 seule base. Les noms et dossiers d’origine restent conservés. Le rangement actuel respecte déjà cette limite ;
 la génération et l’interface de ces propositions restent à implémenter.
 
-**Nomenclature et organisation de la bibliothèque, 1.10.3 (17/11/2026, préparation locale)** : les accès à la
+**Nomenclature et organisation de la bibliothèque, 1.10.3 (18/11/2026, déployée et vérifiée)** : les accès à la
 bibliothèque du site sont regroupés dans le package `webapp/library/` : catalogue Subsonic, navigation par dossiers,
 index des artistes, statistiques, fichiers, rangement d’Incoming et nomenclature. `Library` reste le catalogue
 consulté via l’API ; `LibraryFiles` porte les opérations sur les fichiers ; `LibraryNaming` sépare normalisation
@@ -26,7 +26,18 @@ Validation finale : 725 tests Python complets passent sous Python 3.12.14, ainsi
 (389 contrôles). Tests multilingues, priorité des correspondances, ambiguïtés et collisions avec des fichiers à
 destination couverts. La garde de destination conserve l’envoi dans Incoming au lieu de perdre son staging.
 Docker local indisponible ; dépendance AnyASCII 0.3.3 isolée pour les tests, déclarée dans requirements.txt.
-`git diff --check` passe. Ni déplacement de l’album ni déploiement effectués.
+`git diff --check` passe. Publication du commit `c52cf40` sur https://music2.foos.fr par le script habituel,
+depuis une archive Git figée pour exclure les autres travaux en cours. HTTPS, version publique 1.10.3, ressources
+publiques et les 219 fichiers applicatifs correspondent au commit ; anciens modules absents, neuf modules du
+package importables et AnyASCII 0.3.3 vérifié dans le conteneur. SQLite reste au schéma 19, intègre, avec les
+comptages de la sauvegarde conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.10.3-20261117T231434Z` ;
+image précédente : `pimedia-web:pre-1.10.3-20261117t231434z`.
+Le rattrapage d’Incoming a rangé automatiquement `Le$/Lost In Japan` et `Trentemøller/Trentemøller` dès le redémarrage.
+Les dix MP3 de Trentemøller (104194801 octets) gardent leurs empreintes SHA-256 ; source Incoming disparue.
+Scan terminé et dix titres au nouveau chemin confirmés par l’API Subsonic avec un jeton administrateur existant
+utilisé uniquement pour ces lectures, sans exposition ni modification de compte. L’album apparaît aussi dans
+les nouveautés (`getAlbumList2`). Limite constatée : `search3` ne retourne pas encore le nouvel album après le
+scan ; ce point de recherche reste à examiner séparément. PR différée à la demande utilisateur.
 Fiches : [Envoi de fichiers](features/envoi-fichiers.md), [Bibliothèque](features/bibliotheque.md),
 [Architecture](architecture/README.md). Les anciens chemins cités plus bas dans l’historique reflètent les versions de l’époque.
 

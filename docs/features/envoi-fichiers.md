@@ -159,7 +159,12 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
 Correctif 1.10.3 préparé localement le 17/11/2026 : les 725 tests Python complets et les trois parcours PC jsdom
 (389 contrôles) passent sous Python 3.12.14 et jsdom 25.0.1. Docker local indisponible. AnyASCII 0.3.3 est testé
 comme dépendance PC ; les clés natives, les ambiguïtés et les destinations déjà occupées sont couvertes.
-Pas encore déployé ; aucun album de production déplacé.
+Version 1.10.3 publiée le 18/11/2026 sur https://music2.foos.fr depuis le commit `c52cf40` ; les 219 fichiers
+applicatifs et AnyASCII 0.3.3 sont vérifiés. Le rattrapage a placé automatiquement `Trentemøller/Trentemøller` :
+dix MP3, 104194801 octets et empreintes SHA-256 identiques. Scan terminé et dix titres au nouveau chemin vérifiés
+par l’API Subsonic ; l’album apparaît aussi dans les nouveautés. La recherche ID3 (`search3`) ne le renvoie pas
+encore lors du contrôle après scan, point laissé à examiner séparément. Sauvegarde et image de retour arrière
+consignées dans `docs/DEPLOIEMENT.md`.
 
 - `tests/test_library_naming.py` : initiales, caractères latins non décomposables, arabe, autres alphabets et signes conservés.
 - `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, casse reçue quelconque),
