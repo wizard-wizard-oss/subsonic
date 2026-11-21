@@ -98,10 +98,11 @@ img.cover.empty { background: linear-gradient(135deg, var(--bg-hover), var(--bg-
 
 /* fenêtres */
 .veil { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: grid; place-items: center; z-index: 50; padding: 16px; }
-.dialog { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 14px; width: min(480px, 100%); padding: 18px 22px 22px; }
+.dialog { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 14px; width: min(480px, 100%); padding: 18px 22px 22px;
+  max-height: calc(100dvh - 32px); overflow-y: auto; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; }
-.settings { display: grid; gap: 12px; }
+.settings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .setting { display: grid; grid-template-columns: 1fr 210px; align-items: center; gap: 12px; color: var(--text-soft); }
 .setting.rights { display: block; border-top: 1px solid var(--line); padding-top: 12px; }
 .setting.rights h3 { font-size: 14px; margin: 0 0 6px; color: var(--text); }
@@ -110,6 +111,18 @@ img.cover.empty { background: linear-gradient(135deg, var(--bg-hover), var(--bg-
 .rights-list .yes .mark { color: var(--accent); }
 .rights-list .no { color: var(--text-dim); }
 .setting.check { grid-template-columns: auto 1fr; }
+.song-column-settings { min-width: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+.song-column-settings h3 { font-size: 14px; margin: 0 0 6px; }
+.song-column-settings p { font-size: 12px; line-height: 1.5; margin: 0 0 8px; }
+.song-column-options { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.song-column-options th, .song-column-options td { padding: 5px 4px; text-align: center; }
+.song-column-options th { font-size: 12px; font-weight: 600; color: var(--text-soft); }
+.song-column-options th:first-child { width: 44%; text-align: left; }
+.song-column-options input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+@media (max-width: 480px) {
+  .setting:not(.check):not(.rights) { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .setting select { width: 100%; min-width: 0; }
+}
 .settings-account { justify-self: end; }
 .shortcuts { width: 100%; border-collapse: collapse; }
 .shortcuts td { padding: 6px 4px; border-bottom: 1px solid var(--line); }

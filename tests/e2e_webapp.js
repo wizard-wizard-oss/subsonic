@@ -286,6 +286,76 @@ function makeEventSource(jar) {
         $("tr.song a.song-download").getAttribute("href") === "/api/download?song=s1");
   check("artiste surligné dans la barre", await until(() => $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar1"));
   check("titres de l'album", $$("tr.song").length === 2);
+  // --- colonnes des morceaux : métadonnées propres à chaque piste et réglages séparés ---
+  const genreTable = w.eval(`Views.songTable([
+    {id: "style-1", title: "Premier", genre: "Jazz", disc: 1, track: 7,
+      artist: "Artiste", album: "Album", year: 2024, bitRate: 320, duration: 125, suffix: "flac", size: 1536000},
+    {id: "style-2", title: "Deuxième", genre: "Post-punk / Électro", disc: 1},
+    {id: "style-3", title: "Texte littéral", genre: "<img src=x onerror=alert(1)>", disc: 2},
+    {id: "style-4", title: "Sans style", disc: 2},
+    {id: "style-ext", title: "Ailleurs", ext: "soundcloud", extId: "style-ext", disc: 2}
+  ], {showAlbum: true, albumArtist: "Artiste", addedBy: true, onMove() {}})`);
+  const genreCells = () => Array.from(genreTable.querySelectorAll('td[data-song-column="genre"]'));
+  const discsSpanVisibleColumns = () => Array.from(genreTable.querySelectorAll(".disc-row td")).every(cell =>
+    cell.colSpan === Array.from(genreTable.querySelector("tr.song").children).filter(td => !td.hidden).length);
+  check("styles : propres à chaque morceau et visibles par défaut", app.preferences.browse_genre === true &&
+    genreCells().map(cell => cell.textContent).join("|") === "Jazz|Post-punk / Électro|<img src=x onerror=alert(1)>|—|—" &&
+    genreCells().every(cell => !cell.hidden));
+  check("styles : texte complet accessible, sans interpréter de HTML", !genreTable.querySelector("img[src=x]") &&
+    genreCells()[2].getAttribute("aria-label") === "Style : <img src=x onerror=alert(1)>" &&
+    genreCells()[2].querySelector(".song-genre").title === "Style : <img src=x onerror=alert(1)>");
+  check("styles : tag manquant signalé, y compris pour un titre d'ailleurs",
+    genreCells().slice(3).every(cell => cell.getAttribute("aria-label") === "Style non renseigné") &&
+    discsSpanVisibleColumns());
+  const columnToggle = (root, context, column) => root.querySelector(
+    'input[data-context="' + context + '"][data-column="' + column + '"]');
+  const clickColumnToggle = async (root, context, column) => {
+    const original = app.savePreference;
+    let saved;
+    app.savePreference = (key, value) => { saved = original(key, value); return saved; };
+    try { columnToggle(root, context, column).click(); await saved; }
+    finally { app.savePreference = original; }
+  };
+  $("#open-settings").click();
+  check("réglages : matrice des neuf champs, navigation et file séparées",
+    app.songColumns.join() === "track,artist,album,genre,year,bitrate,duration,format,size" &&
+    $$('.dialog input[data-column]').length === 18 &&
+    app.songColumns.every(column => columnToggle($(".dialog"), "browse", column) &&
+      columnToggle($(".dialog"), "queue", column)) && !columnToggle($(".dialog"), "browse", "title"));
+  check("réglages : choix initiaux conformes à la matrice",
+    app.songColumns.every(column => columnToggle($(".dialog"), "browse", column).checked ===
+      !["format", "size"].includes(column)) &&
+    app.songColumns.every(column => columnToggle($(".dialog"), "queue", column).checked ===
+      !["track", "format", "size"].includes(column)));
+  await clickColumnToggle($(".dialog"), "browse", "genre");
+  check("styles : masqués immédiatement dans les tableaux ouverts", genreCells().every(cell => cell.hidden) &&
+    $$('#main td[data-song-column="genre"]').every(cell => cell.hidden) && discsSpanVisibleColumns());
+  check("styles : choix enregistré pour la navigation uniquement", (await app.api.get("/api/me")).preferences.browse_genre === false &&
+    (await app.api.get("/api/me")).preferences.queue_genre === true);
+  const hiddenGenreTable = w.eval('Views.songTable([{id: "style-hidden", title: "Nouveau", genre: "Rock"}])');
+  check("styles : un nouveau tableau conserve le choix", hiddenGenreTable.querySelector('[data-song-column="genre"]').hidden);
+  hiddenGenreTable.destroy();
+  await clickColumnToggle($(".dialog"), "browse", "genre");
+  check("styles : réaffichés avec les séparateurs de disques alignés", genreCells().every(cell => !cell.hidden) &&
+    discsSpanVisibleColumns() && (await app.api.get("/api/me")).preferences.browse_genre === true);
+  await clickColumnToggle($(".dialog"), "browse", "format");
+  await clickColumnToggle($(".dialog"), "browse", "size");
+  const firstTrack = genreTable.querySelector("tr.song");
+  check("pistes : numéro du tag conservé et absence signalée sans numéro d'ordre",
+    firstTrack.querySelector('[data-song-column="track"]').textContent === "7" &&
+    Array.from(genreTable.querySelectorAll('tr.song [data-song-column="track"]')).slice(1)
+      .every(cell => cell.textContent === "—"));
+  check("colonnes : format, débit, durée et taille sont distincts et affichables",
+    firstTrack.querySelector('[data-song-column="format"]').textContent === "FLAC" &&
+    firstTrack.querySelector('[data-song-column="bitrate"]').textContent.includes("320") &&
+    firstTrack.querySelector('[data-song-column="duration"]').textContent === "2:05" &&
+    firstTrack.querySelector('[data-song-column="size"]').textContent !== "—" &&
+    !firstTrack.querySelector('[data-song-column="format"]').hidden &&
+    !firstTrack.querySelector('[data-song-column="size"]').hidden && discsSpanVisibleColumns());
+  await clickColumnToggle($(".dialog"), "browse", "format");
+  await clickColumnToggle($(".dialog"), "browse", "size");
+  key(d.body, "Escape");
+  genreTable.destroy();
   // --- radio d'un titre : API réelle du faux Subsonic, attente et erreur sans perdre la file ---
   const songRadio = $('tr.song[data-id="s2"] .song-radio');
   check("radio d'un titre : bouton nommé sur chaque morceau Subsonic", $$("tr.song .song-radio").length === 2 &&
@@ -522,6 +592,31 @@ function makeEventSource(jar) {
   check("la souris reste : file d'attente ouverte en bas", await until(() => !$("#queue").hidden) &&
         titlesInQueue() === "Dancing Queen,Knowing Me" && $(".queue-count").textContent.startsWith("2 titres"));
   check("file : titre en cours marqué", $$(".queue-row")[1].classList.contains("current"));
+  const queueBeforeColumns = w.eval('JSON.stringify({ids: App.player.queue.map(song => song.id), index: App.player.index})');
+  check("file : colonnes initiales indépendantes, titre toujours visible",
+    $$('#queue th[data-song-column]').every(cell => cell.hidden === ["track", "format", "size"].includes(cell.dataset.songColumn)) &&
+    $$('#queue td[data-song-column]').every(cell => cell.hidden === ["track", "format", "size"].includes(cell.dataset.songColumn)) &&
+    $$("#queue .col-title").every(cell => !cell.hidden) && !!$("#queue .current .col-title svg"));
+  $("#open-settings").click();
+  await clickColumnToggle($(".dialog"), "queue", "genre");
+  check("file : masquer un champ agit sur l'en-tête et les titres, sans changer la navigation",
+    $$('#queue [data-song-column="genre"]').every(cell => cell.hidden) &&
+    $$('#main [data-song-column="genre"]').every(cell => !cell.hidden) &&
+    w.eval('JSON.stringify({ids: App.player.queue.map(song => song.id), index: App.player.index})') === queueBeforeColumns &&
+    (await app.api.get("/api/me")).preferences.queue_genre === false);
+  for (const column of ["track", "format", "size"]) await clickColumnToggle($(".dialog"), "queue", column);
+  const queueSample = app.queuePanel.row({id: "queue-metadata", title: "Exemple", track: 7, genre: "Jazz",
+    artist: "Artiste", album: "Album", year: 2024, bitRate: 320, duration: 125, suffix: "flac", size: 1536000}, 0);
+  const sampleValue = column => queueSample.querySelector('[data-song-column="' + column + '"]').textContent;
+  check("file : piste, débit, format et taille ont leurs propres colonnes",
+    sampleValue("track") === "7" && sampleValue("bitrate").includes("320") && sampleValue("format") === "FLAC" &&
+    sampleValue("size") !== "—" && sampleValue("duration") === "2:05" &&
+    $$('#queue [data-song-column="format"], #queue [data-song-column="size"], #queue [data-song-column="track"]').every(cell => !cell.hidden));
+  check("file : une piste sans numéro ne prend pas son rang dans la file",
+    app.queuePanel.row({id: "queue-no-track", title: "Sans numéro"}, 4)
+      .querySelector('[data-song-column="track"]').textContent === "—");
+  for (const column of ["track", "format", "size", "genre"]) await clickColumnToggle($(".dialog"), "queue", column);
+  key(d.body, "Escape");
   const rows = $$(".queue-row");
   rows[0].dispatchEvent(new w.MouseEvent("dragstart", {bubbles: true}));
   rows[1].dispatchEvent(new w.MouseEvent("dragover", {bubbles: true, cancelable: true, clientY: 10}));
@@ -1002,6 +1097,9 @@ function makeEventSource(jar) {
   check("playlist mélangée : le titre d'ailleurs après le titre Subsonic", await until(() => $$("#main tr.song").length === 2) &&
         $$("#main tr.song")[1].dataset.id === "sc-29912345" && $$("#main tr.song")[1].querySelector("td.album").textContent === "SoundCloud" &&
         !$$("#main tr.song")[1].querySelector(".song-download"));
+  check("playlist : style Subsonic affiché et style absent repérable pour le titre d'ailleurs",
+    $$("#main td.genre").map(cell => cell.textContent).join() === "Pop,—" &&
+    $$("#main td.genre").every(cell => !cell.hidden));
   check("radio d'un titre : proposée seulement pour le morceau Subsonic de la playlist",
         !!$$("#main tr.song")[0].querySelector(".song-radio") && !$$("#main tr.song")[1].querySelector(".song-radio"));
   const order = () => $$("#main tr.song").map(r => r.dataset.id).join();
@@ -1240,6 +1338,12 @@ function makeEventSource(jar) {
         !$(".dialog"));
   check("Mon compte : cinq parties", $$(".account-part").length === 5 && $$("#main .rights-list li").length === 8 &&
         $$("#main .account-part select").length === 5 && !!$("#main .ext-link-form"));
+  check("Mon compte : même matrice de colonnes", columnToggle($("#main"), "browse", "genre").checked &&
+    $$('#main input[data-column]').length === 18);
+  await clickColumnToggle($("#main"), "browse", "genre");
+  check("Mon compte : le choix de masquer les styles est mémorisé",
+    (await app.api.get("/api/me")).preferences.browse_genre === false);
+  await clickColumnToggle($("#main"), "browse", "genre");
   check("Mon compte : photo venue de Subsonic, rien à retirer", await until(() => $(".account-photo")) &&
         $(".account-photo-side p").textContent.startsWith("Photo de votre compte Subsonic") &&
         !$$(".account-buttons button").some(b => b.textContent.startsWith("Retirer")));

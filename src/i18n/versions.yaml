@@ -5,6 +5,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.12"
+  date: 2026-11-20
+  title: "Choisir les colonnes des morceaux comme dans Subsonic"
+  changes:
+    - "Dans Réglages ou Mon compte, choisissez les informations à afficher : piste, artiste, album, style, année, débit, durée, format et taille du fichier."
+    - "Les choix de parcours et de liste de lecture sont séparés et conservés pour votre compte. Ils s’appliquent immédiatement, sans interrompre la lecture."
+    - "Le style de chaque morceau permet de vérifier ses tags ; un tiret signale une information manquante. Le titre et les commandes restent toujours accessibles."
+
 - version: "1.11.1"
   date: 2026-11-18
   title: "Retrouver le style d’un album plus simplement"

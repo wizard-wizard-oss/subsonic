@@ -76,39 +76,44 @@ const Views = (() => {
   }
 
   /** Tableau des titres. Double-clic : lecture à partir de ce titre. Glisser un titre vers une playlist de la barre
-      de gauche l'y ajoute. options : showAlbum, albumArtist, numbered (n° d'ordre plutôt que n° de piste),
+      de gauche l'y ajoute. options : showAlbum, albumArtist,
       addedBy (colonne « ajouté par », playlist communautaire), canRemove(titre) + onRemove(titre, rang),
       onMove(de, vers) : changer l'ordre (poignée ⋮⋮ glissée dans le tableau, ou Alt + ↑ / ↓ sur une ligne).
       Une playlist peut mêler des titres d'ailleurs (song.ext) : leur cœur est celui des favoris d'ailleurs, leur source
-      remplace l'album, et ils ne se téléchargent pas. */
+      remplace l'album, et ils ne se téléchargent pas. Les colonnes suivent les réglages personnels
+      de parcours, sans relire la liste ni modifier ses tags. */
   function songTable(songs, options) {
     const showAlbum = options && options.showAlbum;
     const playlistRight = App.can("playlist");
     const onMove = options && options.onMove;
+    const metadata = App.songColumns.filter(key => key !== "track");
+    const columnClass = key => key === "artist" ? "song-artist" : key;
+    const header = key => el("th." + columnClass(key), {scope: "col", dataset: {songColumn: key}, text: SongColumns.label(key)});
+    const head = el("thead", {}, el("tr", {},
+      onMove ? el("th.grip", {scope: "col", "aria-label": App.t("playlist.move")}) : null,
+      header("track"), showAlbum ? el("th.thumb", {scope: "col"}) : null,
+      el("th.title", {scope: "col", text: SongColumns.label("title")}), metadata.map(header),
+      options && options.addedBy ? el("th.added-by", {scope: "col", text: SongColumns.label("added_by")}) : null,
+      el("th.fav", {scope: "col", "aria-label": App.t("album.favorite")}),
+      el("th.more", {scope: "col", "aria-label": SongColumns.label("actions")})));
     const body = el("tbody");
     const discs = new Set(songs.map(s => s.disc).filter(Boolean)).size > 1 && options && options.albumArtist;
     songs.forEach((song, i) => {
       if (discs && song.disc !== (songs[i - 1] || {}).disc) {
-        body.appendChild(el("tr.disc-row", {}, el("td", {colspan: 9, text: App.t("album.disc", {number: song.disc || "?"})})));
+        body.appendChild(el("tr.disc-row", {}, el("td", {text: App.t("album.disc", {number: song.disc || "?"})})));
       }
       const heart = song.ext ? ExtMusic.heart(song)
         : heartButton(song, 16, e => { e.stopPropagation(); toggleFavorite("song", song, heart); });
       const payload = song.ext ? {extItems: [song], label: song.title} : {songIds: [song.id], label: song.title};
       const row = el("tr.song", {dataset: {id: song.id}, ondblclick: () => App.player.playList(songs, i)},
         onMove ? el("td.grip", {title: App.t("playlist.move"), text: "⋮⋮"}) : null,
-        el("td.num", {}, el("button.row-play", {type: "button", title: App.t("album.play"),
-                                                 onclick: () => App.player.playList(songs, i)}, App.icon("play", 14)),
-           el("span.track-number", {text: options && options.numbered ? i + 1 : song.track || i + 1})),
+        SongColumns.cell(song, "track", "td.num"),
         showAlbum ? el("td.thumb", {}, App.cover(song.coverId || song.imageUrl, 36)) : null,   // titres d'albums différents
-        el("td.title", {}, el("span", {text: song.title}),
-           song.artist && options && options.albumArtist && song.artist !== options.albumArtist
-             ? el("span.muted", {text: " — " + song.artist}) : null),
-        !showAlbum ? null : song.ext ? el("td.album.muted", {text: App.t("ext.sources." + song.ext)})
-          : el("td.album", {}, el("a", {href: "#/album/" + encodeURIComponent(song.albumId), text: song.album})),
+        el("td.title", {}, el("button.row-play", {type: "button", title: App.t("album.play"),
+          onclick: () => App.player.playList(songs, i)}, App.icon("play", 14)), el("span", {text: song.title})),
+        metadata.map(key => SongColumns.cell(song, key, "td." + columnClass(key) + ".muted")),
         options && options.addedBy ? el("td.added-by.muted", {text: song.addedBy}) : null,
-        el("td.format.muted", {text: (song.suffix || "").toUpperCase()}),
         el("td.fav", {}, heart),
-        el("td.duration.muted", {text: App.duration(song.duration)}),
         el("td.more", {},
            App.can("download") && !song.ext ? el("a.link-button.song-download", {                // droit Subsonic « télécharger »
              href: "/api/download?" + new URLSearchParams({song: song.id}), download: "", title: App.t("album.download_song"),
@@ -137,9 +142,12 @@ const Views = (() => {
       row.classList.toggle("playing", !!App.player.current && row.dataset.id === App.player.current.id);
     });
     highlight();
-    const off = App.bus.on("queue", highlight);
-    const table = el("table.songs", {}, body);
-    table.destroy = off;
+    const offQueue = App.bus.on("queue", highlight);
+    const table = el("table.songs", {}, head, body);
+    const showColumns = () => SongColumns.apply(table, "browse");
+    showColumns();
+    const offPreferences = App.bus.on("preferences", showColumns);
+    table.destroy = () => { offQueue(); offPreferences(); };
     return table;
   }
 

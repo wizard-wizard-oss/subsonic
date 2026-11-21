@@ -1,12 +1,38 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-**Style d'album simplifié, 1.11.1 (18/11/2026, prêt à publier)** : style en premier, autres tags/pistes repliés.
+**Colonnes des morceaux, 1.12 (19/11/2026, préparé localement)** : même grille que la capture des
+paramètres personnels Subsonic, neuf informations pour Parcourir et Liste de lecture, choix indépendants
+et persistants par compte. Style individuel visible, valeurs absentes indiquées par « — », débit/format/taille
+distincts, numéro de piste issu du tag. Les choix initiaux reprennent la capture. Titre et commandes restent
+accessibles, réglages immédiats sans modifier la lecture ; séparateurs de disques ajustés. Schéma unique
+fourni par `/api/me.songColumns`, préférences `browse_*`/`queue_*`, aucune migration ni copie des tags.
+Sauvegardes des cases sérialisées ; anciennes files synchronisées enrichies avec les métadonnées actuelles,
+sans interrompre une lecture démarrée pendant la restauration. Validation : 148 tests Python ciblés,
+quatre parcours jsdom PC (424 contrôles), Chrome clair/sombre et petits écrans, diff/syntaxe propres.
+Tests et validation : voir [Bibliothèque](features/bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+Cette version n’est pas déployée.
+
+**Progression des tags, 1.11.3 (19/11/2026, préparée localement)** : l'éditeur explique le brouillon et
+l'enregistrement dans les fichiers audio. Barre visible dès le clic, compteurs réels par fichier durant
+la préparation et la publication, puis attente distincte de l'actualisation Subsonic. Le suivi des opérations
+longues continue sans pause automatique après une minute ; une coupure propose de reprendre le suivi sans
+réécrire. Erreur d'écriture : brouillon conservé ; scan non confirmé : fichiers enregistrés signalés séparément.
+Aucun nouveau stockage ni changement du mécanisme de sauvegarde/restauration. Tests et détails :
+[Tags d'albums](features/tags-albums.md). Aucune publication ni modification de musique réelle.
+
+**Style d'album simplifié, 1.11.1 (18/11/2026, déployé et vérifié)** : style en premier, autres tags/pistes repliés.
 Les éditions sont des cartes visibles avec styles/pochette disponibles, ordonnées par titre/artiste exacts
 et année locale. Le style s'importe indépendamment des correspondances de pistes ; import manuel et aperçu
 conservés. Discogs par défaut s'il est configuré. Repli MusicBrainz sur les genres du groupe d'éditions,
 sans attribuer ceux de l'artiste. Cas réel Trentemøller 2026 : genre absent dans Subsonic, choix Discogs
 Shoegaze/Indie Rock/Post-Punk récupérés en lecture seule. 221 tests Python ciblés et quatre parcours PC
 passent ; rendu Chrome contrôlé à 768/390/320 px. Voir [Tags d'albums](features/tags-albums.md).
+Publication par `deploy/pc/push.sh` depuis un instantané figé : santé HTTPS et note 1.11.1 vérifiées,
+JS/CSS publics et 230 fichiers applicatifs conformes, conteneur sain. SQLite intègre au schéma 19 ;
+13 comptes, 167 messages, quatre marque-pages, six recommandations, sept envois et sept albums attribués
+conservés. Sauvegarde code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.11.1-20261118T000805Z/` ; image 1.11 conservée sous
+`pimedia-web:pre-1.11.1-20261118t000805z`. Aucun enregistrement de tags sur la musique réelle.
 
 **Éditeur de tags d'album, 1.11 (18/11/2026, déployé et vérifié)** : édition avec le droit
 Subsonic `coverArt` (« Modifier pochettes et tags »), sans exiger `admin` ; valeurs communes ou par piste,

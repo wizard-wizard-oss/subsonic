@@ -179,15 +179,26 @@ App.bus = {
 };
 
 /* ---------- réglages ---------- */
-App.savePreference = async function (key, value) {
-  App.preferences[key] = value;
-  App.bus.emit("preferences", App.preferences);
-  try {
-    App.preferences = (await App.api.post("/api/preferences", {changes: {[key]: value}})).preferences;
-  } catch (error) {
-    App.toast(App.errorText(error), "error");
-  }
-};
+App.savePreference = (() => {
+  let pending = Promise.resolve();
+  return function (key, value) {
+    const userId = App.user && App.user.id, preferences = App.preferences;
+    preferences[key] = value;
+    App.bus.emit("preferences", preferences);
+    const current = () => App.user && App.user.id === userId && App.preferences === preferences;
+    // Les réponses complètes ne remplacent pas les choix optimistes plus récents.
+    // Sérialiser garde aussi le dernier choix d'une même case côté serveur.
+    pending = pending.then(async () => {
+      if (!current()) return;
+      try {
+        await App.api.post("/api/preferences", {changes: {[key]: value}});
+      } catch (error) {
+        if (current()) App.toast(App.errorText(error), "error");
+      }
+    });
+    return pending;
+  };
+})();
 
 /** Mémoire locale du navigateur (volume…) : peut être indisponible, la page marche sans. */
 App.local = {

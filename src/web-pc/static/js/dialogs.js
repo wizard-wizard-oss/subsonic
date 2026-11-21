@@ -63,6 +63,7 @@ const Dialogs = (() => {
       choice(t("settings.chat_panel"), "chat_panel", [["open", "✓"], ["closed", "—"]]),
       choice(t("settings.density"), "density", [["comfortable", t("settings.density_comfortable")], ["compact", t("settings.density_compact")]]),
       choice(t("settings.album_grid"), "album_grid", [["large", t("settings.album_grid_large")], ["small", t("settings.album_grid_small")]]),
+      SongColumns.settings(),
       toggle(t("settings.notify_mentions"), "notify_mentions", () => {
         if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
       })];

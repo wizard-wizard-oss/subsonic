@@ -45,7 +45,7 @@ body[data-queue="open"] .queue-toggle { color: var(--accent); }
 .queue-actions { display: flex; gap: 8px; }
 .queue-actions .link-button { display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase; font-size: 12px; letter-spacing: .03em; }
 .queue-actions .link-button:disabled { opacity: .35; cursor: default; }
-.queue-scroll { overflow-y: auto; }
+.queue-scroll { overflow: auto; }
 .queue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .queue-table th { position: sticky; top: 0; background: var(--bg-sunken); color: var(--text-dim); font-weight: 600; text-align: left;
                   font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; }
@@ -60,22 +60,22 @@ body[data-queue="open"] .queue-toggle { color: var(--accent); }
 .queue-row.drop-before td { box-shadow: inset 0 2px 0 var(--accent); }
 .queue-row.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
 .queue-table .col-grip { width: 28px; cursor: grab; color: var(--text-dim); text-align: center; letter-spacing: -2px; }
-.queue-table .col-num { width: 36px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.queue-table .col-track { width: 48px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .queue-table td.col-cover { width: 44px; padding: 3px 4px 3px 0; }
 .queue-table th.col-cover { width: 44px; }
 .col-cover img.cover { width: 32px; height: 32px; border-radius: 3px; display: block; }
-.queue-row.current .col-num { color: var(--accent-strong); }
+.queue-row.current .col-title .icon { margin-right: 6px; vertical-align: middle; }
 .queue-table .col-title { width: 30%; }
 .queue-table .col-album, .queue-table .col-artist { width: 20%; }
 .queue-table .col-album a { color: inherit; }
 .queue-table .col-duration, .queue-table .col-year { width: 60px; font-variant-numeric: tabular-nums; }
+.queue-table .col-bitrate, .queue-table .col-size { width: 100px; font-variant-numeric: tabular-nums; }
 .queue-table .col-genre { width: 110px; color: var(--text-soft); }
 .queue-table .col-format { width: 120px; color: var(--text-soft); }
 .queue-table .col-tool { width: 32px; text-align: center; }
 .queue-row .col-tool .link-button { opacity: 0; }
 .queue-row:hover .col-tool .link-button, .queue-row:focus-within .col-tool .link-button { opacity: 1; }
 .queue-table tr.empty td { color: var(--text-dim); padding: 18px; max-width: none; }
-@media (max-width: 900px) { .queue-table .col-genre, .queue-table .col-format, .queue-table .col-year { display: none; } }
 
 /* Paroles */
 .lyrics-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; }

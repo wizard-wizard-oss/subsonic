@@ -11,6 +11,21 @@
 - **Écoute signalée à Subsonic** : « en cours » au démarrage de chaque titre Subsonic, « écoutée » après la moitié du titre
   ou 4 minutes réellement écoutées (un saut en avant ne compte pas). Voir `ecoute-en-cours.md`.
 
+## Colonnes configurables (1.12)
+
+Réglages et Mon compte → Affichage proposent la grille de Subsonic : piste, artiste, album, style,
+année, débit, durée, format et taille du fichier. La colonne Liste de lecture concerne cette file,
+indépendamment de Parcourir (albums, recherche, favoris et playlists enregistrées). Le titre, la pochette,
+le marqueur du morceau courant et les commandes restent accessibles lorsque les informations sont masquées.
+Les cases s’appliquent immédiatement sans reconstruire la file, changer son ordre ou relancer la lecture.
+Débit et format sont deux valeurs distinctes ; la taille vient du fichier indexé par Subsonic, en Mio.
+Les informations absentes affichent « — ». Les colonnes choisies restent accessibles horizontalement
+sur les fenêtres étroites. Voir [Bibliothèque](bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+
+La restauration d’une copie locale déjà synchronisée relit les métadonnées Subsonic actualisées, dont
+la taille, en conservant les titres externes, l’ordre, les doublons et la position. Une modification locale
+en attente conserve sa priorité. Tests : `tests/e2e_webapp.js` et `tests/e2e_webapp_queue.js`.
+
 ## File sauvegardée (1.10.1)
 - Au démarrage et après reconnexion, le lecteur utilise `getPlayQueue` via `GET /api/play-queue`.
   Il affiche les titres dans leur ordre, marque le titre courant et sa position, sans charger de flux,

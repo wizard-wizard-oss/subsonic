@@ -75,8 +75,24 @@ class QueueMemory {
       if (!this.enabled || key !== this.key || revision !== this.revision) return;
       const signature = this.remote = JSON.stringify(QueueMemory.body(remote));
       // Une modification locale non envoyée prime. Sinon, une autre application peut avoir changé la file.
-      if (this.state && (this.state.dirty || this.state.remote === signature)) {
+      if (this.state && this.state.dirty) {
         this.flush();
+        return;
+      }
+      if (this.state && this.state.remote === signature) {
+        // Même file : actualiser les tags sans perdre les sources externes ni le rang exact d'un doublon.
+        const fresh = new Map(remote.songs.filter(song => !song.ext).map(song => [String(song.id), song]));
+        // Ces objets sont aussi ceux du lecteur, restaurés avant la requête. Aucun flux n'est rechargé.
+        this.state.songs.forEach(song => {
+          if (!song.ext) Object.assign(song, fresh.get(String(song.id)) || {});
+        });
+        this.restoring = true;
+        try {
+          if (this.player.current) this.player.updateMediaSession(this.player.current);
+          App.bus.emit("queue", this.player);
+          App.bus.emit("player", this.player);
+        } finally { this.restoring = false; }
+        this.write();
         return;
       }
       this.state = QueueMemory.valid(remote) ? Object.assign(remote, {dirty: false, remote: signature}) : null;

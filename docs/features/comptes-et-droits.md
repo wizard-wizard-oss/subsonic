@@ -12,9 +12,9 @@
    fait dans Subsonic s'applique sans se reconnecter ; si Subsonic ne répond pas, on garde les derniers connus
    (`users.roles`, migration 6).
 4. Réglages par personne (`/api/preferences`) : barre à gauche (fixe/survol/masquée), largeur, densité, salon ouvert/fermé,
-   grille d'albums, compteurs d'albums, notifications de mentions, onglet de la barre (`sidebar_tab`).
+   grille d'albums, colonnes des morceaux, notifications de mentions, onglet de la barre (`sidebar_tab`).
 5. **Réglages rapides** (roue dentée en haut, gardée) : affichage (barre, largeur en px, salon, densité, pochettes,
-   notifications), liste « Votre compte Subsonic permet de… » et lien vers « Mon compte ».
+   colonnes des morceaux, notifications), liste « Votre compte Subsonic permet de… » et lien vers « Mon compte ».
 6. **Page « Mon compte »** (`#/account`, 27/10/2026), ouverte par **sa photo et son nom en haut à droite** (ou depuis les
    réglages rapides), en cartes :
    - **Photo de profil** : d'où vient la photo (`GET /api/account` : `source` = `site`, `subsonic` ou rien) ;
@@ -35,6 +35,14 @@
    salon et dans « Écouté en ce moment ». `GET /api/avatars` donne une version par personne **qui a une photo** (sur le
    site : date d'envoi ; Subsonic : « s » + empreinte de l'image, relue au plus toutes les heures) : la page ne demande
    l'image que pour elles, relit la liste toutes les 10 minutes et tout de suite après un changement de sa photo.
+
+Depuis la 1.12, une grille « Colonnes des morceaux » reprend les neuf cases de Subsonic : piste, artiste,
+album, style, année, débit, durée, format et taille. Choix séparés pour Parcourir et Liste de lecture,
+enregistrés immédiatement dans dix-huit préférences booléennes `browse_*`/`queue_*`, sans migration.
+Le titre et les commandes restent disponibles. Les choix initiaux suivent la capture de l’utilisateur ;
+le style est activé. Les paramètres Subsonic restent indépendants. Voir
+[Bibliothèque](bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+Tests dédiés : `tests/test_song_styles.py` et `tests/e2e_webapp.js`.
 
 ## Droits appliqués
 | Droit Subsonic | Effet sur le site |

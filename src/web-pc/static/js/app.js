@@ -64,6 +64,7 @@ class MusicApp {
     ListenLaterUI.reset();
     ListenLaterUI.start();
     App.preferences = me.preferences;
+    App.songColumns = me.songColumns;
     App.reactions = me.reactions;
     App.usernames = me.usernames;
     App.unread = me.unread;
@@ -72,6 +73,7 @@ class MusicApp {
     App.append(App.clear(document.getElementById("me")), [App.avatar(App.user.username, 26),
                                                           App.el("span.me-name", {text: App.user.username})]);
     if (this.started) {
+      App.bus.emit("preferences", App.preferences);
       this.queueMemory.start();
       if (changedUser) App.live.start();
       this.navigate();

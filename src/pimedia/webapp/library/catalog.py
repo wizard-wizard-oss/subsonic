@@ -58,7 +58,8 @@ def song_row(raw):
     return {"id": raw.get("id"), "title": text(raw.get("title"), "?"), "artist": text(raw.get("artist")),
             "album": text(raw.get("album")), "albumId": raw.get("albumId", ""), "track": raw.get("track"),
             "disc": raw.get("discNumber"), "duration": raw.get("duration", 0), "suffix": raw.get("suffix", ""),
-            "bitRate": raw.get("bitRate"), "coverId": raw.get("coverArt", ""), "starred": bool(raw.get("starred")),
+            "bitRate": raw.get("bitRate"), "size": raw.get("size"), "coverId": raw.get("coverArt", ""),
+            "starred": bool(raw.get("starred")),
             "year": raw.get("year"), "genre": text(raw.get("genre")), "artistId": raw.get("artistId", "")}
 
 

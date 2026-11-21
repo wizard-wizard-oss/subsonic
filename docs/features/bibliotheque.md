@@ -36,6 +36,49 @@ pour les droits, formats, préservation et limites. Aucun renommage ni stockage 
 Depuis la 1.11.1, le style est le premier champ visible. Les autres informations sont repliées ; les éditions
 se choisissent dans des cartes et leurs styles sont affichés avant import, sans correspondance de pistes requise.
 
+### Colonnes des morceaux comme dans Subsonic (1.12)
+
+Les réglages rapides et Mon compte → Affichage proposent la même grille que les paramètres personnels
+Subsonic montrés par l’utilisateur : neuf informations, chacune activable pour « Parcourir » et
+« Liste de lecture ». Parcourir concerne les albums, titres populaires, recherche, favoris et playlists
+enregistrées ; Liste de lecture concerne la file du lecteur. Le titre et les commandes restent affichés.
+
+| Information | Parcourir, choix initial | Liste de lecture, choix initial |
+|---|---|---|
+| Piste # | oui | non |
+| Artiste, album, style, année, débit, durée | oui | oui |
+| Format, taille du fichier | non | non |
+
+Ces choix initiaux reprennent la capture fournie, pas les valeurs d’usine d’une autre version de Subsonic.
+Chaque case agit immédiatement, sans recharger les données, modifier l’ordre ni interrompre le lecteur.
+Les dix-huit booléens `browse_*` et `queue_*` sont persistants par compte et indépendants entre contextes.
+Ils sont propres au site : aucun réglage du serveur Subsonic n’est modifié ou importé automatiquement.
+
+Les informations viennent de chaque piste via l’API Subsonic : `track`, `artist`, `album`, `genre`, `year`,
+`bitRate`, `duration`, `suffix`, `size`. Débit en kbps, taille en Mio à partir des octets et format original
+du fichier ; aucun calcul à partir du flux transcodé. Piste # conserve le tag réel, même dans une playlist,
+et ne devient pas un rang inventé. Le style ne reprend jamais celui de l’album lorsqu’il manque au morceau.
+Un « — » signale les valeurs absentes, y compris pour les titres d’ailleurs ; la source remplace leur album.
+Les styles et textes longs sont tronqués avec texte complet au survol. Les séparations de disques et
+l’état vide de la file s’adaptent aux colonnes visibles. Les colonnes choisies restent consultables en
+défilement horizontal lorsque la fenêtre est étroite. Aucun nouveau stockage de tags, scan ou migration.
+
+Schéma unique : `webapp/preferences.py` (`SONG_COLUMNS`), fourni dans `/api/me.songColumns` et réutilisé
+par la grille et les deux tableaux. Projection de la taille : `webapp/library/catalog.py`.
+Formats/visibilité : `web-pc/static/js/song-columns.js` ; tableaux : `views.js`, `queue.js` ; réglages :
+`dialogs.js` et `account.js`, styles dans `base.css`, `views.css`, `player.css`, textes dans `i18n/fr.yaml`.
+Tests : `tests/test_song_styles.py` (projection/HTTP, neuf options, isolation compte/contexte, validation
+booléenne et refus atomique), `tests/e2e_webapp.js` (grille complète, réglages immédiats, tags absents,
+formats, titres d’ailleurs et disques), `tests/e2e_webapp_queue.js` (restauration de la file).
+Les sauvegardes des cases sont sérialisées pour conserver les changements rapides, même sur une même case ;
+les réponses retardées ne remplacent pas les choix récents et les sauvegardes d’un ancien compte sont ignorées.
+Tests différés dédiés dans `e2e_webapp_queue.js` (ordre, échec puis reprise et changement de compte).
+
+Validation locale du 19/11/2026 : 148 tests Python ciblés et quatre parcours jsdom PC réussis (424 contrôles).
+Chrome : réglages en clair/sombre à 1440, 900, 390 et 320 px ; Mon compte à 1440, 390 et 320 px ;
+playlist avec style long et absent, file avec débit/format/taille distincts. Syntaxe JS et `git diff --check`
+valides. Essais sur faux Subsonic, aucune musique réelle modifiée ; version non déployée.
+
 ### Style sur les cartes d’albums (1.10.2)
 
 Dans les grilles de l’accueil, des artistes, d’Albums (y compris les pages suivantes), de la recherche et des favoris,

@@ -209,7 +209,7 @@ Views.playlist = (() => {
         this.moving = false;
         if (!route.stale) this.render(main, route, to);      // relue : les rangs Subsonic ont changé
       };
-      this.table = songs.length ? Views.songTable(songs, {showAlbum: true, numbered: true, addedBy: data.community,
+      this.table = songs.length ? Views.songTable(songs, {showAlbum: true, addedBy: data.community,
         onMove: data.mine && App.can("playlist") && songs.length > 1 ? move : null,
         canRemove: App.can("playlist") ? canRemove : null,
         onRemove: async song => {
