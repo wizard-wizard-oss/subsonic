@@ -1,5 +1,21 @@
 # Déployer le projet
 
+L'éditeur de tags 1.11, publié le 18/11/2026, ajoute Mutagen 1.47.0
+aux dépendances PC ; reconstruire l'image lors d'une mise à jour. Il réutilise `MUSIC_DIR` monté en
+écriture et le volume de données existants, sous le même UID/GID que la musique. Les sauvegardes techniques
+restent hors de la musique dans `<data_dir>/audio-tag-backups` (24 h, huit lots, 4 Gio pour les lots terminés).
+Prévoir l'espace pour les originaux et les copies temporaires. Aucun nouveau volume, réglage obligatoire ni
+migration SQL. Discogs réutilise son jeton configuré ; MusicBrainz n'exige pas de clé pour la consultation.
+Le comportement du vrai Subsonic après regroupement des tags d'album/artiste, notamment les liens,
+commentaires et favoris, reste à vérifier sur une copie. Voir [Tags d'albums](features/tags-albums.md).
+
+Publication 1.11 : instantané figé du code testé, 230 fichiers applicatifs conformes dans le conteneur,
+HTTPS et note de version vérifiés. Le droit d'édition est `coverArt`, sans exiger `admin` ; le scan réutilise
+un administrateur connu valide. Sauvegarde préalable code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.11-20261117T234433Z/`. Image précédente conservée :
+`pimedia-web:pre-1.11-20261117t234433z`. SQLite reste au schéma 19, intègre, et les données sont conservées.
+Aucun enregistrement de tags ni test d'écriture sur la musique de production pendant les contrôles.
+
 Deux éditions, deux déploiements indépendants : le **site web** (édition PC, sur le serveur) et le **Pi** (station
 musicale). Une mise à jour de l'un ne touche jamais l'autre.
 

@@ -8,7 +8,7 @@ from .discogs_entities import (DiscogsArtist, DiscogsCredit, DiscogsEdition, Dis
                               DiscogsRelease, DiscogsTrack, DiscogsVideo)
 from .external_links import parse_link
 from .extmusic import ExtMusicError
-from .music_metadata import PublicMetadata
+from .music_metadata import MusicSourceError, PublicMetadata
 
 PAGE_SIZE = 100
 MAX_PAGES = 1000
@@ -35,6 +35,13 @@ def image_url(value):
         return ""
     return value if (len(value) <= 4096 and parsed.scheme == "https" and parsed.hostname == "i.discogs.com"
                      and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment) else ""
+
+
+def _classification(values):
+    if isinstance(values, str):
+        values = (values,)
+    return list(dict.fromkeys(value.strip()[:100] for value in values or ()
+                              if isinstance(value, str) and value.strip()))
 
 
 class Discogs(PublicMetadata):
@@ -122,7 +129,22 @@ class Discogs(PublicMetadata):
     def editions(self, artist, title):
         params = dict(type="release", artist=artist, release_title=title, per_page=PAGE_SIZE)
         data = self._get("database/search", params, lambda raw: self._edition_matches(raw, artist, title))
-        return tuple(DiscogsEdition(**e) for e in data["editions"])
+        return tuple(self._edition_entity(e) for e in data["editions"])
+
+    def search_releases(self, artist, album):
+        """Recherche libre de candidats ; les crédits existants gardent leur sélection exacte dans editions()."""
+        params = dict(type="release", q=(artist + " " + album).strip(), per_page=25)
+        def project(raw):
+            found = []
+            for result in raw.get("results", []):
+                if result.get("type") != "release" or not result.get("id"):
+                    continue
+                names = str(result.get("title") or "").split(" - ", 1)
+                found.append(self._edition(dict(result, artist=names[0] if len(names) == 2 else "",
+                                                title=names[-1])))
+            return dict(editions=found)
+        data = self._get("database/search", params, project, cache_version=3)
+        return tuple(self._edition_entity(e) for e in data["editions"])
 
     @classmethod
     def _edition_matches(cls, raw, artist, title):
@@ -145,7 +167,7 @@ class Discogs(PublicMetadata):
             return None
         if refresh:
             self.repository.discard(self.prefix + path + "?", self.prefix + query_url(path, sorted(params.items())))
-        return DiscogsPage(tuple(DiscogsEdition(**e) for e in data["editions"]), page, data["pages"], data["total"])
+        return DiscogsPage(tuple(self._edition_entity(e) for e in data["editions"]), page, data["pages"], data["total"])
 
     @staticmethod
     def _edition(raw):
@@ -155,7 +177,16 @@ class Discogs(PublicMetadata):
         return dict(id=discogs_id(edition), master=discogs_id(master) if master else "",
                     title=str(raw.get("title") or "")[:300], artist=musical_name(raw.get("artist"))[:300],
                     year=int(raw.get("year") or 0), format=(", ".join(format) if isinstance(format, list) else str(format))[:200],
-                    image=image_url(raw.get("thumb")), role=str(raw.get("role") or "Main")[:100])
+                    image=image_url(raw.get("thumb")), role=str(raw.get("role") or "Main")[:100],
+                    date=str(raw.get("released") or raw.get("year") or "")[:20],
+                    country=str(raw.get("country") or "")[:100], track_count=int(raw.get("track_count") or 0),
+                    genres=_classification(raw.get("genres") or raw.get("genre")),
+                    styles=_classification(raw.get("styles") or raw.get("style")))
+
+    @staticmethod
+    def _edition_entity(data):
+        return DiscogsEdition(**dict(data, genres=tuple(data.get("genres") or ()),
+                                     styles=tuple(data.get("styles") or ())))
 
     @classmethod
     def _catalog_data(cls, raw):
@@ -165,13 +196,17 @@ class Discogs(PublicMetadata):
                               if r.get("id") and (r.get("type") != "master" or r.get("main_release"))])
 
     def release(self, identity, cached=False):
-        data = self._get("releases/" + discogs_id(identity), {}, self._release_data, cached, cache_version=3)
+        identity = discogs_id(identity)
+        data = self._get("releases/" + identity, {}, self._release_data, cached, cache_version=4)
         if data is None:
             return None
+        if data["id"] != identity:
+            raise MusicSourceError("discovery.unavailable")
         return DiscogsRelease(data["id"], data["title"], data["artist"],
                               tuple(DiscogsIdentity(**i) for i in data["labels"]), data["rating"], data["votes"],
                               tuple(self._track(t) for t in data["tracks"]), tuple(DiscogsCredit(**c) for c in data["credits"]),
-                              tuple(DiscogsVideo(**v) for v in data["videos"]), data["image"])
+                              tuple(DiscogsVideo(**v) for v in data["videos"]), data["image"], data["date"],
+                              data["country"], data["format"], tuple(data["genres"]), tuple(data["styles"]))
 
     @staticmethod
     def _artists(raw):
@@ -181,12 +216,21 @@ class Discogs(PublicMetadata):
     def _track_data(cls, raw):
         return dict(title=str(raw.get("title") or "")[:300], artist=cls._artists(raw.get("artists")),
                     duration=str(raw.get("duration") or "")[:20], kind=raw.get("type_") or "track",
-                    children=[cls._track_data(t) for t in raw.get("sub_tracks") or []])
+                    children=[cls._track_data(t) for t in raw.get("sub_tracks") or []],
+                    position=str(raw.get("position") or "")[:30])
 
     @classmethod
     def _track(cls, data):
+        position = data["position"]
+        explicit = re.fullmatch(r"([0-9]+)[-.]([0-9]+)", position)
+        disc = int(explicit[1]) if explicit and int(explicit[1]) > 0 else None
+        track = int(explicit[2]) if explicit and int(explicit[2]) > 0 else \
+            int(position) if re.fullmatch(r"[0-9]+", position) and int(position) > 0 else None
+        duration = data["duration"].split(":")
+        seconds = sum(int(part) * 60 ** i for i, part in enumerate(reversed(duration))) \
+            if 1 <= len(duration) <= 3 and all(part.isdigit() for part in duration) else None
         return DiscogsTrack(data["title"], data["artist"], data["duration"], data["kind"],
-                            tuple(cls._track(t) for t in data["children"]))
+                            tuple(cls._track(t) for t in data["children"]), position, track, disc, seconds)
 
     @classmethod
     def _release_data(cls, raw):
@@ -196,7 +240,13 @@ class Discogs(PublicMetadata):
                                                                        kind="label") for l in raw.get("labels") or []],
                     rating=float(rating.get("average") or 0), votes=int(rating.get("count") or 0),
                     tracks=[cls._track_data(t) for t in raw.get("tracklist") or []], credits=cls._credits(raw),
-                    videos=cls._videos(raw.get("videos") or []), image=cls._artist_image(raw.get("images") or []))
+                    videos=cls._videos(raw.get("videos") or []), image=cls._artist_image(raw.get("images") or []),
+                    date=str(raw.get("released") or raw.get("year") or "")[:20],
+                    country=str(raw.get("country") or "")[:100],
+                    format=", ".join(dict.fromkeys(str(value) for item in raw.get("formats") or []
+                                   for value in [item.get("name"), *(item.get("descriptions") or [])] if value))[:300],
+                    genres=_classification(raw.get("genres")),
+                    styles=_classification(raw.get("styles")))
 
     @staticmethod
     def _videos(raw):

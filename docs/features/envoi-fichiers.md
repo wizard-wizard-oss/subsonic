@@ -184,5 +184,6 @@ consignées dans `docs/DEPLOIEMENT.md`.
 - Tests lancés sur macOS et dans Docker (Linux) ; sur macOS le disque ignore les majuscules (« converge » et « Converge »
   sont le même dossier), pas sur le serveur.
 - Pas de progression réelle du traitement côté serveur (barre animée seulement) ; pas de reprise d'un envoi coupé.
-- Les tags ID3 ne sont ni lus ni corrigés : seuls les noms de dossiers comptent (`docs/ETAT.md` point 3 quater).
+- L'envoi et le rangement ne modifient pas les tags audio : seuls les noms de dossiers comptent. La correction
+  est une action distincte dans [l'éditeur de tags d'album](tags-albums.md), avec le droit « Modifier pochettes et tags ».
 - Aucun quota par personne ni contrôle de l'espace disque.

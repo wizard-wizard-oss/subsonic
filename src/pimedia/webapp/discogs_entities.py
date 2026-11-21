@@ -1,5 +1,6 @@
 """Objets publics Discogs nécessaires aux catalogues, éditions et discographies."""
 from dataclasses import asdict, dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,11 @@ class DiscogsEdition:
     format: str
     image: str
     role: str = "Main"
+    date: str = ""
+    country: str = ""
+    track_count: int = 0
+    genres: tuple = ()
+    styles: tuple = ()
 
     def to_api(self):
         return asdict(self)
@@ -61,6 +67,10 @@ class DiscogsTrack:
     duration: str
     kind: str
     children: tuple = ()
+    position: str = ""
+    track: Optional[int] = None
+    disc: Optional[int] = None
+    duration_seconds: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +85,11 @@ class DiscogsRelease:
     credits: tuple = ()
     videos: tuple = ()
     image: str = ""
+    date: str = ""
+    country: str = ""
+    format: str = ""
+    genres: tuple = ()
+    styles: tuple = ()
 
 
 @dataclass(frozen=True)

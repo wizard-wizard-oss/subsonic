@@ -25,6 +25,17 @@
 - **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
 - **À écouter** : marque-pages et recommandations d’artistes/albums, indépendants des cœurs. Boutons sur les fiches ; voir [listen-later](listen-later.md).
 
+### Édition des informations (1.11)
+
+Les comptes ayant le droit « Modifier pochettes et tags » disposent d'un bouton « Modifier les informations ».
+L'éditeur prépare
+les corrections manuelles ou proposées par MusicBrainz/Discogs, écrit les tags puis demande la réindexation.
+Navigation, titre et artiste affichés en haut restent ceux des dossiers. Voir [Tags d'albums](tags-albums.md)
+pour les droits, formats, préservation et limites. Aucun renommage ni stockage des tags en SQL.
+
+Depuis la 1.11.1, le style est le premier champ visible. Les autres informations sont repliées ; les éditions
+se choisissent dans des cartes et leurs styles sont affichés avant import, sans correspondance de pistes requise.
+
 ### Style sur les cartes d’albums (1.10.2)
 
 Dans les grilles de l’accueil, des artistes, d’Albums (y compris les pages suivantes), de la recherche et des favoris,

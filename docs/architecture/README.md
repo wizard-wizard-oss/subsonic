@@ -91,6 +91,13 @@ uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi r
 
 ### Autres fonctionnalités
 
+- Tags d'albums (1.11) : `album_tags.py` organise l'édition ; entités/limites dans
+  `tag_entities.py`, seul `audio_tags.py` écrit les fichiers. `tag_sources.py` appelle le fournisseur choisi.
+  `MusicBrainzMetadata` est extrait d'`exploration.py` vers `musicbrainz.py` ; le réexport conserve les imports
+  existants et l'assemblage injecte la même instance dans exploration/tags. Discogs conserve son client et ses
+  projections typées enrichies. Régulation/cache existants réutilisés ; aucun déplacement Pi/web/shared ni
+  copie SQL des tags. `library_scan.py` mutualise les scans envois/corrections. Contrôleur et JS/CSS dédiés.
+
 - Pastille À écouter (1.9.2) : Recommendations publie dans EventHub vers le seul destinataire ; le composant existant utilise LiveEvents, sans nouvelle connexion SSE. Les accusés de lecture passent par le dépôt et le contrôleur existants.
 - À écouter et recommandations (1.9) : résolution commune dans webapp/listening_targets.py, règles dans listen_later.py et recommendations.py, entités et dépôts SQL dédiés. Contrôleur commun, assemblage app.py. Zone web uniquement ; recherche et lecture existantes réutilisées.
 - Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;

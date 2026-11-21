@@ -5,6 +5,22 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.11.1"
+  date: 2026-11-18
+  title: "Retrouver le style d’un album plus simplement"
+  changes:
+    - "Le style de l’album est visible dès l’ouverture. Les autres informations et les pistes restent disponibles dans une section repliée."
+    - "Les éditions trouvées sont affichées directement, avec leurs informations et les styles proposés, au lieu d’une liste déroulante. Les meilleurs résultats passent en premier."
+    - "Vous pouvez reprendre uniquement un style pour tout l’album, sans faire correspondre chaque piste. Les changements restent vérifiables avant l’enregistrement."
+
+- version: "1.11"
+  date: 2026-11-18
+  title: "Corriger les informations des albums"
+  changes:
+    - "Avec le droit « Modifier pochettes et tags », corrigez les informations d’un album et de ses pistes, appliquez une valeur à plusieurs morceaux et vérifiez les changements avant d’enregistrer."
+    - "Recherchez une édition avec MusicBrainz ou Discogs, puis choisissez les informations à reprendre. Les artistes des pistes et l’artiste de l’album restent distincts."
+    - "Les corrections restent dans les fichiers audio et sont réindexées par Subsonic. Les noms et l’organisation des dossiers restent identiques."
+
 - version: "1.10.3"
   date: 2026-11-18
   title: "Les envois retrouvent leurs artistes"

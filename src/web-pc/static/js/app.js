@@ -25,6 +25,7 @@ class MusicApp {
   }
 
   showLogin(message) {
+    AlbumTagsEditor.destroy();
     if (this.queueMemory) this.queueMemory.suspend();
     if (App.queuePanel) App.queuePanel.close();
     App.live.stop();

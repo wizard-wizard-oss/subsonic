@@ -28,3 +28,7 @@ class TtlCache:
         with self._lock:
             for key in [k for k in self._items if k[0] == prefix]:
                 del self._items[key]
+
+    def clear(self):
+        with self._lock:
+            self._items.clear()

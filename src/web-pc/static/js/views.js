@@ -366,6 +366,11 @@ const Views = (() => {
       ListenLaterUI.actions({kind: "album", source: "subsonic", sourceId: data.folderId || data.id}),
       App.can("download") ? App.setIcon(el("a.icon-button.download", {title: App.t("album.download"), href: "/api/download?" +
         new URLSearchParams({album: data.id}), download: ""}), "download", 20) : null,
+      App.can("coverArt") ? App.setIcon(el("button.album-tags-edit", {type: "button", text: App.t("tags.edit_ui"),
+        onclick: () => AlbumTagsEditor.open({id: data.folderId || data.id, name: data.name, artist: data.artist}, () => {
+          App.bus.emit("library-changed", {albumId: data.folderId || data.id});
+          if (App.music.route && App.music.route.view === "album") App.music.navigate();
+        })}), "edit", 16, false, App.t("tags.edit_ui")) : null,
       el("div.album-more", {}, toggle, menu));
   }
 

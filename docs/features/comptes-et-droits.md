@@ -45,6 +45,7 @@
 | `comment` | étoiles et commentaires d'album (le salon reste libre) |
 | `scrobble` | le lecteur signale les écoutes |
 | `upload` | page « Envoyer » |
+| `coverArt` | modifier les tags d'un album ou de ses pistes, sans droit administrateur |
 | `admin` | modérer le salon ; scan Subsonic avec ce compte |
 
 ## Où
@@ -66,7 +67,7 @@ photo : refus expliqué ; adresse avec photo : copiée), photo en haut et dans l
   il faudrait un compte administrateur Subsonic dans le `.env` (pour `changePassword`), un envoi de mail (SMTP) et des
   jetons à usage unique en base. `changePassword` en administrateur n'a pas été vérifié sur le Subsonic de production.
 - Inscription : il n'y a pas de création de compte, tout passe par Subsonic.
-- Droits `coverArt` (tags ID3), `share` (liens publics), `settings` : lus mais **aucune fonction ne les utilise** (le lien
+- Droits `share` (liens publics), `settings` : lus mais **aucune fonction ne les utilise** (le lien
   vers les réglages Subsonic est montré à tous ; Subsonic refuse lui-même si le droit manque).
 - Pas de connexion à un compte YouTube ou SoundCloud (« J'aime » privés) : demande OAuth Google (mode test : 100 personnes
   inscrites à la main, reconnexion chaque semaine) et une appli SoundCloud (inscriptions restreintes) : pas fait.

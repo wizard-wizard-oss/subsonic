@@ -1,5 +1,39 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Style d'album simplifié, 1.11.1 (18/11/2026, prêt à publier)** : style en premier, autres tags/pistes repliés.
+Les éditions sont des cartes visibles avec styles/pochette disponibles, ordonnées par titre/artiste exacts
+et année locale. Le style s'importe indépendamment des correspondances de pistes ; import manuel et aperçu
+conservés. Discogs par défaut s'il est configuré. Repli MusicBrainz sur les genres du groupe d'éditions,
+sans attribuer ceux de l'artiste. Cas réel Trentemøller 2026 : genre absent dans Subsonic, choix Discogs
+Shoegaze/Indie Rock/Post-Punk récupérés en lecture seule. 221 tests Python ciblés et quatre parcours PC
+passent ; rendu Chrome contrôlé à 768/390/320 px. Voir [Tags d'albums](features/tags-albums.md).
+
+**Éditeur de tags d'album, 1.11 (18/11/2026, déployé et vérifié)** : édition avec le droit
+Subsonic `coverArt` (« Modifier pochettes et tags »), sans exiger `admin` ; valeurs communes ou par piste,
+artiste d'album distinct des artistes des pistes, aperçu avant
+écriture. MusicBrainz ou Discogs est choisi explicitement ; les clients sont séparés et leurs propositions
+rejoignent le brouillon manuel. Navigation et en-têtes restent par dossiers, aucun renommage ni déplacement.
+Subsonic fournit l'inventaire ; lecture ciblée pour les champs manquants et la fraîcheur avant écriture Mutagen.
+Aucun catalogue de tags ni historique de valeurs en SQLite. Sauvegardes techniques bornées hors musique,
+reprise conservatrice et suivi en mémoire ; scan partagé avec les envois. Enregistrement et réindexation
+distingués. Tests sur fichiers temporaires, faux serveurs et parcours navigateur ; validation finale dans la
+fiche [Tags d'albums](features/tags-albums.md). Aucune musique de production modifiée.
+Validation : 787 tests Python complets, puis 82 tests ciblés après les derniers ajouts ; huit parcours jsdom
+verts, rendu Chrome clair/sombre et 768/390/320 px, `git diff --check` propre. Docker local indisponible ;
+tests sous Python 3.12.14 et dépendances isolées. Le harness Pi autorise maintenant le chargement simultané
+des ressources comme celui du PC, sans changement du produit Pi.
+Correction du droit avant publication : `coverArt` suffit, y compris sans `admin` ; un administrateur dépourvu
+de `coverArt` ne peut pas éditer. 114 tests ciblés scanner/routes/envois et parcours jsdom sous compte non
+administrateur passent ; le scan observe et utilise un administrateur connu valide quand nécessaire.
+Publication par `deploy/pc/push.sh` depuis un instantané figé : https://music2.foos.fr sert la 1.11 et sa note,
+les 230 fichiers applicatifs sont conformes, Mutagen 1.47.0 installé, conteneur sain et aucune erreur de démarrage.
+SQLite intègre au schéma 19 inchangé : 13 comptes, 167 messages, quatre marque-pages, six recommandations,
+sept envois et sept albums attribués conservés. Sauvegarde code/configuration/données et copie SQLite cohérente :
+`../pimedia-backups/pre-1.11-20261117T234433Z/` ; image précédente `pimedia-web:pre-1.11-20261117t234433z`.
+Aucune modification de tags sur la musique réelle pendant les vérifications. L'effet des regroupements/IDs
+sur les références existantes reste à essayer sur une copie. Les champs absents de l'API, dont l'artiste
+d'album standard, sont vérifiés dans les fichiers. Recharger avec Cmd+Maj+R.
+
 **Décision sur les rapprochements entre alphabets (18/11/2026)** : une même translittération pour un nom arabe
 et un nom latin doit produire une proposition à vérifier, jamais une fusion ni un rangement automatique sur cette
 seule base. Les noms et dossiers d’origine restent conservés. Le rangement actuel respecte déjà cette limite ;
@@ -658,12 +692,10 @@ L'API Subsonic standard n'a pas de pagination pour `getArtists` : impossible de 
      migration 8 (liste recalculée). Détail : `docs/features/bibliotheque.md`. **Pas vérifié sur le vrai Subsonic.**
    - Raccourci **Compilations** en haut de la barre des artistes (26/10/2026) : dossiers réglés par `SHORTCUT_FOLDERS`
      dans le `.env` (`docs/features/barre-gauche.md`).
-3 quater. **Corriger les tags ID3** (demandé le 25/10/2026, à préciser) : l'API Subsonic standard ne sait pas
-   écrire les tags. Il faudrait que le site accède aux fichiers (déjà possible depuis le 26/10/2026 : `MUSIC_DIR` monté en écriture sur `/music`, sous l'utilisateur `music` ; dossier de musique de Subsonic monté dans le
-   conteneur, en écriture), les modifie (bibliothèque Python `mutagen`), puis demande `startScan`. À décider : qui a
-   le droit (proposé : le droit Subsonic `coverArt`, « modifier pochettes et tags », déjà lu par le site), quoi
-   corriger (titre, artiste, album, année, genre, n°, pochette ?),
-   album entier ou titre par titre, et suggestions MusicBrainz (`shared/external.py` le sait déjà) ou saisie à la main.
+3 quater. **Corriger les tags audio** : version 1.11 du 18/11/2026, déployée. Droit `coverArt`,
+   saisie manuelle ou propositions MusicBrainz/Discogs, aperçu puis écriture Mutagen et scan Subsonic.
+   Les dossiers restent inchangés et les tags restent dans les fichiers, sans catalogue SQL.
+   Détail et vérifications restantes : `docs/features/tags-albums.md` et entrée en tête de ce document.
    **Actualité** (fait le 26/10/2026, voir `docs/features/actualite.md`) : page `#/news`, flux de webzines ajoutés par
    chacun et partagés, lus toutes les heures, articles gardés ; chacun décoche les flux qu'il ne veut pas voir (pour
    lui seul) ; « Dans la presse » sur la page artiste. Plus tard, éventuellement : recherche dans les archives des

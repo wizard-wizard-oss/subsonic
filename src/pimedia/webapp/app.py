@@ -10,6 +10,8 @@ from ..server.webfiles import WebFiles
 from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
+from .album_tags import AlbumTags
+from .audio_tags import AudioTagError, AudioTags
 from .library.artists import ArtistIndexes
 from .artist_discogs import ArtistDiscogsLinks
 from .artist_portraits import ArtistPortraits
@@ -21,6 +23,7 @@ from .controllers.auth import AuthController
 from .controllers.base import Forbidden, Guard, MissingRight, Unauthorized
 from .controllers.chat import ChatController
 from .controllers.covers import CoverController
+from .controllers.tags import TagController
 from .controllers.library import LibraryController
 from .controllers.extmusic import ExtMusicController
 from .controllers.imports import ImportController
@@ -41,7 +44,8 @@ from .extmusic import KEPT_SECONDS, ExternalMusic, ExtMusicError, SearchMemory
 from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
-from .exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
+from .exploration import Exploration, ExplorationUnavailable
+from .musicbrainz import MusicBrainzMetadata
 from .discogs import Discogs
 from .discogs_catalogs import CatalogError, DiscogsCatalogs
 from .discogs_exploration import DiscogsExploration
@@ -49,6 +53,9 @@ from .lastfm import LastFm
 from .label_discovery import LabelDiscovery
 from .youtube_versions import YouTubeVersions
 from .music_metadata import MusicSourceError
+from .tag_entities import TAG_BODY_LIMIT, TAG_EDIT_RIGHT, TagError
+from .tag_sources import TagSources
+from .library_scan import LibraryScan
 from .storage.exploration import ExplorationRepository
 from .library.folders import FolderNotFound, Folders
 from .library.catalog import Library
@@ -110,6 +117,11 @@ IMPORT_CREATE_LIMIT = 1024 * 1024
 
 def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
+    if isinstance(error, TagError):
+        return Reply.error(error.status, error.code)
+    if isinstance(error, AudioTagError):
+        return Reply.error(409 if error.args and error.args[0] == "tags.conflict" else 400,
+                           error.args[0] if error.args else "tags.write_failed")
     if isinstance(error, ExplorationUnavailable):
         return Reply.error(503, "explore.unavailable")
     if isinstance(error, MusicSourceError):
@@ -166,14 +178,16 @@ class WebApplication:
         self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
         self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
-        self.exploration = Exploration(MusicBrainzMetadata(ExplorationRepository(self.db)), self.folders, self.library)
+        self.musicbrainz = MusicBrainzMetadata(ExplorationRepository(self.db))
+        self.exploration = Exploration(self.musicbrainz, self.folders, self.library)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
         self.listening = Listening(self.subsonic)
         self.avatars = Avatars(AvatarRepository(self.db), self.users, self.subsonic)
         self.radios = Radios(self.subsonic)
         library_files = LibraryFiles(self.config.music_dir, incoming_dir(self.config.music_dir, self.config.incoming_name))
-        self.uploads = Uploads(self.subsonic, self.users, library_files, UploadRepository(self.db))
+        self.library_scan = LibraryScan(self.subsonic, self.users)
+        self.uploads = Uploads(self.subsonic, self.users, library_files, UploadRepository(self.db), self.library_scan)
         self.upload_attribution = UploadAttribution(self.uploads, self.subsonic)
         self.covers = Covers(self.folders, self.config.music_dir, LastFmAlbums(JsonFetcher(), self.config.lastfm_api_key),
                              ImageDownloader())
@@ -188,6 +202,10 @@ class WebApplication:
                                       DeezerReader(JsonHttp()))
         metadata = ExplorationRepository(self.db)
         self.discogs = Discogs(metadata, self.config.discogs_api_key)
+        self.tag_sources = TagSources(self.musicbrainz, self.discogs)
+        self.audio_tags = AudioTags(self.config.music_dir, os.path.join(self.data_dir, "audio-tag-backups"))
+        self.album_tags = AlbumTags(self.folders, self.subsonic, self.audio_tags, self.tag_sources,
+                                   self.library_scan, self._refresh_tags)
         self.discogs_catalogs = DiscogsCatalogs(self.discogs)
         self.artist_discogs = ArtistDiscogsLinks(ArtistLinkRepository(self.db), self.folders, self.artist_indexes,
                                                self.discogs, self.discogs_catalogs, self.config.subsonic_url)
@@ -216,6 +234,11 @@ class WebApplication:
         except (SubsonicError, SubsonicUnreachable):
             return {}
 
+    def _refresh_tags(self):
+        """Une écriture de tags invalide les lectures indexées, pour tous les comptes concernés."""
+        for cache in (self.library.cache, self.library.top_cache, self.folders.cache, self.ratings.cache):
+            cache.clear()
+
     def _routes(self):
         router = Router()
         guard = Guard(self.accounts, self.users)
@@ -239,6 +262,7 @@ class WebApplication:
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
         covers = CoverController(self.covers)
+        tags = TagController(self.album_tags)
 
         router.add("GET", "/", self._page)
         router.add("GET", "/health", lambda r: Reply.json({"ok": True}))
@@ -334,6 +358,12 @@ class WebApplication:
         router.add("GET", "/api/cover/status", read(covers.status, right="upload"))
         router.add("GET", "/api/cover/search", read(covers.search, right="upload"))
         router.add("POST", "/api/cover/save", write(covers.save, right="upload"))
+        for path, handler in (("/api/tags/status", tags.status), ("/api/tags/album", tags.album),
+                              ("/api/tags/search", tags.search), ("/api/tags/release", tags.release),
+                              ("/api/tags/operation", tags.operation)):
+            router.add("GET", path, read(handler, right=TAG_EDIT_RIGHT))
+        router.add("POST", "/api/tags/preview", write(tags.preview, TAG_BODY_LIMIT, right=TAG_EDIT_RIGHT))
+        router.add("POST", "/api/tags/save", write(tags.save, TAG_BODY_LIMIT, right=TAG_EDIT_RIGHT))
         for path, handler in (("/api/playlist/create", playlists.create), ("/api/playlist/add", playlists.add),
                               ("/api/playlist/remove", playlists.remove), ("/api/playlist/rename", playlists.rename),
                               ("/api/playlist/community", playlists.community),

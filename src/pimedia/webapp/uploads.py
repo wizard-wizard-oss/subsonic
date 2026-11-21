@@ -14,7 +14,7 @@ import uuid
 import zipfile
 
 from .library.files import EXTENSIONS, extension_of, find_albums
-from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
+from .library_scan import LibraryScan
 
 IMAGES = ("jpg", "jpeg", "png")                  # pochettes gardées à côté des titres d'un zip
 ZIP = "zip"
@@ -23,8 +23,6 @@ MAX_ZIP_BYTES = 2000 * 1024 * 1024
 MAX_UNZIPPED_BYTES = 4000 * 1024 * 1024          # garde-fou contre un zip qui gonfle démesurément
 HISTORY_PAGE_SIZE = 50
 CHUNK = 65536
-NOT_AUTHORIZED = 50
-BAD_CREDENTIALS = 40
 UNSAFE = re.compile(r'[\x00-\x1f\x7f<>:"|?*]')
 
 
@@ -55,11 +53,12 @@ def incoming_dir(music_dir, incoming_name):
 
 
 class Uploads:
-    def __init__(self, subsonic, users, library, history):
+    def __init__(self, subsonic, users, library, history, scanner=None):
         self._placement_lock = threading.Lock()
         self.history = history
         self.subsonic = subsonic
         self.users = users
+        self.scanner = scanner or LibraryScan(subsonic, users)
         self.library = library
         self.directory = library.incoming
 
@@ -292,24 +291,7 @@ class Uploads:
         raise UploadError("upload.write_failed")
 
     def scan(self, user):
-        """Demande à Subsonic de scanner (startScan), réservé aux administrateurs : on essaie avec le compte, puis avec les
-        administrateurs connus du site (ceux qui se sont déjà connectés), dont le jeton gardé peut avoir expiré.
-        True si un scan est lancé."""
-        admins = [u for u in self.users.by_priority() if u.is_admin and u.id != user.id][:3]
-        return self._scan_with([user] + admins)
+        return self.scanner.scan(user)
 
     def scan_as_admin(self):
-        """startScan sans personne connectée (rangement automatique d'Incoming) : avec un administrateur connu du site."""
-        return self._scan_with([u for u in self.users.by_priority() if u.is_admin][:3])
-
-    def _scan_with(self, accounts):
-        for who in accounts:
-            try:
-                self.subsonic.call(Credentials.of(who), "startScan")
-                return True
-            except SubsonicError as error:
-                if error.code not in (NOT_AUTHORIZED, BAD_CREDENTIALS):
-                    return False
-            except SubsonicUnreachable:
-                return False
-        return False
+        return self.scanner.scan_as_admin()

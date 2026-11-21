@@ -4,142 +4,18 @@ Les éditions sont proposées par titre ET artiste exacts ; plusieurs éditions 
 Les métadonnées publiques sont partagées, les recherches Subsonic sont toujours faites au nom du lecteur.
 """
 import re
-import logging
-import threading
-import time
-import urllib.error
-from dataclasses import dataclass
-from email.utils import parsedate_to_datetime
-from uuid import UUID
 
-from ..shared.external import JsonFetcher, query_url
 from ..shared.text import normalize
-from .exploration_entities import (AlbumCredits, ArtistConnections, ArtistMatches, CachedMetadata, MusicArtist, MusicEdition,
+from .musicbrainz import (ExplorationUnavailable, MetadataResult, MusicBrainzMetadata, artist_name, artist_names,
+                          mbid, search_phrase)
+from .exploration_entities import (AlbumCredits, ArtistConnections, ArtistMatches, MusicArtist, MusicEdition,
                                    MusicLink, MusicProfile, MusicWork)
 
-BASE = "https://musicbrainz.org/ws/2/"
 PAGE_SIZE = 25
-TTL = 7 * 86400
-STALE_TTL = 30 * 86400
-RETRY_DELAY = 2
-TRANSIENT_ERRORS = {429, 500, 502, 503, 504}
-LOG = logging.getLogger(__name__)
 ROLES = {"producer": "producer", "executive producer": "producer", "co-producer": "producer",
          "instrument": "musician", "vocal": "vocals", "performer": "musician", "guest performer": "musician",
          "composer": "composer", "writer": "composer", "lyricist": "lyricist", "conductor": "conductor",
          "mix": "mix", "recording": "engineer", "engineer": "engineer", "mastering": "mastering"}
-
-
-class ExplorationUnavailable(Exception):
-    pass
-
-
-@dataclass(frozen=True)
-class MetadataResult:
-    data: dict
-    stale: bool = False
-
-
-def mbid(value):
-    try:
-        parsed = str(UUID(str(value)))
-    except (ValueError, AttributeError, TypeError):
-        raise ValueError("MusicBrainz ID") from None
-    if str(value).lower() != parsed:
-        raise ValueError("MusicBrainz ID")
-    return parsed
-
-
-def artist_name(raw):
-    return "".join((c.get("name") or c.get("artist", {}).get("name", "")) + c.get("joinphrase", "")
-                   for c in raw.get("artist-credit", [])
-                   if isinstance(c, dict))
-
-
-def artist_names(raw):
-    """Noms canoniques et crédit complet, qui peut employer des noms d'usage."""
-    credits = raw.get("artist-credit") or []
-    names = [c.get("artist", {}).get("name", c.get("name", "")) for c in credits if isinstance(c, dict)]
-    credit = artist_name(raw) if credits else ""
-    return [*names, credit] if credit else names
-
-
-def search_phrase(text):
-    """Expression littérale MusicBrainz, sans guillemet ni échappement fourni par le nom."""
-    return '"' + re.sub(r'["\\]', " ", str(text))[:300] + '"'
-
-
-class MusicBrainzMetadata:
-    """Réponses de MusicBrainz : cache durable, reprises bornées et déduplication des appels concurrents."""
-    def __init__(self, repository, fetcher=None, clock=time.time, sleep=time.sleep):
-        self.repository = repository
-        self.fetcher = fetcher or JsonFetcher()
-        self.clock = clock
-        self.sleep = sleep
-        self.lock = threading.Lock()
-        self.retry_at = {}
-
-    def _retry_delay(self, error):
-        if not isinstance(error, urllib.error.HTTPError):
-            return RETRY_DELAY
-        if error.code not in TRANSIENT_ERRORS:
-            return None
-        value = (error.headers or {}).get("Retry-After", "")
-        if value:
-            try:
-                return max(0, float(value))
-            except ValueError:
-                try:
-                    return max(0, parsedate_to_datetime(value).timestamp() - self.clock())
-                except (TypeError, ValueError, OverflowError):
-                    pass
-        return 60 if error.code == 429 else RETRY_DELAY
-
-    def _fetch(self, url):
-        for attempt in range(2):
-            try:
-                data = self.fetcher.get(url)
-                if not isinstance(data, dict):
-                    raise ValueError("MusicBrainz response")
-                return data
-            except (OSError, ValueError) as error:
-                delay = self._retry_delay(error)
-                # Une seule reprise, bornée ; une consigne d'attente plus longue revient au prochain clic.
-                if attempt or delay is None or delay > RETRY_DELAY:
-                    raise
-                self.sleep(max(RETRY_DELAY, delay))
-
-    def _fallback(self, cached):
-        if cached and self.clock() - cached.fetched_at < STALE_TTL:
-            return MetadataResult(cached.data, stale=True)
-        raise ExplorationUnavailable()
-
-    def get(self, path, **params):
-        url = query_url(BASE + path, sorted(dict(params, fmt="json").items()))
-        cached = self.repository.get(url)
-        if cached and self.clock() - cached.fetched_at < TTL:
-            return MetadataResult(cached.data)
-        with self.lock:
-            # Une autre requête a pu remplir le cache pendant l'attente. Les lectures déjà en cache ne patientent pas.
-            cached = self.repository.get(url)
-            if cached and self.clock() - cached.fetched_at < TTL:
-                return MetadataResult(cached.data)
-            if self.clock() < self.retry_at.get(url, 0):
-                return self._fallback(cached)
-            try:
-                data = self._fetch(url)
-            except (OSError, ValueError) as error:
-                LOG.warning("MusicBrainz %s : %s", path.split("/")[0],
-                            "HTTP %d" % error.code if isinstance(error, urllib.error.HTTPError) else type(error).__name__)
-                delay = self._retry_delay(error)
-                if delay is None:
-                    raise ExplorationUnavailable() from error
-                self.retry_at = {key: date for key, date in self.retry_at.items() if date > self.clock()}
-                self.retry_at[url] = self.clock() + max(60, delay)
-                return self._fallback(cached)
-            self.repository.save(CachedMetadata(url, data, int(self.clock())))
-            self.retry_at.pop(url, None)
-            return MetadataResult(data)
 
 
 class Exploration:
