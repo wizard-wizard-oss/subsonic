@@ -2,8 +2,8 @@
 from .discogs import discogs_id
 from .listen_later_entities import ListeningTarget
 
-KINDS = ("artist", "album")
-SOURCES = ("subsonic", "discogs")
+TARGET_TYPES = (("artist", "subsonic"), ("artist", "discogs"),
+                ("album", "subsonic"), ("album", "discogs"), ("song", "subsonic"))
 
 
 class ListenLaterError(ValueError):
@@ -17,11 +17,12 @@ def entry_id(value):
 
 
 class ListeningTargets:
-    def __init__(self, folders, discogs, library_key):
+    def __init__(self, folders, discogs, library_key, library):
         self.folders, self.discogs, self.library_key = folders, discogs, library_key
+        self.library = library
 
     def key(self, kind, source, source_id):
-        if kind not in KINDS or source not in SOURCES:
+        if (kind, source) not in TARGET_TYPES:
             raise ValueError("listening target")
         if not isinstance(source_id, str) or not 1 <= len(source_id) <= 100:
             raise ValueError("source id")
@@ -38,6 +39,10 @@ class ListeningTargets:
                                        image_ref=person.image)
             release = self.discogs.release(source_id)
             return ListeningTarget(kind, source, "", release.id, release.title, release.artist, release.image)
+        if kind == "song":
+            song = self.library.song(user, source_id)
+            return ListeningTarget(kind, source, self.library_key, song["id"], song["title"],
+                                   song["artist"], song.get("coverId") or "")
         if kind == "artist":
             artist = self.folders.artist(user, source_id)
             return ListeningTarget(kind, source, self.library_key, artist["id"], artist["name"],

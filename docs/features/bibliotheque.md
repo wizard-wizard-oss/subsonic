@@ -23,7 +23,9 @@
   des albums commentés gardent leur présentation.
 - **Recherche** (champ du haut, dès 2 lettres) : artistes, albums, titres, et section « Ailleurs » (voir `musique-ailleurs.md`).
 - **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
-- **À écouter** : marque-pages et recommandations d’artistes/albums, indépendants des cœurs. Boutons sur les fiches ; voir [listen-later](listen-later.md).
+- **À écouter** : marque-pages et recommandations d’artistes/albums/morceaux, indépendants des cœurs.
+  Boutons sur les fiches et « Conseiller à quelqu’un » sur les lignes de morceaux Subsonic. Les morceaux reçus
+  se lisent ensemble et se retirent individuellement ; voir [listen-later](listen-later.md).
 
 ### Édition des informations (1.11)
 
@@ -77,7 +79,11 @@ Tests différés dédiés dans `e2e_webapp_queue.js` (ordre, échec puis reprise
 Validation locale du 19/11/2026 : 148 tests Python ciblés et quatre parcours jsdom PC réussis (424 contrôles).
 Chrome : réglages en clair/sombre à 1440, 900, 390 et 320 px ; Mon compte à 1440, 390 et 320 px ;
 playlist avec style long et absent, file avec débit/format/taille distincts. Syntaxe JS et `git diff --check`
-valides. Essais sur faux Subsonic, aucune musique réelle modifiée ; version non déployée.
+valides. Essais sur faux Subsonic, aucune musique réelle modifiée.
+Publication le 20/11/2026 depuis un instantané de la 1.11.1 enrichi des colonnes uniquement : 148 tests Python
+et les deux parcours principaux revalidés sur cet instantané. Version publique 1.12, santé HTTPS, 231 fichiers
+applicatifs et 52 ressources publiques conformes. Conteneur sain, SQLite intègre au schéma 19 et données
+conservées. Le parcours connecté à la production n’a pas été rejoué ; recharger avec Cmd+Maj+R.
 
 ### Style sur les cartes d’albums (1.10.2)
 

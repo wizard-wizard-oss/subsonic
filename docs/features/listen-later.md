@@ -1,18 +1,27 @@
-# À écouter : artistes, albums et recommandations (site web)
+# À écouter : artistes, albums, morceaux et recommandations (site web)
 
 ## Fonctionnement
 
 - Page #/listen-later dans la navigation et les réglages rapides : deux sections indépendantes,
-  « Mes marque-pages » et « Les recommandations reçues », filtre artistes/albums.
+  « Mes marque-pages » et « Les recommandations reçues », filtre artistes/albums/morceaux.
 - Bouton marque-page sur les fiches artiste/album Subsonic, la fiche artiste Discogs et les cartes des catalogues
   Discogs existants. Le bouton indique son état ; un second clic retire l'entrée personnelle.
 - « Conseiller à quelqu’un » aux mêmes endroits et dans la liste personnelle : choix d'un autre compte déjà
   connecté au site. Le conseil arrive dans les recommandations, sans créer de marque-page.
+- Depuis la 1.13, le même bouton sur les lignes de morceaux Subsonic (album, titres populaires, recherche,
+  favoris et playlists) envoie le titre précis. Le double-clic sur ce bouton ne lance pas l'album.
+- Les morceaux reçus forment une liste avec titre, artiste et conseillers. « Tout écouter » charge les morceaux
+  dans l'ordre affiché et les enchaîne dans le lecteur habituel ; le bouton d'une ligne commence à ce morceau
+  dans la même liste. Les métadonnées actuelles sont relues via Subsonic avant de remplacer la file.
+- La croix de chaque ligne retire ce morceau des recommandations, pour tous ses conseillers. Les autres conseils,
+  un éventuel marque-page du morceau et la lecture en cours restent indépendants. Le marque-page permet de
+  conserver le morceau ; sa carte propose ensuite « Écouter le morceau ».
 - Plusieurs personnes peuvent conseiller la même référence : une carte regroupe tous leurs noms.
   Une même personne ne crée pas deux conseils identiques pour le même destinataire.
 - Une recommandation peut être gardée comme marque-page. Les deux cartes peuvent coexister et se retirent
   indépendamment. Retirer une recommandation retire tous les conseils reçus pour cette référence.
-- Les entrées Subsonic ouvrent les fiches existantes. L'artiste Discogs ouvre sa fiche dans le site ;
+- Les artistes/albums Subsonic ouvrent les fiches existantes ; le nom d'un morceau gardé ouvre la recherche.
+  L'artiste Discogs ouvre sa fiche dans le site ;
   l'album Discogs ouvre l'édition retenue sur Discogs.
 - « Rechercher pour écouter » ouvre la recherche actuelle préremplie : bibliothèque, vidéos YouTube déjà connues
   et recherche YouTube sur demande. Lecteur, favoris et playlists existants prennent ensuite le relais.
@@ -28,10 +37,11 @@ Migration 17 dans webapp/schema.py, ajoutée à la suite des migrations existant
 | listen_later | id, user_id, kind, source, library_key, source_id, title, artist, image_ref, created_at |
 | recommendations | id, sender_id, recipient_id, kind, source, library_key, source_id, title, artist, image_ref, created_at |
 
-kind : artist ou album ; source : subsonic ou discogs.
+kind : artist, album ou song ; source : subsonic ou discogs. Les morceaux sont limités à Subsonic.
 Folders ramène les références Subsonic aux dossiers : un ajout depuis l'ID3 ou depuis un dossier donne la même
 entrée. library_key réutilise l'identité de serveur calculée par ArtistDiscogsLinks. Les entrées d'un ancien
 serveur restent conservées ; seules celles du serveur configuré et celles de Discogs sont affichées.
+Un morceau garde son identifiant Subsonic propre ; il ne se confond ni avec son album, ni avec un autre titre.
 
 Pour Discogs : identifiant d'artiste, ou identifiant de l'édition déjà utilisée par la carte (editions[0]).
 Deux éditions restent deux références distinctes. Les descriptions sont résolues par les services côté serveur.
@@ -47,13 +57,14 @@ nouveau stockage de liens de lecture. Les marque-pages de position (/api/bookmar
 ## Code
 
 - listen_later_entities.py : ListeningTarget, ListenLaterEntry, Recommendation, RecommendationGroup.
-- listening_targets.py : validation et résolution via Folders et Discogs.
+- listening_targets.py : validation et résolution via Folders, Library.song et Discogs.
 - listen_later.py : règles des entrées personnelles ; recommendations.py : envoi, regroupement et retrait.
 - storage/listen_later.py et storage/recommendations.py : SQL et retour d'entités ;
   storage/listening_targets.py mutualise la projection SQL de la référence.
 - controllers/listen_later.py : adaptation HTTP. Assemblage dans app.py.
 - web-pc/static/js/listen-later.js et css/listen-later.css : boutons, dialogue et page.
-  Intégrations dans les fiches, DiscogsUI.card, la navigation et les réglages existants.
+  Liste de morceaux et chargement de la file dans le même composant ; intégrations dans les fiches, tableaux
+  de titres, DiscogsUI.card, la navigation et les réglages existants.
 - DiscogsRelease.image utilise le validateur d'images existant ; projection de cache passée en version 3.
 
 ## API et accès
@@ -65,11 +76,34 @@ nouveau stockage de liens de lecture. Les marque-pages de position (/api/bookmar
 | POST /api/listen-later/remove | id |
 | POST /api/recommendation/send | recipient, kind, source, sourceId |
 | POST /api/recommendation/remove | kind, source, sourceId : retrait du groupe reçu |
+| GET /api/song?id= | Métadonnées actuelles d'un morceau, relues avec le compte connecté |
 
 Session obligatoire et protection CSRF existante pour les écritures.
 Le propriétaire, l'émetteur et le destinataire d'un retrait viennent de la session.
 Une référence Subsonic conseillée est aussi vérifiée avec le compte du destinataire.
 L'état client est réinitialisé à chaque connexion pour éviter de reprendre celui d'un autre compte.
+
+## Morceaux recommandés (1.13)
+
+Migration 20 : reconstruction transactionnelle de listen_later et recommendations pour accepter song,
+avec contrainte song/subsonic. Identifiants, dates, références, clés étrangères, index, unicités et marqueurs
+de lecture sont conservés. Les migrations déjà publiées restent inchangées.
+
+La liste s'affiche et se supprime depuis les descriptions enregistrées, même si la source devient indisponible.
+À la lecture, au plus quatre demandes getSong sont simultanées. Les morceaux supprimés ou devenus inaccessibles
+(404) sont ignorés avec un message ; si le morceau choisi manque ou si aucune piste ne reste, la file est
+conservée. Les autres erreurs conservent aussi la lecture actuelle. La navigation ou un changement de compte
+annule le démarrage différé. Les boutons de lecture respectent le droit stream ; le retrait reste disponible.
+La liste reçue a ses colonnes propres (titre, artiste, conseillers, commandes) : elle n'affiche pas de tags absents
+des descriptions conservées. Elle défile horizontalement sur écran étroit.
+
+Il s'agit d'une sélection chargée dans la file du lecteur ; elle ne crée pas de playlist Subsonic enregistrée.
+L'envoi de morceaux Discogs, YouTube, SoundCloud ou Jamendo n'est pas proposé.
+
+Validation locale de la 1.13 : 853 tests Python passent, ainsi que les parcours jsdom PC général, file et
+À écouter. Chrome vérifie deux comptes avec le vrai flux SSE, l'écoute de toute la liste et le retrait
+individuel ; rendu clair/sombre contrôlé à 1440, 390 et 320 px, commandes visibles et défilement limité au
+tableau sur petit écran. Les serveurs musicaux sont simulés ; cette version n'est pas encore déployée.
 
 ## Pastille des recommandations (1.9.2)
 
@@ -114,8 +148,14 @@ Les 212 fichiers de l’image, les ressources publiques et les protections des n
 - tests/test_listen_later.py : migration/réouverture, concurrence, dossier/ID3, séparation des comptes,
   types/sources/serveurs, descriptions vérifiées, lecture hors ligne, propriété des retraits, favoris conservés,
   quatre conseillers, répétition idempotente, coexistence, accès du destinataire, validation et CSRF.
+  Pour les morceaux : migration 19→20 avec marqueurs lus/non lus conservés, unicités et suppressions en cascade,
+  descriptions et métadonnées relues dans Subsonic, séparation morceau/album, validation des types et accès
+  des deux comptes, suppression possible après disparition de la source.
 - tests/e2e_listen_later.js : vraie interface dans jsdom, fiches Subsonic/Discogs, envoi d'un conseil,
   regroupement, conservation facultative, filtres, retrait indépendant, recherche existante et changement de compte.
+  Morceaux : envoi depuis la deuxième piste d'un album, liste reçue, plusieurs conseillers, lecture de tout le
+  groupe et à partir d'une ligne, passage à la piste suivante, double-clic, panne préservant la file,
+  piste indisponible ignorée, droit d'écoute, marque-page conservé et retraits jusqu'à la liste vide.
   Ajouté à tests/run_e2e.py.
 - File TCP du serveur de parcours PC portée à 128 connexions pour charger les scripts jsdom sur macOS.
 - Validation locale : 633 tests Python passent ; parcours PC existant et nouveau parcours jsdom passent.

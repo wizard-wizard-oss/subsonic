@@ -15,6 +15,12 @@
 .recommendation-form { display: grid; gap: 1rem; }
 .recommendation-form label { flex-wrap: wrap; }
 .recommendation-form select { max-width: 100%; }
+.recommendation-songs { min-width: 0; }
+.recommendation-songs-head { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.recommendation-songs-head h3 { margin: 0; }
+.recommendation-songs-scroll { overflow-x: auto; }
+.recommendation-songs-table .row-play, .recommendation-songs-table td.more .link-button { opacity: 1; }
+.recommendation-songs-table td.more .recommendation-remove { color: var(--danger); }
 @media (max-width: 480px) {
   .listen-later-card { padding: .75rem; gap: .75rem; }
   .listen-later-artwork { width: 48px; height: 48px; flex-basis: 48px; }

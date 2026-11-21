@@ -1,9 +1,10 @@
 "use strict";
-/* Personal artist/album bookmarks and received recommendations. Search and playback use existing views. */
+/* Personal musical bookmarks and received recommendations. Search and playback use existing services. */
 const ListenLaterUI = (() => {
-  const el = App.el, t = key => App.t("listen_later." + key);
+  const el = App.el, t = (key, params) => App.t("listen_later." + key, params);
   let state = null, pending = null, generation = 0;
   let notificationGeneration = 0, renderGeneration = 0, listenersReady = false;
+  let playbackGeneration = 0;
   const key = target => JSON.stringify([target.kind, target.source, target.sourceId]);
   const reference = target => ({kind: target.kind, source: target.source, sourceId: target.sourceId});
 
@@ -16,6 +17,7 @@ const ListenLaterUI = (() => {
     invalidate();
     notificationGeneration++;
     renderGeneration++;
+    playbackGeneration++;
     showIndicator(false);
   }
 
@@ -107,6 +109,7 @@ const ListenLaterUI = (() => {
     const node = App.setIcon(el("button.listen-later-toggle" + (labelled ? ".listen-later-keep" : ".icon-button"), {
       type: "button", dataset: Object.assign(reference(target), {labelled: String(labelled)}), title: t("add_bookmark"), "aria-label": t("add_bookmark"),
       "aria-pressed": "false", disabled: true,
+      ondblclick: event => event.stopPropagation(),
       onclick: async () => {
         node.disabled = true;
         const owner = App.user.id;
@@ -153,16 +156,26 @@ const ListenLaterUI = (() => {
     Dialogs.open(t("recommend"), form);
   }
 
-  function actions(target) {
-    return el("span.listening-actions", {}, button(target),
-      App.setIcon(el("button.icon-button.recommendation-open", {
+  function recommendButton(target, compact = false) {
+    return App.setIcon(el("button.recommendation-open." + (compact ? "link-button" : "icon-button"), {
         type: "button", title: t("recommend"), "aria-label": t("recommend"),
-        onclick: () => recommend(target)}), "reply", 18));
+        onclick: event => { event.stopPropagation(); recommend(target); },
+        ondblclick: event => event.stopPropagation()}), "reply", compact ? 16 : 18);
+  }
+
+  function actions(target) {
+    return el("span.listening-actions", {}, button(target), recommendButton(target));
+  }
+
+  function searchPath(target) {
+    const query = [target.artist, target.title].filter(Boolean).join(" ");
+    return "#/search/" + encodeURIComponent(query);
   }
 
   function openLink(target) {
     let href;
-    if (target.source === "subsonic") href = "#/" + target.kind + "/" + encodeURIComponent(target.sourceId);
+    if (target.kind === "song") href = searchPath(target);
+    else if (target.source === "subsonic") href = "#/" + target.kind + "/" + encodeURIComponent(target.sourceId);
     else if (target.kind === "artist") href = "#/discogs/artist/" + encodeURIComponent(target.sourceId);
     else href = "https://www.discogs.com/release/" + encodeURIComponent(target.sourceId);
     const props = {href, text: target.title};
@@ -171,9 +184,43 @@ const ListenLaterUI = (() => {
   }
 
   function searchLink(target) {
-    const query = [target.artist, target.title].filter(Boolean).join(" ");
     return el("a.button.listen-later-search", {
-      href: "#/search/" + encodeURIComponent(query), text: t("search_listening")});
+      href: searchPath(target), text: t("search_listening")});
+  }
+
+  async function playSongs(targets, node, startId) {
+    if (node.disabled || !App.can("stream")) return;
+    const owner = App.user.id, playback = ++playbackGeneration;
+    const current = () => playback === playbackGeneration && node.isConnected &&
+      App.user && App.user.id === owner && App.can("stream");
+    node.disabled = true;
+    node.setAttribute("aria-busy", "true");
+    try {
+      const resolved = new Array(targets.length);
+      let next = 0;
+      const load = async () => {
+        while (next < targets.length && current()) {
+          const index = next++;
+          try {
+            resolved[index] = (await App.api.get("/api/song", {id: targets[index].sourceId})).song;
+          } catch (failure) {
+            if (!(failure instanceof ApiError) || failure.status !== 404) throw failure;
+          }
+        }
+      };
+      await Promise.all(Array.from({length: Math.min(4, targets.length)}, load));
+      if (!current()) return;
+      const songs = resolved.filter(Boolean);
+      const start = startId ? songs.findIndex(song => song.id === startId) : 0;
+      if (!songs.length || start < 0) { App.toast(t("song_unavailable"), "error"); return; }
+      App.player.playList(songs, start);
+      if (songs.length < targets.length) App.toast(t("songs_skipped", {count: targets.length - songs.length}));
+    } catch (failure) {
+      if (current()) { playbackGeneration++; App.toast(App.errorText(failure), "error"); }
+    } finally {
+      node.disabled = false;
+      node.removeAttribute("aria-busy");
+    }
   }
 
   function card(target, controls, caption) {
@@ -182,13 +229,17 @@ const ListenLaterUI = (() => {
     image.addEventListener("load", () => { image.hidden = false; });
     image.addEventListener("error", () => { image.hidden = true; });
     const artwork = el("div.listen-later-artwork", {},
-      App.icon(target.kind === "artist" ? "mic" : "disc", 30), image);
+      App.icon({artist: "mic", album: "disc", song: "music"}[target.kind], 30), image);
     return el("article.listen-later-card", {}, artwork,
       el("div.listen-later-details", {}, openLink(target),
         target.artist ? el("span.muted", {text: target.artist}) : null,
         el("span.muted", {text: t("kinds." + target.kind) + " · " + t("sources." + target.source)}),
         caption || null,
-        el("div.listen-later-actions", {}, searchLink(target), controls)));
+        el("div.listen-later-actions", {},
+          target.kind === "song" && App.can("stream") ? App.setIcon(el("button.listen-later-play", {
+            type: "button", onclick: event => playSongs([target], event.currentTarget)}),
+            "play", 16, false, t("play_song")) : null,
+          searchLink(target), controls)));
   }
 
   async function remove(path, body, main, route) {
@@ -199,34 +250,86 @@ const ListenLaterUI = (() => {
     } catch (failure) { App.toast(App.errorText(failure), "error"); }
   }
 
+  function songRecommendations(groups, main, route) {
+    const targets = groups.map(group => group.target);
+    const table = el("table.songs.recommendation-songs-table", {},
+      el("thead", {}, el("tr", {},
+        el("th.title", {scope: "col", text: SongColumns.label("title")}),
+        el("th.song-artist", {scope: "col", text: SongColumns.label("artist")}),
+        el("th", {scope: "col", text: t("advisers")}),
+        el("th.more", {scope: "col", "aria-label": SongColumns.label("actions")}))),
+      el("tbody", {}, groups.map(group => {
+        const target = group.target;
+        const keep = button(target, () => !route.stale && page.render(main, route, false));
+        keep.classList.add("link-button");
+        return el("tr.song", {dataset: {id: target.sourceId},
+          ondblclick: event => playSongs(targets, event.currentTarget, target.sourceId)},
+          el("td.title", {}, App.can("stream") ? el("button.row-play", {
+            type: "button", title: t("play_song"), "aria-label": t("play_song"),
+            onclick: event => playSongs(targets, event.currentTarget, target.sourceId),
+            ondblclick: event => event.stopPropagation()}, App.icon("play", 14)) : null,
+            el("span", {text: target.title})),
+          el("td.song-artist.muted", {text: target.artist}),
+          el("td.recommendation-senders.muted", {text: group.senders.map(sender => sender.username).join(", ")}),
+          el("td.more", {}, keep, recommendButton(target, true),
+            el("button.link-button.recommendation-remove", {
+              type: "button", title: t("dismiss"), "aria-label": t("dismiss"),
+              onclick: () => remove("/api/recommendation/remove", reference(target), main, route),
+              ondblclick: event => event.stopPropagation()}, App.icon("close", 16))));
+      })));
+    const highlight = () => table.querySelectorAll("tr.song").forEach(row => {
+      row.classList.toggle("playing", !!App.player.current && row.dataset.id === App.player.current.id);
+    });
+    highlight();
+    table.destroy = App.bus.on("queue", highlight);
+    page.table = table;
+    return el("div.recommendation-songs", {},
+      el("div.recommendation-songs-head", {},
+        el("h3", {text: t("recommended_songs")}),
+        el("span.muted", {text: App.plural("album.tracks", targets.length)}),
+        App.can("stream") ? App.setIcon(el("button.recommendation-play-all", {
+          type: "button", onclick: event => playSongs(targets, event.currentTarget)}),
+          "play", 16, false, t("play_all")) : null),
+      el("div.recommendation-songs-scroll", {}, table));
+  }
+
   const page = {
+    table: null,
+    destroy() {
+      playbackGeneration++;
+      if (this.table) this.table.destroy();
+      this.table = null;
+    },
     async render(main, route, refresh = true) {
+      this.destroy();
       const render = ++renderGeneration;
       main.textContent = t("loading");
       try {
         const data = await load(refresh);
         if (route.stale || render !== renderGeneration) return;
         const filter = el("select.listen-later-filter", {"aria-label": t("filter")},
-          ["all", "artist", "album"].map(kind => el("option", {value: kind, text: t("filters." + kind)})));
+          ["all", "artist", "album", "song"].map(kind => el("option", {value: kind, text: t("filters." + kind)})));
         const bookmarks = el("div.listen-later-list.bookmark-list");
         const recommendations = el("div.listen-later-list.recommendation-list");
         const show = target => filter.value === "all" || target.kind === filter.value;
         const draw = () => {
+          this.destroy();
           const own = data.bookmarks.filter(entry => show(entry.target));
           const received = data.recommendations.filter(group => show(group.target));
+          const songs = received.filter(group => group.target.kind === "song");
           App.append(App.clear(bookmarks), [own.length ? own.map(entry => card(entry.target, [
             el("button.listen-later-remove", {type: "button", text: t("remove_bookmark"),
               onclick: () => remove("/api/listen-later/remove", {id: entry.id}, main, route)}),
-            App.setIcon(el("button.icon-button", {type: "button", title: t("recommend"),
-              "aria-label": t("recommend"), onclick: () => recommend(entry.target)}), "reply", 18)
+            recommendButton(entry.target)
           ])) : el("p.muted", {text: t("empty_bookmarks")})]);
-          App.append(App.clear(recommendations), [received.length ? received.map(group => card(group.target, [
+          App.append(App.clear(recommendations), [received.length ? received.filter(group => group.target.kind !== "song").map(group => card(group.target, [
             button(group.target, () => !route.stale && page.render(main, route, false), true),
             el("button.recommendation-remove", {type: "button", text: t("dismiss"),
               onclick: () => remove("/api/recommendation/remove", reference(group.target), main, route)})
           ], el("p.recommendation-senders", {
             text: App.t("listen_later.recommended_by", {names: group.senders.map(sender => sender.username).join(", ")})})))
-            : el("p.muted", {text: t("empty_recommendations")})]);
+            : el("p.muted", {text: t("empty_recommendations")}),
+            songs.length ? songRecommendations(songs, main, route) : null]);
         };
         filter.onchange = draw;
         App.append(App.clear(main), [el("h1", {text: t("title")}), el("p.muted", {text: t("intro")}),
@@ -244,5 +347,5 @@ const ListenLaterUI = (() => {
   };
 
   Views.listenLater = page;
-  return {actions, button, reset, start};
+  return {actions, button, recommendButton, reset, start};
 })();

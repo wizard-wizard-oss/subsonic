@@ -1,4 +1,4 @@
-"""Personal artist and album bookmarks; playback stays in its existing services."""
+"""Personal musical bookmarks; playback stays in its existing services."""
 import time
 
 from .listening_targets import entry_id

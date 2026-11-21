@@ -57,6 +57,9 @@ class LibraryController:
         self.upload_attribution.annotate(user, [album])
         return ok(album)
 
+    def song(self, request, user):
+        return ok({"song": self.library.song(user, item_id(request.param("id")))})
+
     def albums(self, request, user):
         page = request.param("page", "0")
         return ok(self.library.albums(user, request.param("kind", "newest"), request.param("value"),

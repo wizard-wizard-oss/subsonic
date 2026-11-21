@@ -209,7 +209,7 @@ class WebApplication:
         self.discogs_catalogs = DiscogsCatalogs(self.discogs)
         self.artist_discogs = ArtistDiscogsLinks(ArtistLinkRepository(self.db), self.folders, self.artist_indexes,
                                                self.discogs, self.discogs_catalogs, self.config.subsonic_url)
-        targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key)
+        targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key, self.library)
         self.listen_later = ListenLater(ListenLaterRepository(self.db), targets)
         self.recommendations = Recommendations(RecommendationRepository(self.db), targets, self.users, self.hub)
         self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
@@ -301,7 +301,7 @@ class WebApplication:
         for path, handler in (("/api/home", library.home), ("/api/artists", library.artists),
                               ("/api/artist", library.artist), ("/api/artist/top", library.top_songs),
                               ("/api/artist/similar", library.similar),
-                              ("/api/album", library.album),
+                              ("/api/album", library.album), ("/api/song", library.song),
                               ("/api/search", library.search), ("/api/starred", library.starred),
                               ("/api/albums", library.albums), ("/api/genres", library.genres),
                               ("/api/cover", library.cover)):

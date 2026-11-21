@@ -5,6 +5,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.13"
+  date: 2026-11-21
+  title: "Conseiller un morceau à un ami"
+  changes:
+    - "Depuis les listes de morceaux de la bibliothèque, conseillez un titre précis à un autre membre avec « Conseiller à quelqu’un »."
+    - "Le morceau arrive dans ses recommandations À écouter, avec un bouton pour l’écouter directement. Il peut le garder en marque-page et filtrer sa liste sur les morceaux."
+    - "Les morceaux reçus forment une liste avec « Tout écouter » pour les enchaîner. Retirez chaque morceau qui ne vous intéresse plus avec sa croix."
+
 - version: "1.12.1"
   date: 2026-11-20
   title: "Suivre l’enregistrement des tags"

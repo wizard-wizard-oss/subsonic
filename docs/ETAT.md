@@ -1,5 +1,17 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Morceaux recommandés, 1.13 (21/11/2026, préparée, non déployée)** : « Conseiller à quelqu’un »
+sur les lignes de morceaux Subsonic. Dans À écouter, les morceaux reçus forment une liste : titre, artiste,
+conseillers, lecture depuis une ligne, « Tout écouter » et retrait individuel. Une croix retire le conseil
+reçu sans toucher aux autres titres, aux marque-pages ou à la lecture en cours. Métadonnées relues avec le
+compte courant avant de remplacer la file ; droit d'écoute respecté, pistes introuvables ignorées et panne
+sans interruption de la lecture existante. Migration 20 pour accepter les morceaux dans les deux tables,
+en conservant les entrées et marqueurs de lecture. Les références artistes/albums existantes gardent leur
+parcours. Détails, tests et limites : [À écouter](features/listen-later.md).
+Validation locale : 853 tests Python passent, ainsi que les trois parcours jsdom PC (général, file et
+À écouter). Chrome vérifie l'envoi entre deux comptes avec le vrai flux SSE, « Tout écouter », le retrait
+individuel et les rendus clair/sombre à 1440, 390 et 320 px. Sources musicales simulées ; non déployée.
+
 **Colonnes des morceaux, 1.12 (20/11/2026, déployé et vérifié)** : même grille que la capture des
 paramètres personnels Subsonic, neuf informations pour Parcourir et Liste de lecture, choix indépendants
 et persistants par compte. Style individuel visible, valeurs absentes indiquées par « — », débit/format/taille

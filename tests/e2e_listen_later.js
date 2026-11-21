@@ -39,11 +39,23 @@ function client() {
   }
   const errors = [];
   let holdNextStatus = false, heldStatus = null, holdNextRead = false, heldRead = null, failNextList = false;
+  let failNextSong = false, holdSongRequests = false;
+  const heldSongs = [], unavailableSongs = new Set();
   const dom = await JSDOM.fromURL(base + "/#/listen-later", {
     runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
     beforeParse(window) {
       window.fetch = (url, options) => {
         requests.push(String(url));
+        if (String(url).startsWith("/api/song?")) {
+          if (failNextSong) {
+            failNextSong = false;
+            return Promise.resolve({ok:false, status:503, json:async () => ({error:"subsonic.unreachable"})});
+          }
+          if (unavailableSongs.has(new URL(url, base).searchParams.get("id"))) {
+            return Promise.resolve({ok:false, status:404, json:async () => ({error:"subsonic.error"})});
+          }
+          if (holdSongRequests) return new Promise(resolve => { heldSongs.push(() => resolve(bob.request(url, options))); });
+        }
         if (String(url) === "/api/recommendation/status" && holdNextStatus) {
           holdNextStatus = false;
           return bob.request(url, options).then(response => new Promise(resolve => {
@@ -122,6 +134,97 @@ function client() {
     assert.equal(receivedByAlice.recommendations.length, 1);
     assert.equal(receivedByAlice.bookmarks.length, 0);
     console.log("OK advice does not create recipient bookmark");
+
+    // A specific track can be sent from its album, then received as a playable recommendation list.
+    const app = window.eval("App"), listeningPage = window.eval("Views.listenLater");
+    await navigate("#/album/al1", () => $('.song[data-id="s2"] .recommendation-open'));
+    const recommendSong = $('.song[data-id="s2"] .recommendation-open');
+    const beforeShare = app.player.current;
+    recommendSong.click();
+    recommendSong.dispatchEvent(new window.MouseEvent("dblclick", {bubbles:true}));
+    assert.equal(app.player.current, beforeShare, "sharing must not start album playback");
+    $(".recommendation-recipient").value = "alice";
+    $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => !$(".recommendation-form"), "song recommendation sent");
+    const songReceivedByAlice = (await (await alice.request("/api/listen-later")).json()).recommendations
+      .find(group => group.target.kind === "song");
+    assert.equal(songReceivedByAlice.target.sourceId, "s2");
+    assert.equal(songReceivedByAlice.target.title, "Knowing Me");
+    await alice.post("/api/recommendation/remove", songReceivedByAlice.target);
+
+    for (const [sender, sourceId] of [[alice,"s1"], [alice,"s2"], [charlie,"s2"]]) {
+      assert.equal((await sender.post("/api/recommendation/send", {
+        recipient:"bob", kind:"song", source:"subsonic", sourceId})).status, 200);
+    }
+    await navigate("#/listen-later", () => $$(".recommendation-songs-table tr.song").length === 2);
+    const songOrder = $$(".recommendation-songs-table tr.song").map(row => row.dataset.id);
+    assert.equal($(".recommendation-play-all").textContent, "Tout écouter");
+    assert.match($('.recommendation-songs-table tr[data-id="s2"] .recommendation-senders').textContent, /alice, charlie|charlie, alice/);
+    const songFilter = $(".listen-later-filter");
+    songFilter.value = "song";
+    songFilter.dispatchEvent(new window.Event("change"));
+    assert.equal($$(".recommendation-songs-table tr.song").length, 2);
+    assert.equal($$(".bookmark-list .listen-later-card").length, 0);
+    console.log("OK specific song sharing and received track list with grouped advisers");
+
+    const original = (await app.api.get("/api/song", {id:"s4"})).song;
+    app.player.playList([original], 0);
+    failNextSong = true;
+    $(".recommendation-play-all").click();
+    await until(() => !$(".recommendation-play-all").disabled &&
+      $("#toasts").textContent.includes("injoignable"), "song loading error");
+    assert.equal(app.player.current.id, "s4");
+    assert.equal(app.player.queue.length, 1);
+
+    holdSongRequests = true;
+    $(".recommendation-play-all").click();
+    $(".recommendation-play-all").click();
+    await until(() => heldSongs.length === 2, "one playlist load despite double click");
+    assert.equal($(".recommendation-play-all").getAttribute("aria-busy"), "true");
+    assert.equal(app.player.current.id, "s4", "keep the current queue until all songs are ready");
+    holdSongRequests = false;
+    heldSongs.splice(0).forEach(release => release());
+    await until(() => app.player.queue.length === 2 && app.player.current.id === songOrder[0], "play all received songs");
+    assert.deepEqual(Array.from(app.player.queue, song => song.id), songOrder);
+    assert(app.player.queue.every(song => song.duration > 0 && song.albumId));
+    app.player.next();
+    assert.equal(app.player.current.id, songOrder[1], "playback advances to the next recommended song");
+    $('.recommendation-songs-table tr[data-id="' + songOrder[0] + '"] .row-play').click();
+    await until(() => app.player.current.id === songOrder[0], "start the recommendation playlist from a row");
+    console.log("OK play all, playlist order, next track, row playback and errors preserving the current queue");
+
+    unavailableSongs.add("s1");
+    $(".recommendation-play-all").click();
+    await until(() => app.player.queue.length === 1 && app.player.current.id === "s2", "skip unavailable recommendation");
+    assert.match($("#toasts").textContent, /indisponibles ignorés : 1/);
+    unavailableSongs.clear();
+    const roles = app.user.roles;
+    app.user.roles = roles.filter(role => role !== "stream");
+    await listeningPage.render($("#main"), app.music.route);
+    assert(!$(".recommendation-play-all"));
+    assert(!$(".recommendation-songs-table .row-play"));
+    assert($(".recommendation-songs-table .recommendation-remove"));
+    app.user.roles = roles;
+    await listeningPage.render($("#main"), app.music.route);
+
+    $('.recommendation-songs-table tr[data-id="s2"] .listen-later-toggle').click();
+    await until(() => $$(".bookmark-list .listen-later-card").length === 3, "keep received song as bookmark");
+    $('.recommendation-songs-table tr[data-id="s2"] .recommendation-remove').click();
+    await until(() => $$(".recommendation-songs-table tr.song").length === 1, "remove one recommended track");
+    assert.equal($('.recommendation-songs-table tr.song').dataset.id, "s1");
+    assert.equal(app.player.current.id, "s2", "removing a recommendation does not interrupt playback");
+    assert.equal($$(".bookmark-list .listen-later-card").length, 3);
+    assert.equal((await (await bob.request("/api/listen-later")).json()).recommendations.length, 1);
+    $(".recommendation-songs-table .recommendation-remove").click();
+    await until(() => !$(".recommendation-songs-table"), "remove the last recommended song");
+    assert(!$(".recommendation-play-all"));
+    const savedSong = $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Knowing Me"));
+    assert(savedSong.querySelector(".listen-later-play"));
+    assert.match(savedSong.querySelector(".listen-later-name").hash, /^#\/search\//);
+    savedSong.querySelector(".listen-later-remove").click();
+    await until(() => $$(".bookmark-list .listen-later-card").length === 2, "remove saved song independently");
+    await navigate("#/artist/ar1", () => $(".artist-actions .listen-later-toggle:not(:disabled)"));
+    console.log("OK stream rights, unavailable songs and individual removal without affecting bookmarks or playback");
 
     const menu = () => $('.topnav a[href="#/listen-later"]');
     const hasDot = () => menu().classList.contains("recommendations-unread");

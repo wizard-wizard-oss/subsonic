@@ -332,4 +332,50 @@ MIGRATIONS = [
         PRIMARY KEY (library_key, album_path)
     )
     """,
+    # 20: individual library songs in bookmarks and recommendations, preserving unread deliveries.
+    """
+    CREATE TABLE listen_later_songs (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        CHECK (kind != 'song' OR source = 'subsonic'),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (user_id, kind, source, library_key, source_id)
+    );
+    INSERT INTO listen_later_songs SELECT * FROM listen_later;
+    DROP TABLE listen_later;
+    ALTER TABLE listen_later_songs RENAME TO listen_later;
+    CREATE INDEX listen_later_by_date ON listen_later (user_id, created_at DESC, id DESC);
+    CREATE TABLE recommendations_songs (
+        id INTEGER PRIMARY KEY,
+        sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        unread_token TEXT,
+        CHECK (sender_id != recipient_id),
+        CHECK (kind != 'song' OR source = 'subsonic'),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (sender_id, recipient_id, kind, source, library_key, source_id)
+    );
+    INSERT INTO recommendations_songs SELECT * FROM recommendations;
+    DROP TABLE recommendations;
+    ALTER TABLE recommendations_songs RENAME TO recommendations;
+    CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC);
+    CREATE INDEX recommendations_unread_by_recipient
+        ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
+    """,
 ]

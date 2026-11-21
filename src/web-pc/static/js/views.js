@@ -122,6 +122,7 @@ const Views = (() => {
              type: "button", title: App.t("album.song_radio"), "aria-label": App.t("album.song_radio"),
              onclick: e => { e.stopPropagation(); playSongRadio(song, e.currentTarget); },
              ondblclick: e => e.stopPropagation()}, App.icon("radio", 16)) : null,
+           !song.ext ? ListenLaterUI.recommendButton({kind: "song", source: "subsonic", sourceId: song.id}, true) : null,
            el("button.link-button.song-play-next", {type: "button", title: App.t("album.play_next"),
                                      onclick: e => { e.stopPropagation(); App.player.playNext([song]); App.toast("→ " + song.title); }},
               App.icon("next", 16)),

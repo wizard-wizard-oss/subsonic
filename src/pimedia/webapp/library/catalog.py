@@ -118,6 +118,12 @@ class Library:
         return self.cache.get(("genres", user.username), load)
 
     # --- pages ---
+    def song(self, user, song_id):
+        raw = self._call(user, "getSong", [("id", song_id)]).get("song") or {}
+        if not raw.get("id") or raw.get("isDir") or raw.get("isVideo") or mac_leftover(raw):
+            raise SubsonicError(70)
+        return song_row(raw)
+
     def top_songs(self, user, artist_name):
         """Titres les plus populaires d'un artiste (Last.fm, par Subsonic) présents dans la bibliothèque ;
         vide sans Last.fm. Gardé une heure : ça ne bouge pas souvent."""
