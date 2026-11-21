@@ -1,5 +1,36 @@
 # Modifier les tags d'un album (site web, 1.11)
 
+## Progression de l'enregistrement (1.12.1)
+
+Les changements appliqués restent en brouillon ; l'aide près de « Vérifier les changements » indique la suite
+« Enregistrer dans les fichiers ». L'aperçu explique que les tags sont les informations contenues dans les
+fichiers audio et que leur enregistrement est suivi de la mise à jour de la bibliothèque.
+
+Dès le clic d'enregistrement, une barre indéterminée accompagne la vérification initiale. Le serveur expose
+ensuite la phase `preparing` (copies, nouveaux tags et vérification) puis `publishing` (remplacement des fichiers),
+avec un compteur réel par fichier pour chaque phase. La préparation, souvent la plus longue, devient visible.
+Chaque phase a sa propre barre et son libellé ; aucun pourcentage de durée globale n'est estimé. La barre
+reste visible en haut de l'éditeur pendant le défilement. L'actualisation Subsonic est une étape distincte,
+indéterminée jusqu'à confirmation ; un scan non confirmé ne donne pas de faux succès global.
+
+Le suivi reste actif tant que le serveur répond et que l'opération continue, sans arrêt automatique au bout
+d'une minute. Une erreur de suivi masque la progression et propose « Actualiser le suivi », sans réécrire les
+fichiers. Une erreur d'écriture conserve le brouillon. Les règles de sauvegarde et restauration restent celles
+de l'écrivain existant ; aucune donnée utilisateur n'est ajoutée en base.
+
+Tests : les fixtures MP3 vérifient la progression et les originaux inchangés pendant la préparation ; un
+parcours HTTP observe les deux phases en cours sur des fichiers temporaires. Le parcours jsdom contrôle
+l'attente initiale, les compteurs, la coupure/reprise du suivi, l'écriture unique, le scan et les échecs.
+Validation locale : 116 tests Python ciblés et le parcours jsdom de l’éditeur passent. Chrome vérifié en
+clair/sombre à 1280/768/390/320 px, sans débordement ni erreur JavaScript ; progression visible pendant le
+défilement. Les tests couvrent plus de 60 réponses de suivi et le focus des erreurs/reprises.
+Publication vérifiée le 20/11/2026 sur https://music2.foos.fr, en version 1.12.1, depuis la 1.12 en
+conservant ses colonnes de morceaux. L’instantané exact passe 116 tests Python et les parcours jsdom tags
+et site. Santé HTTPS, version, 231 fichiers applicatifs et 52 ressources publiques conformes ; conteneur
+sain, aucune erreur de démarrage. SQLite reste intègre au schéma 19 et les données métier sont conservées.
+Sauvegarde : `../pimedia-backups/pre-1.12.1-20261120T190256Z/`, image précédente conservée.
+Aucun enregistrement de tags sur la musique réelle pendant ces contrôles.
+
 ## Style en premier (1.11.1)
 
 L'ouverture montre d'abord « Style de l'album ». Les autres informations et les pistes restent dans un volet
@@ -24,6 +55,10 @@ exposés sans reprendre Electronic des anciens albums. Le diagnostic n'a modifi�
 client fournisseur a utilisé un cache temporaire en mémoire.
 Validation : 221 tests Python ciblés et les quatre parcours PC passent ; Chrome vérifié à 768/390/320 px,
 sans débordement ni erreur JavaScript. Pas de nouveau stockage SQL, droit `coverArt` inchangé.
+La 1.11.1 est publiée et vérifiée le 18/11/2026 sur https://music2.foos.fr : note et santé HTTPS, JS/CSS,
+230 fichiers applicatifs, conteneur sain, SQLite intègre au schéma 19 et données métier conservées.
+Sauvegarde préalable : `../pimedia-backups/pre-1.11.1-20261118T000805Z/`, image 1.11 conservée.
+Les contrôles n'ont enregistré aucun tag sur la musique réelle.
 
 ## Parcours
 

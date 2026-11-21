@@ -174,6 +174,7 @@ class TagOperation:
     album_id: str
     created_at: float
     state: str = "saving"
+    phase: str = "preparing"
     completed: int = 0
     total: int = 0
     error: str = ""
@@ -181,5 +182,5 @@ class TagOperation:
     warnings: list = field(default_factory=list)
 
     def to_api(self):
-        return dict(operationId=self.id, state=self.state, completed=self.completed, total=self.total,
+        return dict(operationId=self.id, state=self.state, phase=self.phase, completed=self.completed, total=self.total,
                     error=self.error, scan=self.scan, warnings=list(self.warnings))

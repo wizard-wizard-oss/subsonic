@@ -46,6 +46,15 @@
 .tags-table input:disabled { opacity: 0.65; }
 .tags-table small { display: block; overflow-wrap: anywhere; }
 .tags-footer { padding-top: 14px; margin-top: 8px; border-top: 1px solid var(--line); }
+.tags-draft-summary { flex: 1; min-width: 0; }
+.tags-draft-help { max-width: 60ch; }
+.tags-progress { position: sticky; top: 0; z-index: 1; padding: 14px; margin-bottom: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-raised); }
+.tags-progress-label { display: block; overflow-wrap: anywhere; }
+.tags-progress-bar { display: block; width: 100%; height: 12px; margin: 10px 0; accent-color: var(--accent); }
+.tags-progress-bar::-webkit-progress-bar { background: var(--bg-sunken); border-radius: 6px; }
+.tags-progress-bar::-webkit-progress-value { background: var(--accent); border-radius: 6px; }
+.tags-progress-bar::-moz-progress-bar { background: var(--accent); border-radius: 6px; }
 .tags-status { min-height: 1.4em; color: var(--text-soft); overflow-wrap: anywhere; }
 .tags-status.page-error { color: var(--danger); }
 .tags-discard { border: 1px solid var(--danger); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }

@@ -205,13 +205,13 @@ class AlbumTags:
                 raise TagError("tags.operation_not_found", 404)
             return replace(operation, warnings=list(operation.warnings))
 
-    def _progress(self, operation, completed, total):
+    def _progress(self, operation, phase, completed, total):
         with self._lock:
-            operation.completed, operation.total = completed, total
+            operation.phase, operation.completed, operation.total = phase, completed, total
 
     def _save(self, user, operation, resolved, edits, preview):
         try:
-            self.audio.apply(edits, progress=lambda done, total: self._progress(operation, done, total))
+            self.audio.apply(edits, progress=lambda phase, done, total: self._progress(operation, phase, done, total))
         except Exception as error:
             code = str(error.args[0]) if isinstance(error, AudioTagError) and error.args else "tags.write_failed"
             LOG.warning("Album tag edit failed: %s", type(error).__name__)

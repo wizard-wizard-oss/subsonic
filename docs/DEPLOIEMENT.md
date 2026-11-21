@@ -1,5 +1,13 @@
 # Déployer le projet
 
+Publication 1.12 le 20/11/2026 : instantané de la 1.11.1 avec les colonnes configurables, sans les changements
+de progression des tags 1.11.3 préparés séparément. 148 tests Python et les deux parcours PC principaux
+rejoués sur cet instantané, publication par `deploy/pc/push.sh`. Les 231 fichiers applicatifs et 52 ressources
+HTTPS sont conformes ; version publique 1.12, conteneur sain et aucun marqueur d’erreur de démarrage.
+Sauvegarde code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.12-20261119T230713Z/`, image précédente `pimedia-web:pre-1.12-20261119t230713z`.
+SQLite reste intègre au schéma 19, données conservées. Aucun changement d’infrastructure ni tag réel écrit.
+
 L'éditeur de tags 1.11, publié le 18/11/2026, ajoute Mutagen 1.47.0
 aux dépendances PC ; reconstruire l'image lors d'une mise à jour. Il réutilise `MUSIC_DIR` monté en
 écriture et le volume de données existants, sous le même UID/GID que la musique. Les sauvegardes techniques
@@ -15,6 +23,22 @@ un administrateur connu valide. Sauvegarde préalable code/configuration/donnée
 `../pimedia-backups/pre-1.11-20261117T234433Z/`. Image précédente conservée :
 `pimedia-web:pre-1.11-20261117t234433z`. SQLite reste au schéma 19, intègre, et les données sont conservées.
 Aucun enregistrement de tags ni test d'écriture sur la musique de production pendant les contrôles.
+
+Publication 1.11.1 le 18/11/2026 : style en premier et résultats d'éditions en cartes. L'image est reconstruite
+depuis l'instantané testé ; les 230 fichiers applicatifs et les JS/CSS publics sont conformes, la santé HTTPS,
+le conteneur et la note publique vérifiés. Sauvegarde préalable code/configuration/données avec copie SQLite
+cohérente : `../pimedia-backups/pre-1.11.1-20261118T000805Z/`. Image 1.11 conservée sous
+`pimedia-web:pre-1.11.1-20261118t000805z`. Schéma 19, intégrité et données métier inchangés ; aucun tag réel écrit.
+
+Publication 1.12.1 le 20/11/2026 : progression de la préparation et de l’enregistrement des tags, puis
+suivi distinct de l’actualisation. Numérotation corrigée après publication de la 1.12 ; instantané basé
+sur cette version, colonnes des morceaux conservées. Déploiement par `deploy/pc/push.sh` après 116 tests
+Python et deux parcours PC sur l’instantané exact. Les 231 fichiers applicatifs et 52 ressources publiques
+sont conformes ; santé HTTPS, version publique et conteneur sain vérifiés, aucune erreur de démarrage.
+SQLite intègre au schéma 19, données métier conservées. Sauvegarde préalable :
+`../pimedia-backups/pre-1.12.1-20261120T190256Z/`, image `pimedia-web:pre-1.12.1-20261120t190256z`.
+Aucun tag réel modifié. Accès SSH de déploiement : compte `subsonic` sur l’hôte du projet, avec la clé
+existante et vérification stricte de l’identité d’hôte ; ne pas utiliser les comptes music ou thomas.
 
 Deux éditions, deux déploiements indépendants : le **site web** (édition PC, sur le serveur) et le **Pi** (station
 musicale). Une mise à jour de l'un ne touche jamais l'autre.

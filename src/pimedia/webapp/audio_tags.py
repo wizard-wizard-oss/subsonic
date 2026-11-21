@@ -466,6 +466,8 @@ class AudioTags:
             raise AudioTagError("tags.write_failed") from None
 
     def _apply(self, edits, progress):
+        if progress:
+            progress("preparing", 0, len(edits))
         snapshots = tuple(self.inspect(edit.relative_path) for edit in edits)
         if any(not snapshot.editable for snapshot in snapshots):
             raise AudioTagError(next(snapshot.reason for snapshot in snapshots if not snapshot.editable))
@@ -499,10 +501,14 @@ class AudioTags:
                 entry["prepared_identity"] = _identity(temporary)
                 entry["prepared_digest"] = _digest(temporary)
                 self._manifest(operation, manifest)
+                if progress:
+                    progress("preparing", index + 1, len(edits))
             if any(_revision(self._path(edit.relative_path)) != edit.expected_revision for edit in edits):
                 raise AudioTagError("tags.conflict")
             manifest["state"] = "publishing"
             self._manifest(operation, manifest)
+            if progress:
+                progress("publishing", 0, len(edits))
             for index, (edit, entry) in enumerate(zip(edits, manifest["entries"])):
                 path = self._path(edit.relative_path)
                 if _revision(path) != edit.expected_revision:
@@ -513,7 +519,7 @@ class AudioTags:
                 entry["published_revision"] = _revision(path)
                 self._manifest(operation, manifest)
                 if progress:
-                    progress(index + 1, len(edits))
+                    progress("publishing", index + 1, len(edits))
             manifest["state"] = "committed"
             self._manifest(operation, manifest)
         except BaseException:

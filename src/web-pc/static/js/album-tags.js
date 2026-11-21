@@ -7,7 +7,7 @@ const AlbumTagsEditor = (() => {
   const TRACK_FIELDS = ["disc", "track", "title", "artist", "genre"];
   const IMPORT_FIELDS = ["title", "artist", "albumArtist", "album", "year", "genre", "track", "disc"];
   const SOURCE_TRACK_FIELDS = new Set(["title", "artist", "track", "disc"]);
-  const POLL_LIMIT = 60, POLL_INTERVAL = 1000;
+  const POLL_INTERVAL = 1000;
   let current = null;
 
   const button = (text, run, className = "") => el("button" + (className ? "." + className : ""),
@@ -35,7 +35,12 @@ const AlbumTagsEditor = (() => {
       this.operationId = null;
       this.operationComplete = false;
       this.previouslyFocused = document.activeElement;
-      this.status = el("p.tags-status", {role: "status", "aria-live": "polite"});
+      this.status = el("p.tags-status", {role: "status", "aria-live": "polite", tabIndex: -1});
+      this.progressLabel = el("strong.tags-progress-label");
+      this.progressBar = el("progress.tags-progress-bar");
+      this.progressHelp = el("p.tags-caption.tags-progress-help");
+      this.progress = el("section.tags-progress", {hidden: true, "aria-label": t("progress_ui")},
+        this.progressLabel, this.progressBar, this.progressHelp);
       this.body = el("div.tags-body", {}, el("p.muted", {text: t("loading_ui")}));
       this.closeButton = App.setIcon(button("", () => this.requestClose(), "icon-button.tags-close"), "close", 18);
       this.closeButton.title = t("close_ui");
@@ -49,7 +54,7 @@ const AlbumTagsEditor = (() => {
       this.dialog = el("section.tags-dialog", {role: "dialog", "aria-modal": "true", "aria-label": t("title_ui")},
         el("header.tags-heading", {}, el("div", {}, el("h2", {text: t("title_ui")}),
           el("p.tags-caption", {text: [album.artist, album.name].filter(Boolean).join(" / ")})), this.closeButton),
-        this.confirmClose, this.body, this.status);
+        this.progress, this.confirmClose, this.body, this.status);
       this.veil = el("div.veil.tags-veil", {onmousedown: event => {
         if (event.target === this.veil) this.requestClose();
       }}, this.dialog);
@@ -136,6 +141,26 @@ const AlbumTagsEditor = (() => {
       this.status.setAttribute("role", error ? "alert" : "status");
     }
 
+    showProgress(label, help, completed = null, total = null) {
+      this.progress.hidden = false;
+      this.progressLabel.textContent = label;
+      this.progressHelp.textContent = help;
+      this.progressBar.hidden = false;
+      this.progressBar.setAttribute("aria-label", label);
+      this.progressBar.setAttribute("aria-valuetext", label);
+      if (Number.isInteger(completed) && Number.isInteger(total) && total > 0) {
+        this.progressBar.max = total;
+        this.progressBar.value = completed;
+      } else this.progressBar.removeAttribute("value");
+    }
+
+    writingProgress(operation) {
+      const preparing = operation.phase === "preparing";
+      const label = t(preparing ? "preparing_ui" : "saving_ui", operation);
+      this.showProgress(label, t(preparing ? "preparing_help_ui" : "saving_help_ui"), operation.completed, operation.total);
+      this.message(label);
+    }
+
     patch() {
       return {albumId: this.snapshot.albumId, revision: this.snapshot.revision,
         tracks: this.tracks.filter(track => track.editable).map(track => {
@@ -155,6 +180,7 @@ const AlbumTagsEditor = (() => {
       this.scope.addEventListener("change", () => this.updateStyleScope());
       this.review = button(t("review_ui"), () => this.preview(), "primary.tags-review");
       this.resetButton = button(t("reset_ui"), () => this.reset(), "link-button.tags-reset");
+      this.draftHelp = el("p.tags-caption.tags-draft-help", {text: t("draft_help_ui")});
       this.diff = el("section.tags-preview", {hidden: true, "aria-label": t("review_title_ui")});
       const advanced = el("details.tags-advanced", {}, el("summary", {text: t("advanced_ui")}),
         el("div.tags-section-heading", {}, el("h3", {text: t("common_ui")}),
@@ -166,7 +192,8 @@ const AlbumTagsEditor = (() => {
         el("section.tags-primary-style", {"aria-label": t("album_style_ui")},
           el("div.tags-section-heading", {}, el("h3", {text: t("album_style_ui")}), this.styleScope),
           this.renderCommon("genre")), this.renderSource(), advanced,
-        el("div.tags-footer", {}, this.count, el("div.tags-actions", {}, this.resetButton, this.review)));
+        el("div.tags-footer", {}, el("div.tags-draft-summary", {}, this.count, this.draftHelp),
+          el("div.tags-actions", {}, this.resetButton, this.review)));
       App.append(App.clear(this.body), [el("p.tags-caption", {text: t("folders_help_ui")}),
         ...(this.snapshot.warnings || []).map(key => el("p.tags-caption", {text: App.t(key)})), this.form, this.diff]);
       this.update();
@@ -239,6 +266,7 @@ const AlbumTagsEditor = (() => {
       this.selectAll.checked = editableCount > 0 && this.selected.size === editableCount;
       this.selectAll.indeterminate = this.selected.size > 0 && this.selected.size < editableCount;
       this.review.disabled = !tracks.length;
+      this.draftHelp.hidden = !tracks.length;
       this.rowInputs.filter(item => item.key !== "selected").forEach(({track, key, input}) => {
         input.classList.toggle("tags-changed", track.tags[key] !== this.original.get(track.id)[key]);
       });
@@ -291,6 +319,7 @@ const AlbumTagsEditor = (() => {
         if (!this.alive() || generation !== this.generation) return;
         this.previewBody = body;
         this.diff.replaceChildren(el("h3", {text: t("review_title_ui")}),
+          el("p.tags-caption.tags-save-help", {text: t("save_help_ui")}),
           ...result.changes.map(change => el("div.tags-diff-row", {},
             el("strong", {text: t("diff_field_ui", {title: change.title, field: fieldLabel(change.field)})}),
             el("p", {}, el("del", {text: change.before || t("empty_ui")}), " → ",
@@ -306,31 +335,37 @@ const AlbumTagsEditor = (() => {
       if (this.busy || !this.previewBody || this.operationId) return;
       this.busy = true; this.saving = true; this.form.disabled = true;
       this.diff.querySelectorAll("button").forEach(node => { node.disabled = true; });
-      this.message(t("saving_ui", {completed: 0, total: this.previewBody.tracks.length}));
+      this.diff.hidden = true;
+      this.showProgress(t("save_starting_ui"), t("preparing_help_ui"));
+      this.message(t("save_starting_ui"));
+      this.progress.scrollIntoView({block: "nearest"});
       try {
         const result = await App.api.post("/api/tags/save", this.previewBody);
         if (!this.alive()) return;
         this.operationId = result.operationId;
         this.saving = false;
         this.diff.hidden = true;
-        this.pollOperation(0);
+        this.pollOperation();
       } catch (error) {
         if (!this.alive()) return;
         this.busy = false; this.saving = false; this.form.disabled = false;
+        this.progress.hidden = true; this.diff.hidden = false;
         this.diff.querySelectorAll("button").forEach(node => { node.disabled = false; });
         this.message(App.errorText(error), true);
+        this.status.focus();
       }
     }
 
-    async pollOperation(attempt) {
+    async pollOperation() {
       if (!this.alive()) return;
       try {
         const operation = await App.api.get("/api/tags/operation", {id: this.operationId});
         if (!this.alive()) return;
         if (operation.state === "failed") {
           this.busy = false; this.operationId = null; this.form.disabled = false;
+          this.progress.hidden = true;
           this.message(operation.error ? App.t(operation.error) : t("operation_failed_ui"), true);
-          this.closeButton.focus(); return;
+          this.status.focus(); return;
         }
         if (operation.state === "saved") {
           if (!this.operationComplete) {
@@ -339,6 +374,10 @@ const AlbumTagsEditor = (() => {
             this.update();
           }
           const scanKey = {pending: "scan_pending_ui", started: "scan_started_ui", updated: "scan_updated_ui", failed: "scan_failed_ui"};
+          this.showProgress(t(scanKey[operation.scan] || "scan_pending_ui"),
+            t(operation.scan === "updated" || operation.scan === "failed" ? "saved_ui" : "scan_help_ui"),
+            operation.scan === "updated" ? operation.total : null, operation.total);
+          this.progressBar.hidden = operation.scan === "failed";
           this.message(t("saved_ui") + " " + t(scanKey[operation.scan] || "scan_pending_ui"));
           if (operation.warnings && operation.warnings.length) {
             this.message(this.status.textContent + " " + operation.warnings.map(key => App.t(key)).join(" "));
@@ -347,20 +386,22 @@ const AlbumTagsEditor = (() => {
             if (operation.scan === "updated" && this.onSaved) this.onSaved();
             this.closeButton.focus(); return;
           }
-        } else this.message(t("saving_ui", {completed: operation.completed, total: operation.total}));
-        if (attempt + 1 < POLL_LIMIT) {
-          this.pollTimer = setTimeout(() => this.pollOperation(attempt + 1), POLL_INTERVAL);
-        } else this.retryOperation(t("poll_paused_ui"));
+        } else this.writingProgress(operation);
+        this.pollTimer = setTimeout(() => this.pollOperation(), POLL_INTERVAL);
       } catch (error) { if (this.alive()) this.retryOperation(App.errorText(error)); }
     }
 
     retryOperation(message) {
       this.busy = false;
+      this.progress.hidden = true;
       this.message((this.operationComplete ? t("saved_ui") + " " + t("scan_unconfirmed_ui") + " " : "") + message);
       this.diff.replaceChildren(button(t("poll_retry_ui"), () => {
-        this.busy = true; this.diff.hidden = true; this.pollOperation(0);
+        this.busy = true; this.diff.hidden = true;
+        this.showProgress(t("poll_resuming_ui"), t("poll_resuming_help_ui"));
+        this.pollOperation();
       }, "tags-poll-retry"));
       this.diff.hidden = false;
+      this.diff.querySelector("button").focus();
     }
 
     renderSource() {
