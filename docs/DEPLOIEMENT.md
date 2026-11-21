@@ -1,5 +1,18 @@
 # Déployer le projet
 
+Publication 1.13 le 21/11/2026 : recommandations de morceaux avec lecture groupée et retrait individuel,
+depuis l'instantané testé du commit `da9edc6`, par `deploy/pc/push.sh`. Migration web 20 : les tables
+`listen_later` et `recommendations` acceptent les morceaux Subsonic. Reconstruction transactionnelle,
+identifiants et marqueurs de lecture conservés ; répétée sur une copie de la sauvegarde avant publication.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.13-20261121T174551Z/` ; image
+précédente `pimedia-web:pre-1.13-20261121t174551z`. Aucun nouveau réglage ni dépendance ; `.env` inchangé.
+Validation : 853 tests Python et trois parcours jsdom PC, Chrome à deux comptes avec SSE et six rendus.
+En production : version publique 1.13, 231 fichiers applicatifs et 52 ressources HTTPS conformes,
+conteneur sain sans erreur de démarrage. SQLite intègre au schéma 20, clés étrangères valides et données
+métier conservées ; contrôles de session et CSRF réussis sans écriture de données utilisateur.
+Le retour de code utilise l'image conservée ; toute restauration SQLite doit tenir compte des écritures
+reçues depuis la sauvegarde. Les commits restent locaux, séparés par évolution ; aucun push Git.
+
 Publication 1.12 le 20/11/2026 : instantané de la 1.11.1 avec les colonnes configurables, sans les changements
 de progression des tags 1.11.3 préparés séparément. 148 tests Python et les deux parcours PC principaux
 rejoués sur cet instantané, publication par `deploy/pc/push.sh`. Les 231 fichiers applicatifs et 52 ressources

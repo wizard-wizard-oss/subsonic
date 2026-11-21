@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-**Morceaux recommandés, 1.13 (21/11/2026, préparée, non déployée)** : « Conseiller à quelqu’un »
+**Morceaux recommandés, 1.13 (21/11/2026, déployée et vérifiée)** : « Conseiller à quelqu’un »
 sur les lignes de morceaux Subsonic. Dans À écouter, les morceaux reçus forment une liste : titre, artiste,
 conseillers, lecture depuis une ligne, « Tout écouter » et retrait individuel. Une croix retire le conseil
 reçu sans toucher aux autres titres, aux marque-pages ou à la lecture en cours. Métadonnées relues avec le
@@ -10,7 +10,14 @@ en conservant les entrées et marqueurs de lecture. Les références artistes/al
 parcours. Détails, tests et limites : [À écouter](features/listen-later.md).
 Validation locale : 853 tests Python passent, ainsi que les trois parcours jsdom PC (général, file et
 À écouter). Chrome vérifie l'envoi entre deux comptes avec le vrai flux SSE, « Tout écouter », le retrait
-individuel et les rendus clair/sombre à 1440, 390 et 320 px. Sources musicales simulées ; non déployée.
+individuel et les rendus clair/sombre à 1440, 390 et 320 px. Sources musicales simulées pour ces essais.
+Publication depuis l'instantané testé, commit `da9edc6` : 231 fichiers applicatifs et 52 ressources HTTPS
+conformes, version publique 1.13, conteneur sain sans erreur de démarrage. SQLite intègre au schéma 20,
+clés étrangères valides ; 14 comptes, 173 messages, quatre marque-pages, neuf recommandations et les
+historiques d'envois conservés. Configuration inchangée ; routes protégées par session et CSRF vérifiées.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.13-20261121T174551Z/`, image précédente
+`pimedia-web:pre-1.13-20261121t174551z`. Migration répétée sur copie avant publication. Les évolutions
+tags, colonnes, progression et recommandations ont chacune leur commit local ; aucun push Git.
 
 **Colonnes des morceaux, 1.12 (20/11/2026, déployé et vérifié)** : même grille que la capture des
 paramètres personnels Subsonic, neuf informations pour Parcourir et Liste de lecture, choix indépendants

@@ -103,7 +103,14 @@ L'envoi de morceaux Discogs, YouTube, SoundCloud ou Jamendo n'est pas proposé.
 Validation locale de la 1.13 : 853 tests Python passent, ainsi que les parcours jsdom PC général, file et
 À écouter. Chrome vérifie deux comptes avec le vrai flux SSE, l'écoute de toute la liste et le retrait
 individuel ; rendu clair/sombre contrôlé à 1440, 390 et 320 px, commandes visibles et défilement limité au
-tableau sur petit écran. Les serveurs musicaux sont simulés ; cette version n'est pas encore déployée.
+tableau sur petit écran. Les serveurs musicaux sont simulés pour ces essais.
+
+La 1.13 est publiée le 21/11/2026 sur https://music2.foos.fr depuis l'instantané du commit `da9edc6`.
+Migration 20 répétée sur copie puis vérifiée en production : intégrité et clés étrangères valides,
+marque-pages, recommandations et marqueurs de lecture conservés. Conteneur sain sans erreur de démarrage,
+231 fichiers applicatifs et 52 ressources HTTPS conformes, session et CSRF vérifiés sur les routes.
+Sauvegarde préalable : `../pimedia-backups/pre-1.13-20261121T174551Z/` ; image précédente conservée sous
+`pimedia-web:pre-1.13-20261121t174551z`. Aucun conseil ni marque-page de production créé pour les contrôles.
 
 ## Pastille des recommandations (1.9.2)
 
