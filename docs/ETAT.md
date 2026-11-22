@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-**Commentaires des recommandations, 1.14 (22/11/2026, développée, non déployée)** : commentaire
+**Commentaires des recommandations, 1.14 (22/11/2026, déployée et vérifiée)** : commentaire
 initial facultatif et échanges privés successifs entre émetteur et destinataire, pour artiste/album/morceau.
 Entité RecommendationComment commune au commentaire initial et aux réponses ; un dépôt SQL et un composant
 de fil réutilisé dans les conseils reçus, envoyés et archivés. Pas de champ feedback parallèle. Migration 21 :
@@ -8,10 +8,15 @@ commentaires, curseurs de lecture par participant et archivage des conseils ; an
 livraison conservés, unicité des conseils actifs et des essais réseau. Pastille et bouton d'accès direct aux
 commentaires non lus via les événements existants. Envois/archives et commentaires paginés ; brouillon conservé
 lors des mises à jour et des échecs, changement de compte protégé. Détails : [À écouter](features/listen-later.md).
-Validation : suite Python complète (868 tests), puis 58 contrôles ciblés après relecture ; les quatre parcours
-jsdom PC passent. Navigateur réel avec comptes fictifs : envoi et réponse, réception SSE, actualisation des
-envois depuis un marque-page et dialogue contenu à 390/320 px. Les modifications locales des tags 1.13.1 sont
-conservées. Aucun déploiement ni message sur les comptes réels.
+Validation de l'instantané publié : 869 tests Python et les quatre parcours jsdom PC passent. Navigateur
+réel avec comptes fictifs : envoi et réponse, réception SSE, actualisation des envois depuis un marque-page et
+dialogue contenu à 390/320 px. Publication sur https://music2.foos.fr depuis le commit `68ba21a` par
+`deploy/pc/push.sh` ; 234 fichiers applicatifs et 53 ressources HTTPS conformes. Conteneur sain, SQLite intègre
+au schéma 21, clés étrangères et données conservées ; session/CSRF vérifiés sans créer de commentaires réels.
+Sauvegarde préalable : `../pimedia-backups/pre-1.14-20261122T210559Z/` ; image `pimedia-web:pre-1.14-20261122t210559z`.
+La correction des tags 1.13.1 reste séparée. Nomenclature confirmée : fonctionnalité nouvelle ou enrichie =
+mineure ; correctif de bug = troisième numéro. Une renumérotation seule appelle uniquement le contrôle ciblé
+de l'historique des versions.
 
 **Morceaux recommandés, 1.13 (21/11/2026, déployée et vérifiée)** : « Conseiller à quelqu’un »
 sur les lignes de morceaux Subsonic. Dans À écouter, les morceaux reçus forment une liste : titre, artiste,

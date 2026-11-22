@@ -162,7 +162,7 @@ et simule une erreur de chargement. Chrome valide deux onglets avec le vrai flux
 La 1.9.2 est déployée le 10/11/2026 : conteneur et HTTPS sains, schéma 18 intègre, données conservées.
 Les 212 fichiers de l’image, les ressources publiques et les protections des nouvelles routes sont vérifiés.
 
-## Commentaires privés des recommandations (1.14, préparée)
+## Commentaires privés des recommandations (1.14, publiée le 22/11/2026)
 
 Le commentaire initial et chaque réponse sont la même entité `RecommendationComment`, sans type question/réponse
 ni avis structuré. Un fil appartient à une recommandation entre deux comptes, quel que soit son type musical.
@@ -221,7 +221,13 @@ l'envoi initial, les échanges successifs, le texte non interprété, le double 
 la coupure après enregistrement, les vues reçues/envoyées/archivées, les pages d'historique et le changement de compte.
 Le navigateur réel vérifie deux comptes fictifs avec le vrai flux SSE, un nouvel envoi depuis un marque-page et le
 fil contenu à 390 et 320 px. Le débordement des barres générales sur petit écran est antérieur à cette évolution.
-La 1.14 reste locale, non déployée ; aucune recommandation réelle n'a été envoyée pour les contrôles.
+La 1.14 est publiée le 22/11/2026 sur https://music2.foos.fr depuis le commit `68ba21a`. L'instantané
+exact passe 869 tests Python et quatre parcours jsdom PC. La migration a été répétée sur une copie SQLite de
+la sauvegarde : valeurs des 25 tables existantes et marqueurs de lecture conservés, intégrité et clés étrangères
+valides. Après publication : schéma 21 intègre, 234 fichiers applicatifs et 53 ressources HTTPS conformes,
+conteneur sain, configuration conservée et protections session/CSRF vérifiées. Aucun commentaire de production
+créé pour les contrôles. Sauvegarde préalable : `../pimedia-backups/pre-1.14-20261122T210559Z/` ;
+image précédente `pimedia-web:pre-1.14-20261122t210559z`. Le correctif de tags préparé séparément n'est pas inclus.
 
 ## Tests et limites
 

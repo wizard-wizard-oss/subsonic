@@ -1,5 +1,21 @@
 # Déployer le projet
 
+Publication 1.14 le 22/11/2026 : commentaires privés des recommandations, depuis l'instantané testé du
+commit `68ba21a`, par `deploy/pc/push.sh`. Version mineure pour cette nouvelle possibilité, conformément
+à la nomenclature confirmée par l'utilisateur ; troisième numéro réservé aux corrections de bugs. Une simple
+renumérotation ne justifie pas de relancer la suite complète : contrôle ciblé de l'historique des versions.
+Le correctif de tags préparé séparément n'est pas inclus.
+Migration web 21 : fils de commentaires, archivage et curseurs de lecture des deux participants. Répétition
+sur une copie de sauvegarde : valeurs des 25 tables existantes, identifiants et marqueurs de lecture conservés.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.14-20261122T210559Z/` ;
+image précédente `pimedia-web:pre-1.14-20261122t210559z`. Configuration et dépendances conservées.
+Validation de l'instantané : 869 tests Python et quatre parcours jsdom PC. En production : version publique
+1.14, 234 fichiers applicatifs et 53 ressources HTTPS conformes, conteneur sain, SQLite intègre au schéma 21,
+clés étrangères et données métier conservées. Les contrôles de session/CSRF ne créent aucun commentaire réel.
+Attention au retour vers une ancienne image : l'unicité des conseils est maintenant partielle (conseils actifs).
+Le code 1.13 ne peut pas être remis seul sur ce schéma. Préparer un retour code/base cohérent en tenant compte
+des écritures reçues depuis la sauvegarde ; ne pas restaurer aveuglément l'ancienne base.
+
 Publication 1.13 le 21/11/2026 : recommandations de morceaux avec lecture groupée et retrait individuel,
 depuis l'instantané testé du commit `da9edc6`, par `deploy/pc/push.sh`. Migration web 20 : les tables
 `listen_later` et `recommendations` acceptent les morceaux Subsonic. Reconstruction transactionnelle,

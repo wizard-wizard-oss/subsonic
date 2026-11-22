@@ -55,3 +55,6 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
   - **Majeure** : grand changement ou rupture de compatibilité.
   Les versions déjà publiées conservent leur numéro ; cette règle s'applique aux prochaines livraisons.
   Rien ne part en production sans son entrée datée.
+  **Vérifications proportionnées** : une simple renumérotation ne justifie pas de rejouer toute la suite de tests.
+  Contrôler uniquement la validité de l'historique (format, ordre, dates) avec `tests/test_versions.py` ; élargir
+  les tests seulement si un changement de code ou un problème identifié le justifie (rappel utilisateur du 22/11/2026).
