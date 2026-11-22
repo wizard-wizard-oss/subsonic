@@ -1,9 +1,18 @@
 # Versions du site (page « Versions », #/versions), la plus récente EN PREMIER.
 # À compléter à CHAQUE modification du site, AVANT de déployer (deploy/pc/push.sh le rappelle). Écrit pour les personnes
-# qui utilisent le site, pas pour les développeurs. Évolution d'une fonctionnalité existante ou correction : troisième
-# niveau (1.7.1, 1.7.2…). Fonctionnalité distincte : mineure ; grand changement : majeure.
+# qui utilisent le site, pas pour les développeurs. Nouvelle fonctionnalité ou enrichissement fonctionnel : mineure.
+# Correction de bug uniquement : troisième numéro. Grand changement ou rupture de compatibilité : majeure.
+# Règle confirmée par l'utilisateur le 22/11/2026 ; conserver les numéros déjà publiés.
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
+
+- version: "1.14"
+  date: 2026-11-22
+  title: "Échanger autour des recommandations"
+  changes:
+    - "Accompagnez un conseil d’un commentaire pour expliquer pourquoi vous recommandez cet artiste, cet album ou ce morceau."
+    - "Le destinataire peut répondre et vous pouvez poursuivre l’échange dans un fil privé, accessible à vous deux."
+    - "Retrouvez vos recommandations envoyées et les nouveaux commentaires dans À écouter. Retirer un conseil le conserve parmi les recommandations archivées, avec ses commentaires."
 
 - version: "1.13"
   date: 2026-11-21

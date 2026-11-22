@@ -63,9 +63,11 @@ from .library.statistics import SubsonicStatistics
 from .listening import Listening
 from .listen_later import ListenLater
 from .recommendations import Recommendations
+from .recommendation_entities import RecommendationError
 from .listening_targets import ListeningTargets, ListenLaterError
 from .storage.listen_later import ListenLaterRepository
 from .storage.recommendations import RecommendationRepository
+from .storage.recommendation_comments import RecommendationCommentRepository
 from .lyrics import Lyrics
 from .mixes import MixError, Mixes
 from .news import News, NewsError
@@ -134,7 +136,7 @@ def error_reply(error):
         return Reply.error(403, "auth.missing_right")
     if isinstance(error, Forbidden):
         return Reply.error(403, "auth.forbidden")
-    if isinstance(error, ChatError):
+    if isinstance(error, (ChatError, RecommendationError)):
         return Reply.error(error.status, error.code)
     if isinstance(error, FolderNotFound):
         return Reply.error(404, "subsonic.error")
@@ -211,7 +213,8 @@ class WebApplication:
                                                self.discogs, self.discogs_catalogs, self.config.subsonic_url)
         targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key, self.library)
         self.listen_later = ListenLater(ListenLaterRepository(self.db), targets)
-        self.recommendations = Recommendations(RecommendationRepository(self.db), targets, self.users, self.hub)
+        self.recommendations = Recommendations(RecommendationRepository(self.db), RecommendationCommentRepository(self.db),
+                                             targets, self.users, self.hub)
         self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
         self.lastfm = LastFm(metadata, self.config.lastfm_api_key)
         self.youtube_versions = YouTubeVersions(self.extmusic)
@@ -286,6 +289,10 @@ class WebApplication:
             router.add("GET", path, read(handler))
         router.add("GET", "/api/listen-later", read(listen_later.all))
         router.add("GET", "/api/recommendation/status", read(listen_later.status))
+        router.add("GET", "/api/recommendation/discussions", read(listen_later.discussions))
+        router.add("GET", "/api/recommendation/comments", read(listen_later.discussion))
+        router.add("POST", "/api/recommendation/comment", write(listen_later.comment))
+        router.add("POST", "/api/recommendation/comments/read", write(listen_later.read_comments))
         router.add("POST", "/api/recommendation/read", write(listen_later.mark_read))
         router.add("POST", "/api/listen-later/add", write(listen_later.add))
         router.add("POST", "/api/listen-later/remove", write(listen_later.remove))

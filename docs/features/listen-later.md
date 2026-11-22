@@ -7,7 +7,8 @@
 - Bouton marque-page sur les fiches artiste/album Subsonic, la fiche artiste Discogs et les cartes des catalogues
   Discogs existants. Le bouton indique son état ; un second clic retire l'entrée personnelle.
 - « Conseiller à quelqu’un » aux mêmes endroits et dans la liste personnelle : choix d'un autre compte déjà
-  connecté au site. Le conseil arrive dans les recommandations, sans créer de marque-page.
+  connecté au site, avec un commentaire initial facultatif. Le conseil arrive dans les recommandations,
+  sans créer de marque-page. Les deux participants peuvent ensuite poursuivre leur échange privé.
 - Depuis la 1.13, le même bouton sur les lignes de morceaux Subsonic (album, titres populaires, recherche,
   favoris et playlists) envoie le titre précis. Le double-clic sur ce bouton ne lance pas l'album.
 - Les morceaux reçus forment une liste avec titre, artiste et conseillers. « Tout écouter » charge les morceaux
@@ -19,7 +20,8 @@
 - Plusieurs personnes peuvent conseiller la même référence : une carte regroupe tous leurs noms.
   Une même personne ne crée pas deux conseils identiques pour le même destinataire.
 - Une recommandation peut être gardée comme marque-page. Les deux cartes peuvent coexister et se retirent
-  indépendamment. Retirer une recommandation retire tous les conseils reçus pour cette référence.
+  indépendamment. Retirer une recommandation archive tous les conseils reçus pour cette référence ; leurs
+  commentaires restent accessibles dans les recommandations archivées et dans les envois de chaque conseiller.
 - Les artistes/albums Subsonic ouvrent les fiches existantes ; le nom d'un morceau gardé ouvre la recherche.
   L'artiste Discogs ouvre sa fiche dans le site ;
   l'album Discogs ouvre l'édition retenue sur Discogs.
@@ -47,7 +49,8 @@ Pour Discogs : identifiant d'artiste, ou identifiant de l'édition déjà utilis
 Deux éditions restent deux références distinctes. Les descriptions sont résolues par les services côté serveur.
 
 Unicité des marque-pages par propriétaire et référence complète ; des conseils par émetteur, destinataire et
-référence complète. Un nouvel ajout identique conserve la date initiale. Les clés étrangères nettoient les
+référence complète tant que le conseil est actif. Un nouvel ajout identique conserve la date initiale et
+le commentaire déjà envoyé ; après archivage, un nouvel envoi crée un autre fil. Les clés étrangères nettoient les
 entrées à la suppression du compte correspondant.
 
 Les descriptions conservées permettent d'afficher et retirer une entrée sans rappeler les sources.
@@ -56,15 +59,20 @@ nouveau stockage de liens de lecture. Les marque-pages de position (/api/bookmar
 
 ## Code
 
-- listen_later_entities.py : ListeningTarget, ListenLaterEntry, Recommendation, RecommendationGroup.
+- listen_later_entities.py : ListeningTarget et ListenLaterEntry.
+- recommendation_entities.py : Recommendation, RecommendationComment, groupes, livraisons, pages et statut typés ;
+  limites des commentaires et des pages définies une seule fois.
 - listening_targets.py : validation et résolution via Folders, Library.song et Discogs.
-- listen_later.py : règles des entrées personnelles ; recommendations.py : envoi, regroupement et retrait.
-- storage/listen_later.py et storage/recommendations.py : SQL et retour d'entités ;
+- listen_later.py : règles des entrées personnelles ; recommendations.py : envoi, regroupement,
+  archivage, droits des deux participants, commentaires et accusés de lecture.
+- storage/listen_later.py, storage/recommendations.py et storage/recommendation_comments.py : SQL et retour d'entités ;
   storage/listening_targets.py mutualise la projection SQL de la référence.
 - controllers/listen_later.py : adaptation HTTP. Assemblage dans app.py.
 - web-pc/static/js/listen-later.js et css/listen-later.css : boutons, dialogue et page.
   Liste de morceaux et chargement de la file dans le même composant ; intégrations dans les fiches, tableaux
   de titres, DiscogsUI.card, la navigation et les réglages existants.
+- web-pc/static/js/recommendation-comments.js : un seul composant de fil privé pour les conseils reçus,
+  envoyés et archivés ; champ de commentaire également réutilisé à l'envoi initial.
 - DiscogsRelease.image utilise le validateur d'images existant ; projection de cache passée en version 3.
 
 ## API et accès
@@ -74,8 +82,12 @@ nouveau stockage de liens de lecture. Les marque-pages de position (/api/bookmar
 | GET /api/listen-later | bookmarks et recommendations regroupées |
 | POST /api/listen-later/add | kind, source, sourceId |
 | POST /api/listen-later/remove | id |
-| POST /api/recommendation/send | recipient, kind, source, sourceId |
-| POST /api/recommendation/remove | kind, source, sourceId : retrait du groupe reçu |
+| POST /api/recommendation/send | recipient, kind, source, sourceId, comment facultatif ; recommendation et created |
+| POST /api/recommendation/remove | kind, source, sourceId : archivage du groupe reçu |
+| GET /api/recommendation/discussions | scope=sent ou archived, before facultatif ; pages de recommandations |
+| GET /api/recommendation/comments | id, before ou after facultatif ; fil privé paginé, maxLength et pageSize |
+| POST /api/recommendation/comment | recommendationId, body, requestId facultatif ; auteur issu de la session |
+| POST /api/recommendation/comments/read | recommendationId, commentId effectivement affiché |
 | GET /api/song?id= | Métadonnées actuelles d'un morceau, relues avec le compte connecté |
 
 Session obligatoire et protection CSRF existante pour les écritures.
@@ -149,6 +161,67 @@ et simule une erreur de chargement. Chrome valide deux onglets avec le vrai flux
 
 La 1.9.2 est déployée le 10/11/2026 : conteneur et HTTPS sains, schéma 18 intègre, données conservées.
 Les 212 fichiers de l’image, les ressources publiques et les protections des nouvelles routes sont vérifiés.
+
+## Commentaires privés des recommandations (1.14, préparée)
+
+Le commentaire initial et chaque réponse sont la même entité `RecommendationComment`, sans type question/réponse
+ni avis structuré. Un fil appartient à une recommandation entre deux comptes, quel que soit son type musical.
+Sur une carte regroupant plusieurs conseillers, chaque bouton ouvre uniquement le fil de ce conseiller avec le
+destinataire. Aucun message n'est copié dans le salon ou dans les commentaires publics d'album.
+
+La page À écouter conserve les marque-pages et les conseils reçus, puis montre les recommandations envoyées et
+les recommandations archivées. Le filtre artistes/albums/morceaux s'applique à toutes ces sections. Un bouton
+« Lire les nouveaux commentaires » ouvre directement un fil non lu, même ancien ou archivé au-delà de la première
+page. Le fil affiche le contexte musical, les auteurs, les dates et les textes, avec un formulaire unique.
+
+Migration 21, ajoutée sans changer les migrations publiées :
+
+| Table | Champs nouveaux |
+|---|---|
+| recommendation_comments | id autoincrémenté, recommendation_id, author_id, body, created_at, client_token |
+| recommendations | recipient_archived_at, sender_last_read_comment_id, recipient_last_read_comment_id |
+
+La reconstruction transactionnelle de recommendations conserve les identifiants, dates, références, contraintes,
+clés étrangères et marqueurs de livraison existants. L'unicité émetteur/destinataire/référence devient un index
+partiel sur les conseils actifs. Les identifiants de recommandations et de commentaires ne sont pas réutilisés.
+Les deux curseurs valent initialement zéro ; aucun commentaire n'est inventé pour les anciens conseils.
+
+Un envoi initial et son commentaire sont insérés dans la même transaction. Une répétition d'un conseil actif
+renvoie celui-ci avec created=false, sans nouveau commentaire ni écrasement. Pour ajouter du texte à un conseil
+existant, on ouvre son fil ; un texte saisi lors d'un second envoi y reste en brouillon pour être envoyé
+explicitement, sans créer de doublon automatique. Le client fournit un requestId conservé lors d'un nouvel essai réseau ; l'unicité
+(recommendation_id, author_id, client_token) évite le double enregistrement. Le même identifiant avec un autre
+texte est refusé en 409. Ce marqueur technique n'est pas exposé dans les commentaires retournés.
+
+Le texte est facultatif à l'envoi initial et obligatoire pour ajouter un commentaire. Il est limité à 1 000
+caractères côté service et dans les champs HTML, avec une limite transmise par l'API. Les historiques et listes
+d'envois/archives sont chargés par pages de 50 ; before récupère les anciens éléments et after rattrape les nouveaux
+commentaires sans doublons. Il n'y a pas de limite au nombre de réponses, ni de réponses imbriquées, édition,
+suppression ou réaction dans cette version.
+
+Le service contrôle les deux participants et le serveur de bibliothèque courant avant chaque accès au fil.
+Un tiers reçoit 404, même s'il conseille le même album. La création vérifie toujours l'accès musical des deux
+comptes ; consulter et commenter un conseil enregistré ne nécessite plus de rappeler une source devenue
+indisponible. Les nouvelles écritures passent par la session et la protection CSRF existantes. Les contenus
+sont affichés comme texte DOM, sans HTML interprété. Les suppressions de comptes conservent les cascades existantes.
+
+Le flux SSE existant ne porte que des invalidations ciblées sur les participants. Le statut inclut les nouveaux
+conseils et les commentaires écrits par l'autre participant après le curseur de lecture. L'onglet doit être visible
+et le fil ouvert pour acquitter les commentaires jusqu'au dernier identifiant affiché. Une arrivée plus récente
+reste non lue ; les curseurs avancent uniquement, et un identifiant futur ou appartenant à un autre fil ne les
+modifie pas. Écrire soi-même ne masque pas les commentaires entrants non lus. Les lectures mettent à jour les
+onglets du lecteur ; les envois et les réponses actualisent aussi immédiatement la page du compte courant.
+Reconnexion, retour au premier plan et actualisation manuelle permettent le rattrapage. Le brouillon est conservé
+pendant une mise à jour ou un échec d'envoi ; le changement de compte ferme le fil et ignore les réponses anciennes.
+
+Validation : tests de migration 20→21, transaction initiale, livraisons et essais concurrents, persistance,
+cascades, participants et conseillers distincts, validation, CSRF, archivage et nouvel envoi, pagination, lecture
+concurrente et diffusion ciblée dans tests/test_recommendation_comments.py. Le parcours jsdom À écouter couvre
+l'envoi initial, les échanges successifs, le texte non interprété, le double clic, le brouillon, un onglet masqué,
+la coupure après enregistrement, les vues reçues/envoyées/archivées, les pages d'historique et le changement de compte.
+Le navigateur réel vérifie deux comptes fictifs avec le vrai flux SSE, un nouvel envoi depuis un marque-page et le
+fil contenu à 390 et 320 px. Le débordement des barres générales sur petit écran est antérieur à cette évolution.
+La 1.14 reste locale, non déployée ; aucune recommandation réelle n'a été envoyée pour les contrôles.
 
 ## Tests et limites
 

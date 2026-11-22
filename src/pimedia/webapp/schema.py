@@ -378,4 +378,50 @@ MIGRATIONS = [
     CREATE INDEX recommendations_unread_by_recipient
         ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
     """,
+    # 21: private recommendation comments, durable threads and participant read cursors.
+    """
+    CREATE TABLE recommendations_discussions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        unread_token TEXT,
+        recipient_archived_at INTEGER,
+        sender_last_read_comment_id INTEGER NOT NULL DEFAULT 0 CHECK (sender_last_read_comment_id >= 0),
+        recipient_last_read_comment_id INTEGER NOT NULL DEFAULT 0 CHECK (recipient_last_read_comment_id >= 0),
+        CHECK (sender_id != recipient_id),
+        CHECK (kind != 'song' OR source = 'subsonic'),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = ''))
+    );
+    INSERT INTO recommendations_discussions
+        (id, sender_id, recipient_id, kind, source, library_key, source_id, title, artist, image_ref, created_at, unread_token)
+        SELECT id, sender_id, recipient_id, kind, source, library_key, source_id, title, artist, image_ref, created_at, unread_token
+        FROM recommendations;
+    DROP TABLE recommendations;
+    ALTER TABLE recommendations_discussions RENAME TO recommendations;
+    CREATE UNIQUE INDEX recommendations_active_target
+        ON recommendations (sender_id, recipient_id, kind, source, library_key, source_id)
+        WHERE recipient_archived_at IS NULL;
+    CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC);
+    CREATE INDEX recommendations_by_sender ON recommendations (sender_id, id DESC);
+    CREATE INDEX recommendations_unread_by_recipient
+        ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL;
+    CREATE TABLE recommendation_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recommendation_id INTEGER NOT NULL REFERENCES recommendations (id) ON DELETE CASCADE,
+        author_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        body TEXT NOT NULL CHECK (length(trim(body)) > 0),
+        created_at INTEGER NOT NULL,
+        client_token TEXT NOT NULL,
+        UNIQUE (recommendation_id, author_id, client_token)
+    );
+    CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id)
+    """,
 ]

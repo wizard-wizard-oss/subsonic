@@ -47,8 +47,11 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - Un changement de déploiement met à jour `docs/DEPLOIEMENT.md`.
 - **Toute modification du site met à jour la version**, à chaque fois, avant le déploiement : une entrée datée en tête de
   `src/i18n/versions.yaml` (page « Versions », écrite pour les utilisateurs ; voir `docs/features/versions.md`).
-  **Évolution, finition visuelle ou correction de la même fonctionnalité : troisième niveau** (1.7.1, 1.7.2,
-  1.7.3…). Décision utilisateur du 08/11/2026 : le lot de fiches artiste/album, choix Discogs mémorisé, biographie,
-  images et raccourcis est la **1.8** ; la retouche des compteurs est la **1.7.13**, après la 1.7.12.
-  Réserver la version **mineure** à une fonctionnalité distincte ou à un lot significatif, et la
-  **majeure** à un grand changement. Rien ne part en production sans cette entrée.
+  **Nomenclature confirmée par l'utilisateur le 22/11/2026** :
+  - **Mineure** (`1.13` → `1.14`) : ajout d'une fonctionnalité ou d'un comportement, y compris l'enrichissement
+    d'une fonctionnalité existante. Les commentaires privés des recommandations sont la **1.14**.
+  - **Correctif, troisième numéro** (`1.14.1`) : correction d'un bug uniquement. Ne pas numéroter une nouvelle
+    possibilité comme un correctif au motif qu'elle complète une fonctionnalité existante.
+  - **Majeure** : grand changement ou rupture de compatibilité.
+  Les versions déjà publiées conservent leur numéro ; cette règle s'applique aux prochaines livraisons.
+  Rien ne part en production sans son entrée datée.

@@ -47,11 +47,13 @@ def session_cookie(token, max_age, secure):
     return "; ".join(parts)
 
 
-def int_param(request, name):
+def int_param(request, name, strict=False):
     value = request.param(name)
     try:
         return int(value) if value else None
     except ValueError:
+        if strict:
+            raise
         return None
 
 

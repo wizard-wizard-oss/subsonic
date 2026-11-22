@@ -39,13 +39,17 @@ function client() {
   }
   const errors = [];
   let holdNextStatus = false, heldStatus = null, holdNextRead = false, heldRead = null, failNextList = false;
-  let failNextSong = false, holdSongRequests = false;
+  let failNextSong = false, holdSongRequests = false, loseNextCommentResponse = false;
   const heldSongs = [], unavailableSongs = new Set();
   const dom = await JSDOM.fromURL(base + "/#/listen-later", {
     runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
     beforeParse(window) {
       window.fetch = (url, options) => {
         requests.push(String(url));
+        if (String(url) === "/api/recommendation/comment" && loseNextCommentResponse) {
+          loseNextCommentResponse = false;
+          return bob.request(url, options).then(() => { throw new Error("Connection lost after recording comment"); });
+        }
         if (String(url).startsWith("/api/song?")) {
           if (failNextSong) {
             failNextSong = false;
@@ -125,14 +129,17 @@ function client() {
     console.log("OK bookmark album and artist from existing pages");
 
     $(".artist-actions .recommendation-open").click();
+    await until(() => $(".recommendation-recipient"), "artist recommendation form");
     assert($(".recommendation-recipient"));
     assert(!$$(".recommendation-recipient option").some(option => option.value === "bob"));
     $(".recommendation-recipient").value = "alice";
+    $(".recommendation-comment-input").value = "Tu aimeras cet artiste.";
     $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable: true}));
     await until(() => !$(".recommendation-form"), "recommendation sent");
     const receivedByAlice = await (await alice.request("/api/listen-later")).json();
     assert.equal(receivedByAlice.recommendations.length, 1);
     assert.equal(receivedByAlice.bookmarks.length, 0);
+    assert.equal(receivedByAlice.recommendations[0].recommendations[0].commentPreview, "Tu aimeras cet artiste.");
     console.log("OK advice does not create recipient bookmark");
 
     // A specific track can be sent from its album, then received as a playable recommendation list.
@@ -143,6 +150,7 @@ function client() {
     recommendSong.click();
     recommendSong.dispatchEvent(new window.MouseEvent("dblclick", {bubbles:true}));
     assert.equal(app.player.current, beforeShare, "sharing must not start album playback");
+    await until(() => $(".recommendation-recipient"), "song recommendation form");
     $(".recommendation-recipient").value = "alice";
     $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
     await until(() => !$(".recommendation-form"), "song recommendation sent");
@@ -166,6 +174,8 @@ function client() {
     assert.equal($$(".recommendation-songs-table tr.song").length, 2);
     assert.equal($$(".bookmark-list .listen-later-card").length, 0);
     console.log("OK specific song sharing and received track list with grouped advisers");
+    songFilter.value = "all";
+    songFilter.dispatchEvent(new window.Event("change"));
 
     const original = (await app.api.get("/api/song", {id:"s4"})).song;
     app.player.playList([original], 0);
@@ -228,7 +238,7 @@ function client() {
 
     const menu = () => $('.topnav a[href="#/listen-later"]');
     const hasDot = () => menu().classList.contains("recommendations-unread");
-    const live = () => window.recommendationSources.at(-1).fire("recommendations");
+    const live = (data = {}) => window.recommendationSources.at(-1).fire("recommendations", data);
     const advise = async (sourceId, sender = alice) => {
       assert.equal((await sender.post("/api/recommendation/send", {
         recipient: "bob", kind: "album", source: "discogs", sourceId})).status, 200);
@@ -337,11 +347,120 @@ function client() {
     console.log("OK shared Discogs cards and external artist controls");
 
     await navigate("#/listen-later", () => $$(".bookmark-list .listen-later-card").length === 3);
+    const sentBefore = (await (await bob.request("/api/recommendation/discussions?scope=sent")).json()).recommendations.length;
+    $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Rare")).querySelector(".recommendation-open").click();
+    await until(() => $(".recommendation-recipient"), "recommend from listening list");
+    $(".recommendation-recipient").value = "alice";
+    $(".recommendation-comment-input").value = "Pour les arrangements de ce disque.";
+    $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => $$(".listen-later-sent .listen-later-card").length === sentBefore + 1, "sent list updates without navigating or a server event");
+    assert.match($(".listen-later-sent").textContent, /Pour les arrangements de ce disque/);
+    $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Rare")).querySelector(".recommendation-open").click();
+    await until(() => $(".recommendation-recipient"), "existing advice form");
+    $(".recommendation-recipient").value = "alice";
+    $(".recommendation-comment-input").value = "Un autre détail à partager.";
+    $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => $(".recommendation-comment-form"), "existing advice opens its single thread");
+    assert.equal($(".recommendation-comment-input").value, "Un autre détail à partager.");
+    assert.equal($$(".recommendation-comment").length, 1, "a second recommendation submission does not post another comment");
+    $(".recommendation-comment-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => $$(".recommendation-comment").length === 2 && !$(".recommendation-comment-form button").disabled, "preserved draft explicitly sent as a comment");
+    $(".dialog-head button").click();
+    assert.equal($$(".listen-later-sent .listen-later-card").length, sentBefore + 1);
+    await alice.post("/api/recommendation/remove", {kind:"album", source:"discogs", sourceId:"104"});
+    console.log("OK sending from a bookmark refreshes sent advice; an existing advice preserves the draft without duplication");
+
+    const shared = (await (await alice.post("/api/recommendation/send", {
+      recipient: "bob", kind: "album", source: "subsonic", sourceId: "al1",
+      comment: '<img src=x onerror="alert(1)"> Pour la basse.'})).json()).recommendation;
+    live({discussionId: shared.id});
+    await until(() => $('.recommendation-list .recommendation-comments-open[data-recommendation-id="' + shared.id + '"]'), "private thread entry");
+    assert(!$(".recommendation-comment-summary img"), "comment text must not become HTML");
+    $('.recommendation-list .recommendation-comments-open[data-recommendation-id="' + shared.id + '"]').click();
+    await until(() => $(".recommendation-comment-form") && $$(".recommendation-comment").length === 1, "initial comment");
+    assert.match($(".recommendation-comment p").textContent, /<img src=x/);
+    assert.equal($(".recommendation-comment-input").maxLength, receivedByAlice.commentMaxLength);
+    await until(() => !hasDot(), "displayed comments acknowledged");
+    const submitComment = text => {
+      $(".recommendation-comment-input").value = text;
+      $(".recommendation-comment-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    };
+    submitComment("Trop bien, surtout le deuxième titre !");
+    $(".recommendation-comment-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => $$(".recommendation-comment").length === 2 && !$(".recommendation-comment-form button").disabled, "one recipient comment despite double submit");
+    $(".recommendation-comment-input").value = "Mon brouillon reste ici";
+    await alice.post("/api/recommendation/comment", {recommendationId: shared.id, body: "Essaie leur album précédent."});
+    live({discussionId: shared.id});
+    await until(() => $$(".recommendation-comment").length === 3, "sender continues the exchange");
+    assert.equal($(".recommendation-comment-input").value, "Mon brouillon reste ici");
+    submitComment("Je vais l’écouter.");
+    await until(() => $$(".recommendation-comment").length === 4 && !$(".recommendation-comment-form button").disabled, "unlimited alternating replies");
+    console.log("OK dedicated private comments, escaped text, both participants, draft preserved and duplicate submit blocked");
+
+    Object.defineProperty(document, "hidden", {configurable:true, value:true});
+    await alice.post("/api/recommendation/comment", {recommendationId: shared.id, body: "Encore un détail."});
+    live({discussionId: shared.id});
+    await until(hasDot, "hidden thread remains unread");
+    assert.equal($$(".recommendation-comment").length, 4);
+    Object.defineProperty(document, "hidden", {configurable:true, value:false});
+    document.dispatchEvent(new window.Event("visibilitychange"));
+    await until(() => $$(".recommendation-comment").length === 5 && !hasDot(), "visible thread catches up");
+
+    loseNextCommentResponse = true;
+    submitComment("Une réponse à conserver malgré la coupure.");
+    await until(() => $(".recommendation-discussion .page-error").textContent && !$(".recommendation-comment-form button").disabled, "lost comment response");
+    assert.equal($(".recommendation-comment-input").value, "Une réponse à conserver malgré la coupure.");
+    $(".recommendation-comment-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
+    await until(() => $$(".recommendation-comment").length === 6 && !$(".recommendation-comment-form button").disabled, "retry reuses comment request id");
+    const history = await (await bob.request("/api/recommendation/comments?id=" + shared.id)).json();
+    assert.equal(history.comments.length, 6);
+    assert.equal(history.comments.filter(comment => comment.body.startsWith("Une réponse à conserver")).length, 1);
+    console.log("OK hidden thread stays unread and network retry keeps exactly one comment");
+
+    $(".dialog-head button").click();
+    await until(() => $('.recommendation-list .recommendation-remove'), "received list after discussion");
+    $('.recommendation-list .recommendation-remove').click();
+    await until(() => !$(".recommendation-list .listen-later-card"), "archive recommendation with conversation");
+    await alice.post("/api/recommendation/comment", {recommendationId: shared.id, body: "La discussion reste accessible."});
+    live({discussionId: shared.id});
+    await until(() => $(".recommendation-unread-comments") && !$(".recommendation-unread-comments").hidden, "archived thread notification");
+    $(".recommendation-unread-comments").click();
+    await until(() => $$(".recommendation-comment").length === 7, "open archived thread from notification");
+    $(".dialog-head button").click();
+
+    const sentArtist = receivedByAlice.recommendations[0].recommendations[0];
+    await alice.post("/api/recommendation/comment", {recommendationId: sentArtist.id, body: "J’ai adoré cet artiste."});
+    live({discussionId: sentArtist.id});
+    await until(() => $('.listen-later-sent .recommendation-comments-open.unread[data-recommendation-id="' + sentArtist.id + '"]'), "reply on a sent recommendation");
+    $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]').click();
+    await until(() => $$(".recommendation-comment").length === 2 && $(".recommendation-comment-form"), "same thread component on sent advice");
+    submitComment("Je suis content que ça te plaise !");
+    await until(() => $$(".recommendation-comment").length === 3 && !$(".recommendation-comment-form button").disabled, "sender replies again");
+    assert.equal($$(".recommendation-comment-form").length, 1);
+    console.log("OK archived conversations remain reachable and sent advice uses the same comment entity and component");
+
+    const threadPage = await (await bob.request("/api/recommendation/comments?id=" + sentArtist.id)).json();
+    for (let index = 0; index < threadPage.pageSize + 3; index++) {
+      await alice.post("/api/recommendation/comment", {recommendationId: sentArtist.id, body: "Commentaire de pagination " + index});
+    }
+    live({discussionId: sentArtist.id});
+    await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6, "catch up more than one page of new comments");
+    $(".dialog-head button").click();
+    await until(() => $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]'), "sent thread updated");
+    $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]').click();
+    await until(() => $$(".recommendation-comment").length === threadPage.pageSize && !$(".recommendation-comments-older").hidden, "bounded initial comment page");
+    $(".recommendation-comments-older").click();
+    await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6 && $(".recommendation-comments-older").hidden, "older comments prepend without duplicates");
+    assert.equal(new Set($$(".recommendation-comment").map(node => node.dataset.id)).size, threadPage.pageSize + 6);
+    console.log("OK paginated history, multiple-page live catch-up and unique comment nodes");
+
+    // Changing account closes the private thread and discards late results for its previous owner.
     bob.jar.cookie = alice.jar.cookie;
     const me = await (await alice.request("/api/me")).json();
     await window.eval("App.music").start(me);
     await until(() => $(".bookmark-list") && !$(".bookmark-list .listen-later-card"), "account reset");
     assert.equal($$(".recommendation-list .listen-later-card").length, 1);
+    assert(!$(".recommendation-discussion"));
     assert.deepEqual(errors, []);
     console.log("OK account isolation and no browser errors");
   } finally {
