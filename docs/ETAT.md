@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-**Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, préparée, non déployée)** : la fiche artiste
+**Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, déployée et vérifiée)** : la fiche artiste
 consulte d'abord la biographie de `getArtistInfo2` par l'API Subsonic existante, puis Wikipédia en français,
 puis en anglais si elle est absente ou si Subsonic est indisponible. Le portrait garde son chargement
 indépendant ; une biographie Last.fm ne demande plus de photo à Wikipédia. Cas signalé : Jungle renvoyait
@@ -12,6 +12,13 @@ ainsi que le parcours jsdom PC général, avec la biographie Last.fm et son lien
 Wikipédia conservé. Le test HTTP Jungle confirme que la biographie du groupe fournie par Subsonic
 passe avant une page Wikipédia décrivant le style musical. Vérification réelle limitée à la lecture des
 métadonnées, sans modification de la bibliothèque.
+Publication depuis l'instantané du commit dédié `81f5d3f`, par `deploy/pc/push.sh`. Les 12 tests ciblés
+biographies/versions de cet instantané passent. Version publique 1.14.2, 234 fichiers applicatifs conformes
+au commit et conteneur sain, sans erreur de démarrage. La route réelle `/api/artist/bio` renvoie pour
+Jungle une biographie du groupe, sourcée Last.fm et liée à sa fiche. SQLite reste intègre au schéma 21,
+clés étrangères et comptages métier conservés ; configuration inchangée. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.14.2-20261126T211022Z/` ; image précédente
+`pimedia-web:pre-1.14.2-20261126t211022z`. La note publiée ne contient que ce correctif.
 
 **Commentaires des recommandations, 1.14 (22/11/2026, déployée et vérifiée)** : commentaire
 initial facultatif et échanges privés successifs entre émetteur et destinataire, pour artiste/album/morceau.

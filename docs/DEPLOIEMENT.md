@@ -1,5 +1,16 @@
 # Déployer le projet
 
+Publication 1.14.2 le 26/11/2026 : correctif de priorité des biographies, Last.fm via l'API Subsonic avant
+Wikipédia français puis anglais, depuis l'instantané du commit dédié `81f5d3f`, par `deploy/pc/push.sh`.
+Le code et la note de version de ce correctif sont les seules différences applicatives avec la production
+précédente. Validation initiale : 30 tests Python ciblés et parcours jsdom PC général ; 12 tests biographies/versions
+passent aussi sur l'instantané isolé. En production : version publique 1.14.2, 234 fichiers applicatifs conformes,
+conteneur sain, aucune erreur de démarrage ; biographie du groupe Jungle et lien Last.fm vérifiés sur la route réelle.
+SQLite reste au schéma 21, intègre, avec clés étrangères valides et comptages métier conservés. Configuration
+inchangée, aucune nouvelle dépendance déclarée. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.14.2-20261126T211022Z/` ; image précédente
+`pimedia-web:pre-1.14.2-20261126t211022z`. Le retour arrière peut conserver la base actuelle.
+
 Publication 1.14 le 22/11/2026 : commentaires privés des recommandations, depuis l'instantané testé du
 commit `68ba21a`, par `deploy/pc/push.sh`. Version mineure pour cette nouvelle possibilité, conformément
 à la nomenclature confirmée par l'utilisateur ; troisième numéro réservé aux corrections de bugs. Une simple
