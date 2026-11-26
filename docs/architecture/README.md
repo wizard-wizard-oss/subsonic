@@ -91,6 +91,11 @@ uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi r
 
 ### Autres fonctionnalités
 
+- Affichage mobile (1.15) : `web-pc/static/js/mobile/bootstrap.js` assemble un adaptateur de navigation selon
+  l’écran et la session. `navigation.js` réutilise les artistes, playlists, routes et fil du salon existants,
+  avec restauration à la sortie du mode mobile. CSS conditionnelles dans `static/css/mobile/` ; aucune règle
+  métier, donnée ou route dupliquée, aucun changement du moteur YouTube ni de l’édition Pi.
+
 - Tags d'albums (1.11) : `album_tags.py` organise l'édition ; entités/limites dans
   `tag_entities.py`, seul `audio_tags.py` écrit les fichiers. `tag_sources.py` appelle le fournisseur choisi.
   `MusicBrainzMetadata` est extrait d'`exploration.py` vers `musicbrainz.py` ; le réexport conserve les imports

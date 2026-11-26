@@ -1,5 +1,8 @@
 # Bibliothèque : accueil, artiste, album, albums, recherche, favoris (site web)
 
+Sur téléphone, un menu cliquable donne accès aux mêmes artistes, playlists et pages sans modifier
+la navigation PC. Voir [Affichage mobile](mobile.md).
+
 ## Ce que ça fait
 - **Accueil** (`#/`) : derniers albums, plus écoutés (`frequent`), mieux notés (`highest`), albums commentés récemment.
 - **Artiste** (`#/artist/<id>`) : **le dossier de l'artiste** (pas les tags) ; ses albums = ses sous-dossiers (par année,

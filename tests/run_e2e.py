@@ -15,6 +15,7 @@ JOURNEYS = [   # (parcours, serveur de test)
     ("e2e_queue.js", PI_HARNESS),
     ("e2e_hifi.js", PI_HARNESS),
     ("e2e_webapp.js", PC_HARNESS),
+    ("e2e_mobile_page.js", PC_HARNESS),
     ("e2e_webapp_queue.js", PC_HARNESS),
     ("e2e_listen_later.js", PC_HARNESS),
     ("e2e_album_tags.js", PC_HARNESS),
@@ -41,6 +42,9 @@ def run_journey(script, harness, jsdom):
 def main():
     jsdom = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("JSDOM_PATH", "jsdom")
     failed = []
+    mobile = subprocess.run(["node", os.path.join("tests", "e2e_mobile.js"), jsdom], cwd=ROOT, timeout=TIMEOUT)
+    if mobile.returncode:
+        failed.append("e2e_mobile.js")
     for script, harness in JOURNEYS:
         print("== " + script, flush=True)
         if not run_journey(script, harness, jsdom):

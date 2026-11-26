@@ -1,5 +1,14 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Affichage mobile isolé, 1.15 (26/11/2026, préparée, non déployée)** : menu ☰ cliquable pour les artistes,
+playlists et liens existants, salon en volet, accueil et lecteur contenus sur petit écran. CSS et JS dédiés
+activés sur petit écran, y compris en paysage tactile ; ouverture locale sans changement des préférences PC. Au retour sur grand écran,
+les nœuds et gestionnaires d’origine sont conservés. Aucun changement du moteur YouTube ou de l’édition Pi.
+Détails et vérifications : [Affichage mobile](features/mobile.md). Les quatre parcours jsdom PC et le contrôle
+des versions passent. Le premier affichage à 390 px avait été vu dans un navigateur ; la vérification visuelle
+finale reste à reprendre, le navigateur de test ne démarrant plus. Périmètre confirmé le 26/11 : responsive seulement,
+chargement YouTube existant conservé ; aucun mini-lecteur déplaçable ni nouveau mécanisme de lecture.
+
 **Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, déployée et vérifiée)** : la fiche artiste
 consulte d'abord la biographie de `getArtistInfo2` par l'API Subsonic existante, puis Wikipédia en français,
 puis en anglais si elle est absente ou si Subsonic est indisponible. Le portrait garde son chargement

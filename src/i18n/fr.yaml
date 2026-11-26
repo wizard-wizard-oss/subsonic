@@ -194,6 +194,7 @@ webapp:
     forbidden: "Action refusée"
     missing_right: "Votre compte Subsonic n'a pas ce droit (à demander à l'administrateur de Subsonic)"
   nav:
+    menu: "Menu"
     listen_later: "À écouter"
     home: "Accueil"
     favorites: "Favoris"

@@ -6,6 +6,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.15"
+  date: 2026-11-26
+  title: "Retrouver sa musique sur téléphone"
+  changes:
+    - "Sur petit écran, le bouton de menu ouvre les artistes, les playlists et les liens de navigation. Fermez-le avec le même bouton, la croix ou un appui à l’extérieur."
+    - "Le salon s’ouvre dans un volet et le lecteur ainsi que l’accueil s’adaptent à la largeur du téléphone."
+    - "La navigation sur ordinateur et ses réglages restent inchangés."
+
 - version: "1.14.2"
   date: 2026-11-26
   title: "Retrouver la biographie du bon artiste"
