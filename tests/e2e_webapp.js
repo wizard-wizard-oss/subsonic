@@ -145,6 +145,10 @@ function makeEventSource(jar) {
   w.location.hash = "#/artist/ar3";                          // lien par l'identifiant des tags : ramené au dossier
   check("artiste en cours d'une lettre pas encore construite : surligné", await until(() =>
         $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar3"));
+  check("artiste : biographie Last.fm récupérée par Subsonic et lien vers sa source", await until(() =>
+        $(".bio-source a") && $(".bio-source a").textContent === "Last.fm") &&
+        $(".artist-head .artist-bio .bio-text").textContent.includes("Icelandic singer") &&
+        $(".bio-source a").getAttribute("href") === "https://www.last.fm/music/Björk");
   w.location.hash = "#/";
   let reloaded = false;
   const app = w.eval("App"), listCalls = app.api.get;

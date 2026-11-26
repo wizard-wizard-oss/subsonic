@@ -1,5 +1,18 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, préparée, non déployée)** : la fiche artiste
+consulte d'abord la biographie de `getArtistInfo2` par l'API Subsonic existante, puis Wikipédia en français,
+puis en anglais si elle est absente ou si Subsonic est indisponible. Le portrait garde son chargement
+indépendant ; une biographie Last.fm ne demande plus de photo à Wikipédia. Cas signalé : Jungle renvoyait
+le style musical car la page Wikipédia française empêchait tout appel Last.fm. Fiche publique Last.fm du
+groupe et biographie fournie par le serveur Subsonic réel confirmées. Tests et détails :
+[Bibliothèque](features/bibliotheque.md).
+Validation locale : 30 tests Python ciblés (biographies, anecdotes, portraits et versions) passent,
+ainsi que le parcours jsdom PC général, avec la biographie Last.fm et son lien affichés et le repli
+Wikipédia conservé. Le test HTTP Jungle confirme que la biographie du groupe fournie par Subsonic
+passe avant une page Wikipédia décrivant le style musical. Vérification réelle limitée à la lecture des
+métadonnées, sans modification de la bibliothèque.
+
 **Commentaires des recommandations, 1.14 (22/11/2026, déployée et vérifiée)** : commentaire
 initial facultatif et échanges privés successifs entre émetteur et destinataire, pour artiste/album/morceau.
 Entité RecommendationComment commune au commentaire initial et aux réponses ; un dépôt SQL et un composant

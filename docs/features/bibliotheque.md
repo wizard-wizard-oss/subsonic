@@ -4,9 +4,10 @@
 - **Accueil** (`#/`) : derniers albums, plus écoutés (`frequent`), mieux notés (`highest`), albums commentés récemment.
 - **Artiste** (`#/artist/<id>`) : **le dossier de l'artiste** (pas les tags) ; ses albums = ses sous-dossiers (par année,
   puis nom), cœur (étoile posée sur le dossier), « Radio de l'artiste », « Créer un mix à partir de cet artiste »,
-  **biographie** (27/10/2026 : Wikipédia en français, sinon Last.fm via Subsonic `getArtistInfo2`, sinon Wikipédia en
-  anglais ; photo Wikipédia, lien vers la source, repliée avec « Lire la suite », `GET /api/artist/bio?name=&id=`, gardée
-  un jour, `pimedia/webapp/facts.py`), **titres populaires** (5 puis 10, Last.fm via Subsonic, chargés après la page),
+  **biographie** (priorité corrigée le 26/11/2026 : Last.fm via Subsonic `getArtistInfo2`, sinon Wikipédia en français,
+  puis en anglais ; portrait chargé séparément, lien vers la source, repliée avec « Lire la suite »,
+  `GET /api/artist/bio?name=&id=`, gardée un jour, `pimedia/webapp/facts.py`),
+  **titres populaires** (5 puis 10, Last.fm via Subsonic, chargés après la page),
   **artistes similaires** (Last.fm).
 - **Album** (`#/album/<id>`) : **le dossier de l'album** ; ses titres = ceux du dossier puis de ses dossiers de disques
   (CD1, CD2…), nom de l'album = nom du dossier, artiste = dossier parent. Pochette, année, genre, nombre de titres, durée,
@@ -207,7 +208,10 @@ retrouver ses autres groupes / projets et d'ouvrir leurs fiches musicales (toute
 
 ## Tests
 `tests/test_webapp.py`, `tests/test_webapp_folders.py` (pages par dossiers, liens ID3, noms de dossiers, cœur),
-`tests/test_webapp_ext.py` (recherche), `tests/e2e_webapp.js` (dont les pochettes : flèche existante, chargement
+`tests/test_webapp_music.py` (biographie Last.fm via l'API Subsonic prioritaire, cas Jungle groupe/style,
+replis Wikipédia français puis anglais, API absente/en erreur, cache),
+`tests/test_webapp_ext.py` (recherche), `tests/e2e_webapp.js` (biographie Last.fm et son lien, repli Wikipédia,
+lecture sur les pochettes : flèche existante, chargement
 unique, album complet sans navigation, erreur sans perdre la file, lien sur le nom).
 Version 1.7.7 déployée le 07/11/2026 : santé HTTPS et conteneur sains ; version, JavaScript et CSS servis vérifiés.
 Les interactions sont validées dans jsdom ; le parcours avec un compte connecté en production reste à regarder.

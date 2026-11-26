@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.14.2"
+  date: 2026-11-26
+  title: "Retrouver la biographie du bon artiste"
+  changes:
+    - "Les biographies Last.fm sont désormais prioritaires sur Wikipédia, pour éviter des confusions comme celle entre le groupe Jungle et le style musical du même nom."
+    - "Wikipédia reste disponible en secours lorsqu’aucune biographie n’est fournie, d’abord en français puis en anglais."
+
 - version: "1.14"
   date: 2026-11-22
   title: "Échanger autour des recommandations"

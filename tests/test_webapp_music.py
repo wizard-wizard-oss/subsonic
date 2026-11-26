@@ -6,10 +6,12 @@ import random
 import unittest
 import urllib.error
 import urllib.parse
+from unittest.mock import patch
 
 from pimedia.shared.text import normalize
 from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
 from pimedia.webapp.mixes import MixError, MixOptions, spread_artists
+from pimedia.webapp.subsonic import SubsonicError, SubsonicUnreachable
 from tests.fake_subsonic import PNG
 from tests.webapp_support import FakeInfoSites, FakeLyricsSites, WebAppTestCase
 
@@ -305,23 +307,68 @@ class LyricsHttpTest(WebAppTestCase):
 
 
 class ArtistBioHttpTest(WebAppTestCase):
-    def test_wikipedia_in_french_first(self):
+    def test_wikipedia_in_french_when_subsonic_has_no_biography(self):
         bob = self.client("bob", "pw2")
         bio = bob.get("/api/artist/bio?name=ABBA&id=ar1").json()
         self.assertEqual((bio["src"], bio["img"], bio["url"]),
                          ("Wikipédia", FakeInfoSites.PHOTO, "https://fr.wikipedia.org/wiki/ABBA"))
         self.assertTrue(bio["text"].startswith("ABBA est un groupe de pop suédois"))
-        self.assertEqual(self.subsonic.calls["getArtistInfo2"], 0)            # Last.fm pas demandé
+        self.assertEqual(self.subsonic.calls["getArtistInfo2"], 1)
 
-    def test_lastfm_by_subsonic_when_wikipedia_has_nothing(self):
+    def test_lastfm_by_subsonic_first_and_cached(self):
         bob = self.client("bob", "pw2")
-        bio = bob.get("/api/artist/bio?name=Bj%C3%B6rk&id=ar3").json()
+        with patch.object(self.app.facts.wikipedia, "artist_page", return_value={}) as wikipedia:
+            bio = bob.get("/api/artist/bio?name=Bj%C3%B6rk&id=ar3").json()
+            wikipedia.assert_not_called()
         self.assertEqual((bio["src"], bio["url"]), ("Last.fm", "https://www.last.fm/music/Björk"))
         self.assertIn("Icelandic singer", bio["text"])
         self.assertNotIn("Read more", bio["text"])                            # lien Last.fm retiré
         asked = self.subsonic.calls["getArtistInfo2"]
         bob.get("/api/artist/bio?name=Bj%C3%B6rk&id=ar3")
         self.assertEqual(self.subsonic.calls["getArtistInfo2"], asked)         # gardé en mémoire
+
+    def test_jungle_group_biography_wins_over_wikipedia_genre(self):
+        bob = self.client("bob", "pw2")
+        biography = "Jungle est un groupe londonien fondé en 2013, dont la musique mêle soul et funk."
+        page = {"extract": "La jungle est un style de musique électronique.",
+                "content_urls": {"desktop": {"page": "https://fr.wikipedia.org/wiki/Jungle_(musique)"}}}
+        def artist_info(handler, params):
+            handler.reply_json({"artistInfo2": {"biography": biography, "lastFmUrl": "https://www.last.fm/music/Jungle"}})
+        with patch.object(self.subsonic, "api_getArtistInfo2", side_effect=artist_info) as subsonic, \
+             patch.object(self.app.facts.wikipedia, "artist_page", return_value=page) as wikipedia:
+            bio = bob.get("/api/artist/bio?name=Jungle&id=jungle-id").json()
+            subsonic.assert_called_once()
+            self.assertEqual(subsonic.call_args.args[1]["id"], "jungle-id")
+            wikipedia.assert_not_called()
+        self.assertEqual((bio["text"], bio["src"], bio["url"]),
+                         (biography, "Last.fm", "https://www.last.fm/music/Jungle"))
+
+    def test_wikipedia_in_english_after_empty_subsonic_and_french_page(self):
+        bob = self.client("bob", "pw2")
+        page = {"extract": "ABBA are a Swedish pop group formed in Stockholm in 1972.",
+                "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/ABBA"}}}
+        with patch.object(self.app.facts.wikipedia, "artist_page",
+                          side_effect=lambda name, lang: page if lang == "en" else {}) as wikipedia:
+            bio = bob.get("/api/artist/bio?name=ABBA&id=ar1").json()
+        self.assertEqual((bio["text"], bio["src"], bio["url"]),
+                         (page["extract"], "Wikipédia", "https://en.wikipedia.org/wiki/ABBA"))
+        self.assertEqual([call.args for call in wikipedia.call_args_list], [("ABBA", "fr"), ("ABBA", "en")])
+        self.assertEqual(self.subsonic.calls["getArtistInfo2"], 1)
+
+    def test_wikipedia_when_subsonic_is_unavailable(self):
+        bob = self.client("bob", "pw2")
+        for error in (SubsonicError(70), SubsonicUnreachable()):
+            with self.subTest(error=type(error).__name__):
+                self.app.facts.cache.clear()
+                with patch.object(self.app.subsonic, "call", side_effect=error):
+                    bio = bob.get("/api/artist/bio?name=ABBA&id=ar1").json()
+                self.assertEqual((bio["src"], bio["text"]), ("Wikipédia", FakeInfoSites.ABBA["extract"]))
+
+    def test_wikipedia_without_subsonic_artist_id(self):
+        bob = self.client("bob", "pw2")
+        bio = bob.get("/api/artist/bio?name=ABBA").json()
+        self.assertEqual(bio["src"], "Wikipédia")
+        self.assertEqual(self.subsonic.calls["getArtistInfo2"], 0)
 
     def test_nothing_found_and_bad_requests(self):
         bob = self.client("bob", "pw2")

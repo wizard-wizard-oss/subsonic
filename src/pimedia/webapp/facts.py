@@ -1,6 +1,6 @@
 """Biographie d'un artiste (page artiste) et anecdotes du titre en cours (panneau des paroles), par les classes communes
 aux deux éditions (Wikipédia, MusicBrainz). La biographie Last.fm vient de Subsonic (getArtistInfo2, Last.fm réglé sur le
-serveur) : seulement si Wikipédia n'a pas de page en français. Gardées un jour en mémoire."""
+serveur) et passe avant Wikipédia en français, puis en anglais. Gardées un jour en mémoire."""
 from ..shared.external import FactsBuilder, sentences
 from .library.cache import TtlCache
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
@@ -14,15 +14,15 @@ class Facts:
         self.cache = cache or TtlCache(86400)
 
     def artist_bio(self, user, name, artist_id=""):
-        """{"text", "img", "src", "url"} : Wikipédia en français, sinon Last.fm (par Subsonic), sinon Wikipédia en
-        anglais ; {} si rien n'est trouvé."""
+        """{"text", "img", "src", "url"} : Last.fm (par Subsonic), sinon Wikipédia en français, puis en anglais ;
+        {} si rien n'est trouvé. Le portrait de l'artiste se charge séparément."""
         name, artist_id = (str(v or "").strip() for v in (name, artist_id))
         if not name or max(len(name), len(artist_id)) > 300:
             raise ValueError("artiste")
 
         def search():
             try:
-                return self._wikipedia_bio(name, "fr") or self._lastfm_bio(user, name, artist_id) \
+                return self._lastfm_bio(user, name, artist_id) or self._wikipedia_bio(name, "fr") \
                     or self._wikipedia_bio(name, "en")
             except Exception:                 # source injoignable : on réessaiera plus tard
                 return {}
@@ -55,7 +55,7 @@ class Facts:
         text = " ".join(sentences(info.get("biography"), 12, 20, 400))
         if not text:
             return {}
-        return {"text": text, "img": self.wikipedia.artist_photo(name), "src": "Last.fm", "url": info.get("lastFmUrl", "")}
+        return {"text": text, "img": "", "src": "Last.fm", "url": info.get("lastFmUrl", "")}
 
     def _biography(self, user, artist_id):
         return self._artist_info(user, artist_id).get("biography", "")
