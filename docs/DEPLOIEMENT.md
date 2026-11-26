@@ -1,5 +1,17 @@
 # Déployer le projet
 
+Publication 1.15 le 26/11/2026 : responsive isolé pour les petits écrans, menu artistes/playlists
+et salon en volets ; CSS et JS mobiles dédiés. Navigation PC et moteur YouTube conservés. L’instantané
+reprend la production 1.14.2 et ajoute seulement cette évolution ; les travaux de tags et de textes encore
+préparés séparément ne sont pas inclus.
+Publication le 26/11/2026 depuis l’instantané testé du commit `376064d`, par
+`deploy/pc/push.sh`. Version publique 1.15, conteneur sain, 238 fichiers applicatifs et
+57 ressources HTTPS conformes. Validation de cet instantané : 58 contrôles mobiles,
+parcours complet mobile, parcours PC général et cinq tests de versions. Configuration et volume de données
+conservés ; SQLite intègre au schéma 21, clés étrangères valides. Les messages et sessions reçus pendant
+la publication sont conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15-20261126T212335Z/` ;
+image précédente `pimedia-web:pre-1.15-20261126t212335z`. Aucune migration ; le retour de code peut conserver la base courante.
+
 Publication 1.14.2 le 26/11/2026 : correctif de priorité des biographies, Last.fm via l'API Subsonic avant
 Wikipédia français puis anglais, depuis l'instantané du commit dédié `81f5d3f`, par `deploy/pc/push.sh`.
 Le code et la note de version de ce correctif sont les seules différences applicatives avec la production

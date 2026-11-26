@@ -1,13 +1,21 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-**Affichage mobile isolé, 1.15 (26/11/2026, préparée, non déployée)** : menu ☰ cliquable pour les artistes,
+**Affichage mobile isolé, 1.15 (26/11/2026, déployée et vérifiée)** : menu ☰ cliquable pour les artistes,
 playlists et liens existants, salon en volet, accueil et lecteur contenus sur petit écran. CSS et JS dédiés
-activés sur petit écran, y compris en paysage tactile ; ouverture locale sans changement des préférences PC. Au retour sur grand écran,
-les nœuds et gestionnaires d’origine sont conservés. Aucun changement du moteur YouTube ou de l’édition Pi.
-Détails et vérifications : [Affichage mobile](features/mobile.md). Les quatre parcours jsdom PC et le contrôle
-des versions passent. Le premier affichage à 390 px avait été vu dans un navigateur ; la vérification visuelle
-finale reste à reprendre, le navigateur de test ne démarrant plus. Périmètre confirmé le 26/11 : responsive seulement,
-chargement YouTube existant conservé ; aucun mini-lecteur déplaçable ni nouveau mécanisme de lecture.
+activés sur petit écran, y compris en paysage tactile ; ouverture locale sans changement des préférences PC.
+Les nœuds et gestionnaires d’origine reviennent sur grand écran. Les styles mobiles ont une source unique,
+Échap laisse les contrôles du salon agir avant de fermer le volet ; les barres sont compactées en paysage court.
+Revue indépendante puis recontrôle : responsabilités et couches existantes conservées, aucune duplication
+métier. Chargement YouTube et édition Pi inchangés. Détails : [Affichage mobile](features/mobile.md).
+Publication le 26/11/2026 depuis l’instantané testé du commit `376064d`, par
+`deploy/pc/push.sh`. Version publique 1.15, conteneur sain, 238 fichiers applicatifs et
+57 ressources HTTPS conformes. Validation de cet instantané : 58 contrôles mobiles,
+parcours complet mobile, parcours PC général et cinq tests de versions. Configuration et volume de données
+conservés ; SQLite intègre au schéma 21, clés étrangères valides. Les messages et sessions reçus pendant
+la publication sont conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15-20261126T212335Z/` ;
+image précédente `pimedia-web:pre-1.15-20261126t212335z`. Aucune migration ; le retour de code peut conserver la base courante.
+La validation visuelle finale à 320 px et en paysage reste à confirmer : le navigateur de test est indisponible.
+La lecture YouTube réelle sur téléphone reste à vérifier avec les retours utilisateur.
 
 **Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, déployée et vérifiée)** : la fiche artiste
 consulte d'abord la biographie de `getArtistInfo2` par l'API Subsonic existante, puis Wikipédia en français,

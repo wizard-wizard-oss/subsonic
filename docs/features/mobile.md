@@ -49,3 +49,13 @@ Les responsabilités et couches de données existantes restent en place ; aucune
 Les quatre parcours jsdom PC passent. L’affichage initial à 390 px avait été vérifié dans un navigateur.
 La validation visuelle finale (dont 320 px et paysage) reste à faire : le navigateur de vérification ne
 démarre plus. La lecture YouTube réelle sur téléphone n’a pas été vérifiée.
+
+## Publication 1.15
+
+Publication le 26/11/2026 depuis l’instantané testé du commit `376064d`, par
+`deploy/pc/push.sh`. Version publique 1.15, conteneur sain, 238 fichiers applicatifs et
+57 ressources HTTPS conformes. Validation de cet instantané : 58 contrôles mobiles,
+parcours complet mobile, parcours PC général et cinq tests de versions. Configuration et volume de données
+conservés ; SQLite intègre au schéma 21, clés étrangères valides. Les messages et sessions reçus pendant
+la publication sont conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15-20261126T212335Z/` ;
+image précédente `pimedia-web:pre-1.15-20261126t212335z`. Aucune migration ; le retour de code peut conserver la base courante.
