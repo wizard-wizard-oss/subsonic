@@ -11,7 +11,8 @@ from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.release_radar import RadarProfiles, RadarReleases, ReleaseSources
 from pimedia.webapp.weekly_releases.entities import RadarError, RadarRelease
-from pimedia.webapp.weekly_releases.limits import FULL_SYNC_EVERY, REFRESH_COOLDOWN, WINDOW_AFTER, WINDOW_BEFORE
+from pimedia.webapp.weekly_releases.limits import (FULL_SYNC_EVERY, REFRESH_COOLDOWN, RETRY_FAILED_AFTER, WINDOW_AFTER,
+                                                    WINDOW_BEFORE)
 from pimedia.webapp.weekly_releases.sync import ReleaseSync
 
 TODAY = date(2026, 11, 27)
@@ -202,6 +203,36 @@ class ReleaseSyncTest(unittest.TestCase):
         self.assertEqual(self.trends.refreshed, [1])
         self.sync.sync_new_source(source)
         self.assertEqual(len(spawned), 2)                     # le travail précédent est fini : un nouveau fil
+
+    def test_failure_reason_is_logged(self):
+        errors = []
+        self.sync.log = errors.append
+        self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.musicbrainz.down = True
+        self.sync.sync_all()
+        self.assertTrue(any("Warp" in line and "explore.unavailable" in line for line in errors), errors)
+
+    def test_failed_sources_are_retried_after_half_an_hour(self):
+        self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.sources.add(1, "style", "techno", "techno", "manual")
+        self.releases.mark_full_sync(self.now - 3600)
+        self.releases.mark_synced("label", mbid(700), self.now - 7200)
+        self.releases.mark_failed("label", mbid(700), self.now - RETRY_FAILED_AFTER)
+        self.releases.mark_failed("style", "techno", self.now - RETRY_FAILED_AFTER + 60)   # trop récent
+        self.assertFalse(self.sync.tick())                      # pas une synchronisation complète
+        self.assertEqual([c[0] for c in self.musicbrainz.calls], ["label"])
+        self.assertEqual(self.found("label", mbid(700)), {mbid(1)})
+        self.musicbrainz.calls.clear()
+        self.sync.tick()
+        self.assertEqual(self.musicbrainz.calls, [])            # réussie : plus en échec
+
+    def test_a_failed_source_nobody_follows_is_not_retried(self):
+        source = self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.sources.hide(1, source.id)
+        self.releases.mark_full_sync(self.now - 3600)
+        self.releases.mark_failed("label", mbid(700), self.now - 2 * RETRY_FAILED_AFTER)
+        self.sync.tick()
+        self.assertEqual(self.musicbrainz.calls, [])
 
     def test_purge_removes_old_releases(self):
         old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - timedelta(days=60), "Album", ())

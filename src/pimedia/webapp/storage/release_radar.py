@@ -106,6 +106,12 @@ class RadarReleases:
                           (kind, identity))
         return row["synced_at"] if row else None
 
+    def failing_since(self, before):
+        """Sources dont le dernier essai a échoué, au plus tard à « before » (secondes)."""
+        rows = self.db.query("SELECT source_kind, source_identity FROM radar_sync WHERE failed_at <= ? "
+                             "AND (synced_at IS NULL OR failed_at > synced_at)", (int(before),))
+        return {(row["source_kind"], row["source_identity"]) for row in rows}
+
     def last_synced(self, keys):
         """Synchronisation réussie la plus récente parmi ces sources (None si aucune)."""
         rows = self.db.query("SELECT source_kind, source_identity, synced_at FROM radar_sync "

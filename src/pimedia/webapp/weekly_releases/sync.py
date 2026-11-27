@@ -9,7 +9,7 @@ from datetime import date, datetime, time as day_time, timedelta
 from ...shared.providers.musicbrainz.client import IDS_PER_QUERY, MAX_LIMIT
 from .entities import RadarError, RadarRelease
 from .limits import (ARTIST_KINDS, ARTIST_PAGES, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN,
-                     STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
+                     RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
 from .trends import SERVICE_ERRORS
 
 
@@ -49,10 +49,22 @@ class ReleaseSync:
             self.sleep(SYNC_CHECK_EVERY)
 
     def tick(self):
-        """Synchronise si c'est l'heure ; True si une synchronisation complète a eu lieu."""
-        if not self.due():
-            return False
-        return self.sync_all()
+        """Synchronise si c'est l'heure ; sinon réessaie les sources en échec depuis RETRY_FAILED_AFTER secondes.
+        True si une synchronisation complète a eu lieu."""
+        if self.due():
+            return self.sync_all()
+        self.retry_failed()
+        return False
+
+    def retry_failed(self):
+        failing = self.releases.failing_since(self.clock() - RETRY_FAILED_AFTER)
+        sources = [source for source in self.sources.active_union() if source[:2] in failing]
+        if not sources or not self._running.acquire(blocking=False):
+            return                                    # rien à reprendre, ou une synchronisation complète tourne
+        try:
+            self.sync_sources(sources)
+        finally:
+            self._running.release()
 
     def due(self):
         last, now = self.releases.last_full_sync(), self.clock()
@@ -131,18 +143,21 @@ class ReleaseSync:
         artists = [source for source in sources if source[0] in ARTIST_KINDS]
         for kind, identity, name in sources:
             if kind == STYLE:
-                self._guarded([(kind, identity)], lambda: self._style(identity, start, end))
+                self._guarded([(kind, identity)], name, lambda: self._style(identity, start, end))
             elif kind == LABEL:
-                self._guarded([(kind, identity)], lambda: self._label(identity, start, end))
+                self._guarded([(kind, identity)], name, lambda: self._label(identity, start, end))
         for index in range(0, len(artists), IDS_PER_QUERY):
-            chunk = [(kind, identity) for kind, identity, _ in artists[index:index + IDS_PER_QUERY]]
-            self._guarded(chunk, lambda: self._artists(chunk, start, end))
+            batch = artists[index:index + IDS_PER_QUERY]
+            chunk = [(kind, identity) for kind, identity, _ in batch]
+            self._guarded(chunk, ", ".join(name for _, _, name in batch), lambda: self._artists(chunk, start, end))
 
-    def _guarded(self, keys, work):
-        """Une panne n'efface rien : la source garde ses sorties, l'échec est noté, la nuit suivante réessaie."""
+    def _guarded(self, keys, names, work):
+        """Une panne n'efface rien : la source garde ses sorties, l'échec et sa raison sont notés, et la source est
+        réessayée RETRY_FAILED_AFTER secondes plus tard."""
         try:
             work()
-        except SERVICE_ERRORS:
+        except SERVICE_ERRORS as error:
+            self.log("Radar des sorties : %s en échec (%r)" % (names, error))
             for kind, identity in keys:
                 self.releases.mark_failed(kind, identity, self.clock())
             return

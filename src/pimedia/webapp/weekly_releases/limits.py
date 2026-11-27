@@ -10,6 +10,7 @@ REFRESH_COOLDOWN = 600                    # « Actualiser » : une fois toutes l
 STYLE_PAGES_PER_WEEK = 2                  # pages MusicBrainz lues par style et par semaine
 ARTIST_PAGES = 3                          # pages MusicBrainz lues par lot d'artistes
 SYNC_CHECK_EVERY = 900                    # la tâche de fond regarde toutes les 15 min s'il faut synchroniser
+RETRY_FAILED_AFTER = 1800                 # une source en échec est réessayée 30 min plus tard, sans attendre la nuit
 TREND_ARTISTS = 30                        # artistes des tendances par compte
 TREND_RESOLVE_ATTEMPTS = 60               # recherches MusicBrainz d'un nom d'artiste sans MBID, par compte et par calcul
 TREND_LABEL_ALBUMS = 30                   # albums dont on cherche le label, par compte et par nuit

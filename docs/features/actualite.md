@@ -86,8 +86,9 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   comptes, des plus anciennes aux plus récentes : un style = une requête par semaine de la fenêtre (2 pages de 100
   au plus) ; un label = ses éditions de la fenêtre, puis une requête groupée `rgid:` pour ne garder que les
   nouveautés (pas les rééditions) ; les artistes et proches = requêtes groupées par 20 (`arid:`).
-- Une panne garde les sorties déjà en base et note l’échec (`radar_sync.failed_at`). Les sorties plus vieilles que
-  30 jours sont purgées.
+- Une panne garde les sorties déjà en base, note l’échec (`radar_sync.failed_at`) et sa raison dans le journal du
+  conteneur ; la source est réessayée 30 min plus tard (vérification toutes les 15 min), sans attendre la nuit.
+  Les sorties plus vieilles que 30 jours sont purgées.
 - Ajouter une source la synchronise tout de suite ; « ↻ » relance tendances et sources du compte, une fois toutes
   les 10 min (refus : 429 `weekly.refresh_too_soon`).
 - Toutes les valeurs (fenêtre, plafonds, délais) sont dans `webapp/weekly_releases/limits.py`.
