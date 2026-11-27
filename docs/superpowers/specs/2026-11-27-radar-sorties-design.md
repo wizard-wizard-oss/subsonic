@@ -177,3 +177,31 @@ fois ; 40 lignes par fonction, 300 par fichier ; tests écrits avant le code (un
 - Nombre d'écoutes par compte : non utilisé dans cette version (décision de l'utilisateur).
 
 Document validé par l'utilisateur le 27/11/2026.
+
+---
+
+## Version 2 (validée par l'utilisateur le 27/11/2026, soir, après la première mise en ligne)
+
+Constats en production : MusicBrainz renvoie des 503 par moments ; un seul échec annulait tout le « profil de goûts »
+(0 profil sur 14) ; le tri par ressemblance de tags était jugé flou (« un peu vaste »). Décisions :
+
+- **Signaux : les favoris seulement** (artistes, albums, morceaux de `getStarred2`). Plus de marque-pages ni de
+  playlists pour l'instant ; chacun ajoute ensuite ce qu'il veut dans « Mes sources ».
+- **Styles dominants** : pour chaque artiste favori, ses 3 premiers tags MusicBrainz présents dans le catalogue des
+  styles, lus **par lots de 20 artistes en une requête** (recherche `arid:… OR …`, qui renvoie les tags). On compte les
+  artistes par style ; un style porté par moins de 3 artistes est écarté ; les **5 premiers** deviennent des sources
+  « d'après vos favoris », décochables ; on peut en ajouter.
+- **Sans favori** : message « pas encore de favoris » et **styles génériques du sub**, calculés de la même façon à
+  partir des albums les plus écoutés du serveur (`getAlbumList2 type=frequent`, liste commune : c'est voulu ici).
+- **Plus de profil additionné ni de tri par ressemblance** : les cartes sont rangées par date puis par titre.
+- **Sorties des artistes : ListenBrainz** (`explore/fresh-releases`), deux requêtes par nuit pour tout le site
+  (14 jours avant, 60 jours après : ~2,3 Mo, ~3 000 albums et EP), gardées en base avec les MBID et noms des artistes
+  crédités. « Mes artistes » = rapprochement local par MBID. Les requêtes MusicBrainz groupées par artiste disparaissent.
+- **Découvertes remplacées par « Autour de… »** : on choisit un de ses artistes ; Last.fm donne ses proches (une
+  requête : l'utilisateur fait davantage confiance à Last.fm pour ça) ; on les cherche dans les sorties ListenBrainz
+  déjà en base (MBID quand Last.fm le donne, sinon nom normalisé). Plus de sources « proches » ni d'interrupteur.
+- **Styles et labels** : MusicBrainz comme en version 1 (nouvel essai 30 min après un échec, raison journalisée).
+- **Pas de cache de 7 jours pour le radar** : la synchronisation interroge les services en direct ; ce qu'on garde
+  (sorties, labels d'albums, styles des artistes) est dans les tables du radar.
+- **Version 1.24** (la 1.23 est en ligne ; la 1.23.1 non déployée y est intégrée). Un seul déploiement, après la fin de
+  la première synchronisation en cours.
