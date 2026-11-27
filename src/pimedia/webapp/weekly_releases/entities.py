@@ -109,12 +109,14 @@ class RadarSettings:
     discoveries_enabled: bool
     discoveries_available: bool
     refresh_cooldown: int
+    kinds: tuple = ()
+    addable: tuple = ()
     refresh_after: Optional[int] = None
 
     def to_api(self):
         return {"sources": [s.to_api() for s in self.sources], "discoveriesEnabled": self.discoveries_enabled,
                 "discoveriesAvailable": self.discoveries_available, "refreshCooldown": self.refresh_cooldown,
-                "refreshAfter": self.refresh_after}
+                "kinds": list(self.kinds), "addable": list(self.addable), "refreshAfter": self.refresh_after}
 
 
 @dataclass(frozen=True)

@@ -127,6 +127,18 @@ class RadarServiceTest(unittest.TestCase):
         self.week(self.alice)
         self.assertEqual(len(self.local_calls), 4)                       # gardé quelques minutes
 
+    def test_a_card_whose_folder_is_missing_does_not_break_the_week(self):
+        self.follow_all()
+        self.local = lambda user, title, artist: (_ for _ in ()).throw(LookupError("dossier"))
+        self.radar.local = self.local
+        cards = self.week(self.alice)["cards"]
+        self.assertEqual({card["local"] for card in cards}, {None})
+
+    def test_settings_send_the_kinds_to_the_page(self):
+        body = json.loads(self.controller.sources(None, self.alice).body)
+        self.assertEqual((body["kinds"], body["addable"]), (["style", "label", "artist", "similar"],
+                                                             ["style", "label", "artist"]))
+
     def test_discoveries_hidden_when_turned_off_or_without_lastfm(self):
         self.follow_all()
         self.controller.discoveries(None, self.alice, {"enabled": False})

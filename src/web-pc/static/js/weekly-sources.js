@@ -6,8 +6,8 @@
 const WeeklySources = (() => {
   const el = App.el;
   const t = (key, values) => App.t("weekly." + key, values);
-  const GROUPS = ["style", "label", "artist", "similar"];
-  const ADDABLE = ["style", "label", "artist"];
+  // types traités à part : un style s'ajoute par le catalogue, un proche n'existe que si les découvertes sont possibles
+  const STYLE = "style", SIMILAR = "similar";
   const API = "/api/news/releases";
 
   class SourcesPanel {
@@ -35,14 +35,14 @@ const WeeklySources = (() => {
     draw(settings) {
       App.clear(this.box);
       this.box.appendChild(el("h2", {text: t("sources_title")}));
-      for (const kind of GROUPS) {
-        if (kind === "similar" && !settings.discoveriesAvailable) continue;
+      for (const kind of settings.kinds) {
+        if (kind === SIMILAR && !settings.discoveriesAvailable) continue;
         this.lists[kind] = el("ul.weekly-source-list");
         App.append(this.box, [el("h3", {text: t("kind_" + kind)}), this.lists[kind]]);
       }
       for (const source of settings.sources) this.addRow(source);
       if (settings.discoveriesAvailable) this.box.appendChild(this.discoveriesToggle(settings.discoveriesEnabled));
-      this.box.appendChild(this.addForm());
+      this.box.appendChild(this.addForm(settings.addable));
       this.status = el("p.muted", {"aria-live": "polite"});
       this.box.appendChild(this.status);
     }
@@ -79,9 +79,9 @@ const WeeklySources = (() => {
       return el("label.weekly-discoveries", {}, box, el("span", {text: t("discoveries_toggle")}));
     }
 
-    addForm() {
+    addForm(addable) {
       this.kind = el("select", {"aria-label": t("add_kind")},
-        ...ADDABLE.map(kind => el("option", {value: kind, text: t("kind_" + kind)})));
+        ...addable.map(kind => el("option", {value: kind, text: t("kind_" + kind)})));
       this.query = el("input", {type: "search", list: "weekly-source-genres", "aria-label": t("add_query")});
       this.results = el("div.weekly-search-results");
       const options = el("datalist", {id: "weekly-source-genres"}, ...this.genres.map(name => el("option", {value: name})));
@@ -93,7 +93,7 @@ const WeeklySources = (() => {
     }
 
     kindChanged() {
-      const style = this.kind.value === "style";
+      const style = this.kind.value === STYLE;
       this.query.setAttribute("placeholder", t(style ? "add_style" : "add_search"));
       if (style) this.query.setAttribute("list", "weekly-source-genres"); else this.query.removeAttribute("list");
       App.clear(this.results);
@@ -102,7 +102,7 @@ const WeeklySources = (() => {
     async submit() {
       const kind = this.kind.value, query = this.query.value.trim();
       if (!query) return;
-      if (kind === "style") {
+      if (kind === STYLE) {
         const name = this.genres.find(genre => genre.toLowerCase() === query.toLowerCase());
         if (name) this.add(kind, name, name); else this.status.textContent = t("unknown_style");
         return;

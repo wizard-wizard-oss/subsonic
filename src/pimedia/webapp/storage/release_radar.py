@@ -3,6 +3,7 @@ import json
 import time
 
 from ..weekly_releases.entities import RadarRelease, RadarSource
+from ..weekly_releases.limits import MANUAL
 
 SOURCE_COLUMNS = "id, kind, identity, name, origin, hidden, via"
 FULL_SYNC = "full"
@@ -24,14 +25,16 @@ class ReleaseSources:
         return RadarSource.from_row(row) if row else None
 
     def add(self, user_id, kind, identity, name, origin, via=None):
-        """Une source masquée ne revient que si la personne l'ajoute elle-même (origine « manual »)."""
+        """Une source masquée ne revient que si la personne l'ajoute elle-même (origine MANUAL)."""
         self.db.execute(
             "INSERT INTO release_sources (user_id, kind, identity, name, origin, via, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, kind, identity) DO UPDATE SET "
-            "name = excluded.name, via = CASE WHEN hidden = 0 THEN COALESCE(excluded.via, via) ELSE via END, "
-            "origin = CASE WHEN excluded.origin = 'manual' THEN 'manual' ELSE origin END, "
-            "hidden = CASE WHEN excluded.origin = 'manual' THEN 0 ELSE hidden END",
-            (user_id, kind, identity, name, origin, via, int(self.clock())))
+            "VALUES (:user, :kind, :identity, :name, :origin, :via, :now) ON CONFLICT (user_id, kind, identity) "
+            "DO UPDATE SET name = excluded.name, "
+            "via = CASE WHEN hidden = 0 THEN COALESCE(excluded.via, via) ELSE via END, "
+            "origin = CASE WHEN excluded.origin = :manual THEN :manual ELSE origin END, "
+            "hidden = CASE WHEN excluded.origin = :manual THEN 0 ELSE hidden END",
+            {"user": user_id, "kind": kind, "identity": identity, "name": name, "origin": origin, "via": via,
+             "now": int(self.clock()), "manual": MANUAL})
         return self.get(user_id, kind, identity)
 
     def hide(self, user_id, source_id):
@@ -41,14 +44,14 @@ class ReleaseSources:
         self.db.execute("UPDATE release_sources SET hidden = 1 WHERE user_id = ? AND kind = ? AND identity = ?",
                         (user_id, kind, identity))
 
-    def prune(self, user_id, origin, keep):
-        """Retire les sources automatiques de cette origine qui ne sont plus calculées ; une source masquée reste
-        (elle mémorise le refus), une source manuelle n'est jamais touchée."""
-        rows = self.db.query("SELECT id, kind, identity FROM release_sources WHERE user_id = ? AND origin = ? "
-                             "AND hidden = 0", (user_id, origin))
-        stale = [row["id"] for row in rows if (row["kind"], row["identity"]) not in keep]
-        for source_id in stale:
-            self.db.execute("DELETE FROM release_sources WHERE id = ?", (source_id,))
+    def prune(self, user_id, origin, kind, keep):
+        """Retire les sources automatiques de cette origine et de ce type qui ne sont plus calculées ; une source
+        masquée reste (elle mémorise le refus), une source manuelle n'est jamais touchée."""
+        rows = self.db.query("SELECT id, identity FROM release_sources WHERE user_id = ? AND origin = ? AND kind = ? "
+                             "AND hidden = 0", (user_id, origin, kind))
+        for row in rows:
+            if row["identity"] not in keep:
+                self.db.execute("DELETE FROM release_sources WHERE id = ?", (row["id"],))
 
     def active_union(self):
         """Sources visibles d'au moins un compte, sans doublon : ce que la synchronisation interroge."""

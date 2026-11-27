@@ -52,11 +52,17 @@ class FakeMusicBrainz:
 
 
 class FakeTrends:
-    def __init__(self):
-        self.refreshed = []
+    def __init__(self, log=None):
+        self.refreshed, self.log, self.failure, self.adds = [], log, None, []
 
     def refresh(self, user):
+        if self.failure:
+            raise self.failure
         self.refreshed.append(user.id)
+        if self.log is not None:
+            self.log.append("trends")
+        for add in self.adds:
+            add()
 
 
 class ReleaseSyncTest(unittest.TestCase):
@@ -147,6 +153,55 @@ class ReleaseSyncTest(unittest.TestCase):
         source = self.sources.add(1, "label", mbid(700), "Warp", "manual")
         self.sync.sync_new_source(source)
         self.assertEqual(self.found("label", mbid(700)), {mbid(1)})
+
+    def test_run_survives_an_unexpected_error(self):
+        def broken(*args):
+            raise RuntimeError("bug imprévu")
+        self.musicbrainz._call = broken
+        self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        errors, sleeps = [], []
+
+        def stop(seconds):
+            sleeps.append(seconds)
+            raise StopIteration
+        self.sync.log, self.sync.sleep = errors.append, stop
+        with self.assertRaises(StopIteration):
+            self.sync.run()
+        self.assertEqual(len(sleeps), 1)                 # la boucle continue : elle va dormir puis revérifier
+        self.assertIn("bug imprévu", errors[0])
+        self.assertTrue(self.sync.due())                  # rien n'a été marqué comme synchronisé
+
+    def test_an_account_in_error_does_not_stop_the_others(self):
+        errors = []
+        self.sync.log = errors.append
+        self.trends.failure = RuntimeError("compte cassé")
+        self.assertTrue(self.sync.tick())
+        self.assertEqual(len(errors), 2)
+        self.assertIn("compte cassé", errors[0])
+
+    def test_existing_sources_are_synced_before_trends_then_new_ones(self):
+        log = []
+        self.musicbrainz._call = lambda *args: log.append(args[0])
+        self.trends.log = log
+        self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.trends.adds = [lambda: self.sources.add(1, "artist", mbid(800), "Moderat", "trends")]
+        self.sync.sync_all()
+        self.assertEqual(log, ["label", "trends", "trends", "artists"])
+        self.assertEqual(self.found("artist", mbid(800)), {mbid(2)})
+
+    def test_requests_share_one_worker_and_are_deduplicated(self):
+        spawned = []
+        self.sync.spawn = spawned.append
+        source = self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.sync.sync_new_source(source)
+        self.sync.sync_new_source(source)
+        self.sync.refresh_user(self.alice)
+        self.assertEqual(len(spawned), 1)
+        spawned[0]()
+        self.assertEqual(len([c for c in self.musicbrainz.calls if c[0] == "label"]), 2)   # ajout, puis ↻
+        self.assertEqual(self.trends.refreshed, [1])
+        self.sync.sync_new_source(source)
+        self.assertEqual(len(spawned), 2)                     # le travail précédent est fini : un nouveau fil
 
     def test_purge_removes_old_releases(self):
         old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - timedelta(days=60), "Album", ())

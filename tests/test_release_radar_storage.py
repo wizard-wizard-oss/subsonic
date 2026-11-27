@@ -54,9 +54,11 @@ class RadarStorageTest(unittest.TestCase):
         self.sources.hide(1, refused.id)
         self.sources.add(1, "artist", "mine", "À moi", "manual")
         self.sources.add(2, "artist", "stale", "Ancien", "trends")
-        self.sources.prune(1, "trends", {("artist", "kept")})
+        self.sources.add(1, "label", "label-kept", "Label", "trends")
+        self.sources.prune(1, "trends", "artist", {"kept"})
+        self.assertTrue(self.sources.get(1, "label", "label-kept"))       # un autre type n'est pas touché
         self.assertEqual({s.identity for s in self.sources.for_user(1, include_hidden=True)},
-                         {"kept", "mine", "refused"})
+                         {"kept", "mine", "refused", "label-kept"})
         self.assertEqual([s.identity for s in self.sources.for_user(2)], ["stale"])
 
     def test_profiles(self):

@@ -9,10 +9,11 @@ from ..library.cache import TtlCache
 from ..subsonic import SubsonicError, SubsonicUnreachable
 from . import taste
 from .entities import RadarCard, RadarFilter, RadarRefresh, RadarSearch, RadarSettings, RadarWeek
-from .limits import (LOCAL_CACHE_SECONDS, LOCAL_LOOKUPS_IN_PARALLEL, MANUAL_KINDS, MAX_NAME, RADAR_PAGE,
-                     REFRESH_COOLDOWN, SEARCH_KINDS, WINDOW_AFTER, WINDOW_BEFORE)
+from .limits import (ARTIST, KINDS, LABEL, LOCAL_CACHE_SECONDS, LOCAL_LOOKUPS_IN_PARALLEL, MANUAL, MANUAL_KINDS,
+                     MAX_NAME, RADAR_PAGE, REFRESH_COOLDOWN, SEARCH_KINDS, SIMILAR, STYLE, WINDOW_AFTER, WINDOW_BEFORE)
 
-FILTER_KINDS = {"labels": "label", "artists": "artist", "discoveries": "similar"}
+STYLE_FILTER = STYLE + ":"
+FILTER_KINDS = {"labels": LABEL, "artists": ARTIST, "discoveries": SIMILAR}
 
 
 def _text(value):
@@ -55,7 +56,7 @@ class RadarService:
         sources = self.sources.for_user(user.id)
         if self.discoveries_on(user):
             return sources
-        return [source for source in sources if source.kind != "similar"]
+        return [source for source in sources if source.kind != SIMILAR]
 
     def discoveries_on(self, user):
         return self.discoveries_available and self.profiles.get(user.id)[1]
@@ -73,16 +74,16 @@ class RadarService:
     def _matches(card, selected):
         if selected == "all":
             return True
-        if selected.startswith("style:"):
-            return any(r.kind == "style" and r.identity == selected[len("style:"):] for r in card.reasons)
+        if selected.startswith(STYLE_FILTER):
+            return any(r.kind == STYLE and r.identity == selected[len(STYLE_FILTER):] for r in card.reasons)
         return any(r.kind == FILTER_KINDS[selected] for r in card.reasons)
 
     def _filters(self, sources, cards, discoveries):
-        styles = sorted((s for s in sources if s.kind == "style"), key=lambda s: s.name.casefold())
-        keys = ["all"] + ["style:" + s.identity for s in styles] + ["labels", "artists"]
+        styles = sorted((s for s in sources if s.kind == STYLE), key=lambda s: s.name.casefold())
+        keys = ["all"] + [STYLE_FILTER + s.identity for s in styles] + ["labels", "artists"]
         keys += ["discoveries"] if discoveries else []
         return [RadarFilter(key, sum(1 for card in cards if self._matches(card, key)),
-                            key[len("style:"):] if key.startswith("style:") else None) for key in keys]
+                            key[len(STYLE_FILTER):] if key.startswith(STYLE_FILTER) else None) for key in keys]
 
     @property
     def discoveries_available(self):
@@ -98,8 +99,8 @@ class RadarService:
         def look_up():
             try:
                 albums = self.local(user, release.title, release.artist)["albums"]
-            except (SubsonicError, SubsonicUnreachable, ValueError):
-                return None
+            except (SubsonicError, SubsonicUnreachable, ValueError, LookupError):
+                return None                           # cette carte garde « Écouter » ; la semaine s'affiche quand même
             if len(albums) != 1:
                 return None
             return {key: albums[0].get(key) for key in ("id", "coverId", "folderId")}
@@ -112,16 +113,17 @@ class RadarService:
     # ---------- sources et réglages ----------
     def settings(self, user):
         return RadarSettings(tuple(self.sources.for_user(user.id)), self.profiles.get(user.id)[1],
-                             self.discoveries_available, REFRESH_COOLDOWN, self._refresh_after(user))
+                             self.discoveries_available, REFRESH_COOLDOWN, KINDS, MANUAL_KINDS,
+                             self._refresh_after(user))
 
     def add_source(self, user, kind, identity, name):
         if kind not in MANUAL_KINDS:
             raise ValueError("source")
-        if kind == "style":
+        if kind == STYLE:
             identity = name = self.styles.genre(identity).name
         else:
             identity, name = valid_mbid(identity), _text(name)
-        source = self.sources.add(user.id, kind, identity, name, "manual")
+        source = self.sources.add(user.id, kind, identity, name, MANUAL)
         self.sync.sync_new_source(source)
         return source
 
@@ -139,7 +141,7 @@ class RadarService:
         if kind not in SEARCH_KINDS:
             raise ValueError("search")
         query = _text(query)
-        result = self.musicbrainz.search_labels(query) if kind == "label" else self.musicbrainz.search_artists(query)
+        result = self.musicbrainz.search_labels(query) if kind == LABEL else self.musicbrainz.search_artists(query)
         return RadarSearch(tuple(result.value), result.stale)
 
     def refresh(self, user):

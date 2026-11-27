@@ -8,11 +8,9 @@ from datetime import date, datetime, time as day_time, timedelta
 
 from ...shared.providers.musicbrainz.client import IDS_PER_QUERY, MAX_LIMIT
 from .entities import RadarError, RadarRelease
-from .limits import (ARTIST_PAGES, FULL_SYNC_EVERY, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN, STYLE_PAGES_PER_WEEK,
-                     SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
+from .limits import (ARTIST_KINDS, ARTIST_PAGES, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN,
+                     STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
 from .trends import SERVICE_ERRORS
-
-ARTIST_KINDS = ("artist", "similar")
 
 
 def radar_release(album):
@@ -23,13 +21,18 @@ def _spawn(work):
     threading.Thread(target=work, daemon=True).start()
 
 
+def _log(text):
+    print(text, flush=True)
+
+
 class ReleaseSync:
     def __init__(self, musicbrainz, trends, sources, releases, profiles, users, today=date.today, clock=time.time,
-                 sleep=time.sleep, spawn=_spawn):
+                 sleep=time.sleep, spawn=_spawn, log=_log):
         self.musicbrainz, self.trends, self.sources = musicbrainz, trends, sources
         self.releases, self.profiles, self.users = releases, profiles, users
-        self.today, self.clock, self.sleep, self.spawn = today, clock, sleep, spawn
+        self.today, self.clock, self.sleep, self.spawn, self.log = today, clock, sleep, spawn, log
         self._running = threading.Lock()
+        self._queue, self._queue_lock, self._worker = [], threading.Lock(), False
 
     def window(self):
         today = self.today()
@@ -37,8 +40,12 @@ class ReleaseSync:
 
     # ---------- quand synchroniser ----------
     def run(self):
+        """Ne s'arrête jamais : une erreur imprévue est journalisée et la vérification suivante a lieu quand même."""
         while True:
-            self.tick()
+            try:
+                self.tick()
+            except Exception as error:                  # le fil de fond doit survivre à tout
+                self.log("Radar des sorties : synchronisation interrompue (%r)" % (error,))
             self.sleep(SYNC_CHECK_EVERY)
 
     def tick(self):
@@ -59,17 +66,51 @@ class ReleaseSync:
         if not self._running.acquire(blocking=False):
             return False                              # une synchronisation complète tourne déjà
         try:
+            # d'abord ce que les comptes suivent déjà (la page se remplit vite après une mise en production),
+            # puis les tendances, puis les sources qu'elles viennent d'ajouter
+            existing = self.releases.oldest_first(self.sources.active_union())
+            self.sync_sources(existing)
             for user in self.users():
-                self.trends.refresh(user)
-            self.sync_sources(self.releases.oldest_first(self.sources.active_union()))
+                self._refresh_trends(user)
+            known = {source[:2] for source in existing}
+            self.sync_sources([source for source in self.sources.active_union() if source[:2] not in known])
             self.releases.purge(self.today() - PURGE_AFTER)
             self.releases.mark_full_sync(self.clock())
             return True
         finally:
             self._running.release()
 
+    def _refresh_trends(self, user):
+        try:
+            self.trends.refresh(user)
+        except Exception as error:                      # un compte en erreur n'empêche pas les autres
+            self.log("Radar des sorties : tendances du compte %s non calculées (%r)" % (user.id, error))
+
+    # ---------- travail demandé depuis la page : une seule file, sans doublon ----------
+    def _enqueue(self, key, work):
+        with self._queue_lock:
+            if any(queued == key for queued, _ in self._queue):
+                return
+            self._queue.append((key, work))
+            start, self._worker = not self._worker, True
+        if start:
+            self.spawn(self._drain)
+
+    def _drain(self):
+        while True:
+            with self._queue_lock:
+                if not self._queue:
+                    self._worker = False
+                    return
+                key, work = self._queue.pop(0)
+            try:
+                work()
+            except Exception as error:
+                self.log("Radar des sorties : %s interrompu (%r)" % (key, error))
+
     def sync_new_source(self, source):
-        self.spawn(lambda: self.sync_sources([(source.kind, source.identity, source.name)]))
+        self._enqueue(("source", source.kind, source.identity),
+                      lambda: self.sync_sources([(source.kind, source.identity, source.name)]))
 
     def refresh_user(self, user):
         """« Actualiser » : tendances et sources du compte, au plus une fois toutes les REFRESH_COOLDOWN secondes.
@@ -80,18 +121,18 @@ class ReleaseSync:
         self.profiles.request_refresh(user.id, now)
 
         def work():
-            self.trends.refresh(user)
+            self._refresh_trends(user)
             self.sync_sources([(s.kind, s.identity, s.name) for s in self.sources.for_user(user.id)])
-        self.spawn(work)
+        self._enqueue(("user", user.id), work)
         return now + REFRESH_COOLDOWN
 
     def sync_sources(self, sources):
         start, end = self.window()
         artists = [source for source in sources if source[0] in ARTIST_KINDS]
         for kind, identity, name in sources:
-            if kind == "style":
+            if kind == STYLE:
                 self._guarded([(kind, identity)], lambda: self._style(identity, start, end))
-            elif kind == "label":
+            elif kind == LABEL:
                 self._guarded([(kind, identity)], lambda: self._label(identity, start, end))
         for index in range(0, len(artists), IDS_PER_QUERY):
             chunk = [(kind, identity) for kind, identity, _ in artists[index:index + IDS_PER_QUERY]]
@@ -119,12 +160,12 @@ class ReleaseSync:
                 found += result.albums
                 if result.next_offset is None:
                     break
-            self.releases.save("style", name, [radar_release(a) for a in found], monday, sunday)
+            self.releases.save(STYLE, name, [radar_release(a) for a in found], monday, sunday)
             monday += timedelta(days=7)
 
     def _label(self, identity, start, end):
         page = self.musicbrainz.label_groups(identity, start, end)
-        self.releases.save("label", identity, [radar_release(a) for a in page.albums], start, end)
+        self.releases.save(LABEL, identity, [radar_release(a) for a in page.albums], start, end)
 
     def _artists(self, keys, start, end):
         ids, found, offset = list(dict.fromkeys(identity for _, identity in keys)), [], 0

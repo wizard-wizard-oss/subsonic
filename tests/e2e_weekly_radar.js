@@ -29,7 +29,8 @@ win.fakeGet = async (url, params) => {
                     card("b", "Album style", [techno]), card("c", "Album proche", [apparat])]};
   }
   if (url.endsWith("/sources")) return {sources: state.sources, discoveriesEnabled: true,
-                                         discoveriesAvailable: state.discoveriesAvailable, refreshCooldown: 600};
+                                         discoveriesAvailable: state.discoveriesAvailable, refreshCooldown: 600,
+                                         kinds: ["style", "label", "artist", "similar"], addable: ["label", "style"]};
   if (url.endsWith("/genres")) return {genres: [{name: "techno"}, {name: "noise rock"}], followed: [], default: "noise rock"};
   if (url.endsWith("/search")) return {results: [{id: WARP, name: "Warp", country: "GB", description: ""}]};
   if (url.endsWith("/releases")) return {albums: [], next: null};
@@ -102,6 +103,9 @@ const button = text => [...doc.querySelectorAll("button")].find(node => node.tex
   assert.deepEqual(writes.at(-1), {url: "/api/news/releases/sources/hide", body: {id: 1}});
   assert.equal(panel.querySelector('[data-source="1"]'), null);
   assert.equal(radarCalls().length, count + 1);
+
+  // les types viennent du serveur : groupes et choix d'ajout
+  assert.deepEqual([...panel.querySelectorAll("select option")].map(o => o.value), ["label", "style"]);
 
   // ajouter un label par recherche
   panel.querySelector("select").value = "label";
