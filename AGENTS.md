@@ -27,7 +27,7 @@ Chacune a été enfreinte au moins une fois. Avant de rendre un travail, relire 
 8. **SQL uniquement dans `webapp/storage/` et `schema.py`.**
 
 ### Taille et rangement
-9. **Dans `src/` : 40 lignes au plus par fonction** (Python et JS), hors tables de données littérales, **et 300 lignes au plus par fichier.** Découper avant de dépasser, pas après.
+9. **Une fonction = une tâche bien définie.** On ne fait pas quinze choses dans une même fonction : chaque petite fonction a un nom qui dit ce qu'elle fait, un rôle, et renvoie son résultat (le reste est délégué à d'autres petites fonctions). Repères, **à titre de recommandation et non de maximum** : environ 40 lignes par fonction (Python et JS, hors tables de données littérales) et 300 lignes par fichier. Un dépassement se justifie ; une fonction courte qui mélange plusieurs responsabilités est pire qu'une longue qui n'en a qu'une. `tests/test_code_size.py` avertit sans jamais échouer.
 10. **Une fonctionnalité = un paquet** (`webapp/tags/`, `webapp/notifications/`…) avec ses entités et son service ; pas de nouveaux modules à plat dans `webapp/`. Un fichier = une responsabilité (ex. lecture des formats audio ≠ sécurité des fichiers ≠ journal de transaction).
 11. **`app.py` assemble seulement** : chaque contrôleur déclare ses routes ; le câblage des services est à part.
 

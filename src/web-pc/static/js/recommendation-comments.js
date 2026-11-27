@@ -227,45 +227,65 @@ const RecommendationComments = (() => {
    * « Voir les autres conseillers » ouvre les autres. node.bubble est le bouton « commentaires » (avec son
    * compteur) à placer dans les commandes de la carte.
    */
-  function group(recommendations) {
-    const first = latest(recommendations);
-    const summaries = [];
+  /** Le bouton « commentaires » d'une carte : compteur, accent si non lu, état déplié. */
+  function bubbleControl(first, toggle) {
+    const count = el("small");
     const bubble = el("button.recommendation-bubble", {type: "button", title: t("comments"), "aria-label": t("comments"),
       dataset: {recommendationId: String(first.id)},
-      onclick: event => { event.stopPropagation(); node.toggle(); }, ondblclick: event => event.stopPropagation()});
-    const count = el("small");
-    const paintBubble = () => {
+      onclick: event => { event.stopPropagation(); toggle(); }, ondblclick: event => event.stopPropagation()});
+    App.append(bubble, [App.icon("chat", 18), count]);
+    const paint = summaries => {
       const recs = summaries.map(item => item.recommendation());
       const total = recs.reduce((sum, rec) => sum + rec.commentCount, 0);
       count.textContent = total ? String(total) : "";
       bubble.classList.toggle("unread", recs.some(rec => rec.commentsUnread));
       bubble.setAttribute("aria-expanded", String(summaries.some(item => item.isOpen())));
     };
-    const make = (rec, named) => {
-      const item = summary(rec, {named, onPaint: paintBubble});
-      summaries.push(item);
-      return item;
-    };
-    const main = make(first, recommendations.length > 1);
-    const others = recommendations.filter(rec => rec !== first).map(rec => make(rec, true));
-    App.append(bubble, [App.icon("chat", 18), count]);
+    return {bubble, paint};
+  }
+
+  /** « Voir les autres conseillers » : ouvre ou referme les fils des autres personnes. */
+  function othersControl(others) {
     const rest = el("div.recommendation-comment-others", {hidden: true}, others);
-    const all = others.length ? el("button.link-button.recommendation-comments-all", {
-      type: "button", hidden: true, text: t("all_advisers", {count: others.length}),
-      onclick: event => { event.stopPropagation(); showOthers(rest.hidden); }}) : null;
-    const showOthers = visible => {
+    let all = null;
+    const show = visible => {
       rest.hidden = !visible;
       all.textContent = t(visible ? "fewer_advisers" : "all_advisers", {count: others.length});
       others.forEach(item => { if (item.isOpen() !== visible) item.toggle(); });
     };
-    const node = el("div.recommendation-comment-group", {}, main, all, rest);
-    node.bubble = bubble;
+    if (others.length) {
+      all = el("button.link-button.recommendation-comments-all", {
+        type: "button", hidden: true, text: t("all_advisers", {count: others.length}),
+        onclick: event => { event.stopPropagation(); show(rest.hidden); }});
+    }
+    return {rest, all, show};
+  }
+
+  /**
+   * Fils d'une même carte : repliés au départ ; la bulle déplie celui du conseiller le plus récent, et
+   * « Voir les autres conseillers » ouvre les autres. node.bubble est le bouton « commentaires » à placer
+   * dans les commandes de la carte.
+   */
+  function group(recommendations) {
+    const first = latest(recommendations), summaries = [];
+    const controls = bubbleControl(first, () => node.toggle());
+    const make = (rec, named) => {
+      const item = summary(rec, {named, onPaint: () => controls.paint(summaries)});
+      summaries.push(item);
+      return item;
+    };
+    const main = make(first, recommendations.length > 1);
+    const more = othersControl(recommendations.filter(rec => rec !== first).map(rec => make(rec, true)));
+    const node = el("div.recommendation-comment-group", {}, main, more.all, more.rest);
+    node.bubble = controls.bubble;
     node.toggle = () => {
       main.toggle();
-      if (all) { all.hidden = !main.isOpen(); if (!main.isOpen() && !rest.hidden) showOthers(false); }
+      if (!more.all) return;
+      more.all.hidden = !main.isOpen();
+      if (!main.isOpen() && !more.rest.hidden) more.show(false);
     };
     node.isOpen = () => summaries.some(item => item.isOpen());
-    paintBubble();
+    controls.paint(summaries);
     return node;
   }
 
