@@ -1,49 +1,6 @@
-"""Entités de l'exploration musicale : identités externes et crédits, sans dépendance HTTP ou SQL."""
-from dataclasses import asdict, dataclass, field
-
-
-@dataclass(frozen=True)
-class MusicLink:
-    """Lien vers une identité MusicBrainz, avec son rôle et la période de la relation."""
-    id: str
-    name: str
-    kind: str = "artist"
-    role: str = "artist"
-    detail: str = ""
-    begin: str = ""
-    end: str = ""
-    ended: bool = False
-
-    def to_api(self):
-        return asdict(self)
-
-
-@dataclass(frozen=True)
-class MusicEdition:
-    """Édition MusicBrainz d’un album (pays, date, support et labels)."""
-    id: str
-    title: str
-    artist: str
-    date: str = ""
-    country: str = ""
-    format: str = ""
-    labels: tuple = ()
-
-    def to_api(self):
-        return asdict(self)
-
-
-@dataclass(frozen=True)
-class MusicArtist:
-    """Identité MusicBrainz ; les homonymes restent des choix distincts."""
-    id: str
-    name: str
-    type: str = ""
-    country: str = ""
-    description: str = ""
-
-    def to_api(self):
-        return asdict(self)
+"""Résultats composés par l'exploration (homonymes, éditions et crédits) ; les entités MusicBrainz sont dans
+shared/providers/musicbrainz/entities.py."""
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -53,17 +10,6 @@ class ArtistMatches:
 
     def to_api(self):
         return dict(artists=[a.to_api() for a in self.artists], stale=self.stale)
-
-
-@dataclass
-class ArtistConnections:
-    id: str
-    name: str
-    relations: list
-    stale: bool = False
-
-    def to_api(self):
-        return dict(id=self.id, name=self.name, relations=[r.to_api() for r in self.relations], stale=self.stale)
 
 
 @dataclass
@@ -78,36 +24,3 @@ class AlbumCredits:
         return {"editions": [e.to_api() for e in self.editions], "selected": self.selected,
                 "labels": [e.to_api() for e in self.labels], "people": [e.to_api() for e in self.people],
                 "stale": self.stale}
-
-
-@dataclass(frozen=True)
-class MusicWork:
-    """Sortie ou enregistrement MusicBrainz figurant dans un catalogue ou un crédit."""
-    id: str
-    title: str
-    artist: str
-    kind: str
-    date: str = ""
-    role: str = "artist"
-
-    def to_api(self):
-        return asdict(self)
-
-
-@dataclass
-class MusicProfile:
-    id: str
-    name: str
-    kind: str
-    description: str
-    relations: list
-    works: list
-    more: bool
-    offset: int
-    next_offset: int
-    stale: bool = False
-
-    def to_api(self):
-        return dict(id=self.id, name=self.name, kind=self.kind, description=self.description,
-                    relations=[r.to_api() for r in self.relations], works=[w.to_api() for w in self.works],
-                    more=self.more, offset=self.offset, nextOffset=self.next_offset, stale=self.stale)

@@ -9,6 +9,7 @@ from .cache import CachedMetadata
 from .http import HttpClient
 
 TRANSIENT_ERRORS = {429, 500, 502, 503, 504}
+GONE = {404, 410}
 RETRY_DELAY = 2           # une seule reprise immédiate, si le service ne demande pas d'attendre plus
 MAX_WAIT = 2              # au-delà, la cadence répond « trop de demandes » au lieu de bloquer la page
 MIN_BACKOFF = 60
@@ -38,19 +39,42 @@ def retry_after(error, now):
             return None
 
 
+class Pacer:
+    """Un départ de requête par intervalle pour un service, quel que soit l'appelant (horloge réelle)."""
+    def __init__(self, interval, clock=time.monotonic, sleep=time.sleep):
+        self.interval, self.clock, self.sleep = interval, clock, sleep
+        self.lock, self.next_call = threading.Lock(), 0.0
+
+    def wait(self):
+        with self.lock:
+            delay = self.next_call - self.clock()
+            if delay > MAX_WAIT:
+                raise ProviderUnavailable("discovery.rate_limited")
+            if delay > 0:
+                self.sleep(delay)
+            self.next_call = self.clock() + self.interval
+
+    def hold(self, seconds):
+        """Le service a demandé d'attendre : aucun départ avant ce délai."""
+        with self.lock:
+            self.next_call = max(self.next_call, self.clock() + seconds)
+
+
 class PublicMetadata:
     prefix = ""
     interval = 1.0
     ttl = 86400
     stale_ttl = 30 * 86400
 
-    def __init__(self, store, http=None, clock=time.time, sleep=time.sleep):
+    unavailable_code = "discovery.unavailable"
+
+    def __init__(self, store, http=None, clock=time.time, sleep=time.sleep, pacer=None):
         if not self.prefix:
             raise TypeError("prefix")
         self.store, self.http = store, http or HttpClient()
         self.clock, self.sleep = clock, sleep
+        self.pacer = pacer or Pacer(self.interval)
         self._guard, self._locks, self._retry_at = threading.Lock(), {}, {}
-        self._pace, self._next_call = threading.Lock(), 0.0
 
     @property
     def enabled(self):
@@ -68,7 +92,7 @@ class PublicMetadata:
             if isinstance(cached, Fetched):
                 return cached
             if self.clock() < self._retry_at.get(key, 0):
-                return self._fallback(cached, "discovery.unavailable")
+                return self._fallback(cached, self.unavailable_code)
             try:
                 data = self._attempts(url, read or (lambda address: self.http.get_json(address, headers)))
             except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
@@ -89,18 +113,9 @@ class PublicMetadata:
         with self._guard:
             return self._locks.setdefault(key, threading.Lock())
 
-    def _wait_turn(self):
-        with self._pace:
-            delay = self._next_call - self.clock()
-            if delay > MAX_WAIT:
-                raise ProviderUnavailable("discovery.rate_limited")
-            if delay > 0:
-                self.sleep(delay)
-            self._next_call = self.clock() + self.interval
-
     def _attempts(self, url, read):
         for attempt in range(2):
-            self._wait_turn()
+            self.pacer.wait()
             try:
                 data = read(url)
                 if not isinstance(data, dict):
@@ -123,13 +138,16 @@ class PublicMetadata:
         return asked if asked is not None else RETRY_DELAY
 
     def _failed(self, key, cached, error):
-        code = "discovery.unavailable"
+        code = self.unavailable_code
         if isinstance(error, ProviderUnavailable):
             code = str(error)
         elif isinstance(error, urllib.error.HTTPError) and error.code == 429:
             code = "discovery.rate_limited"
             asked = retry_after(error, self.clock())
-            self._next_call = self.clock() + max(MIN_BACKOFF, min(asked if asked is not None else MIN_BACKOFF, 3600))
+            self.pacer.hold(max(MIN_BACKOFF, min(asked if asked is not None else MIN_BACKOFF, 3600)))
+        elif isinstance(error, urllib.error.HTTPError) and error.code in GONE:
+            # L'entité n'existe plus : ni reprise ni copie périmée.
+            raise ProviderUnavailable(code) from None
         delay = self._retry_delay(error) if not isinstance(error, ProviderUnavailable) else None
         self._retry_at = {k: date for k, date in self._retry_at.items() if date > self.clock()}
         if delay is not None:

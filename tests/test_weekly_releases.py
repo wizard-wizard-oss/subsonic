@@ -1,5 +1,6 @@
 """Consultation anticipée et abonnements au travers du contrôleur et de SQLite."""
 import json
+from datetime import date, timedelta
 from io import BytesIO
 import tempfile
 import unittest
@@ -12,7 +13,8 @@ from pimedia.server.transport import Request
 from pimedia.storage.database import Database
 from pimedia.webapp.app import WebApplication
 from pimedia.webapp.controllers.weekly_releases import WeeklyReleasesController
-from pimedia.webapp.musicbrainz import GENRE_CATALOG_TTL, MusicBrainzMetadata
+from pimedia.shared.providers.metadata import Pacer
+from pimedia.shared.providers.musicbrainz.client import GENRE_CATALOG_TTL, MusicBrainz
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
@@ -39,10 +41,11 @@ class WeeklyTest(unittest.TestCase):
                        "primary-type": "Album", "title": "A", "artist-credit": [{"name": "B"}]}]}
         self.cache = ExplorationRepository(db)
         self.repository = ReleaseSubscriptions(db)
-        client = MusicBrainzMetadata(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None)
-        self.controller = WeeklyReleasesController(WeeklyReleases(client, self.repository))
+        client = MusicBrainz(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None, pacer=Pacer(0))
+        self.controller = WeeklyReleasesController(WeeklyReleases(client, self.repository,
+                                                                  today=lambda: date(2026, 11, 27)))
 
-    def get(self, url):
+    def get_json(self, url, headers=None):
         self.calls.append(url)
         self.assertEqual(urlsplit(url).path, "/ws/2/release-group")
         return self.result
@@ -61,7 +64,7 @@ class WeeklyTest(unittest.TestCase):
         initial = json.loads(self.controller.genres(None, self.alice).body)
         self.assertEqual(len(initial["genres"]), 2227)
         self.assertEqual(len(self.calls), 1)
-        another = MusicBrainzMetadata(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None)
+        another = MusicBrainz(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None, pacer=Pacer(0))
         self.assertEqual(len(another.release_genres()), 2227)
         self.assertEqual(len(self.calls), 1)
         self.now += GENRE_CATALOG_TTL - 1
@@ -111,6 +114,25 @@ class WeeklyTest(unittest.TestCase):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": False})
         self.assertEqual(followed(self.alice), [])
 
+    def week(self, monday, offset=None):
+        params = {"genre": GENRE, "monday": monday, "offset": offset}
+        return self.controller.week(SimpleNamespace(param=lambda name, default=None: params.get(name) or default),
+                                    self.alice)
+
+    def test_week_far_in_past_or_future_is_refused_without_a_request(self):
+        for monday in ("2025-11-17", "2027-12-06"):
+            with self.subTest(monday=monday), self.assertRaises(ValueError):
+                self.week(monday)
+        self.assertEqual(self.calls, [])
+        self.week("2025-12-01")
+
+    def test_offset_must_be_a_bounded_multiple_of_the_page(self):
+        for offset in ("5", str(WeeklyReleases.PAGE_SIZE * 11)):
+            with self.subTest(offset=offset), self.assertRaises(ValueError):
+                self.week("2026-11-23", offset)
+        self.assertEqual(self.calls, [])
+        self.week("2026-11-23", str(WeeklyReleases.PAGE_SIZE * 10))
+
     def test_follow_and_unfollow_by_name_without_duplicates(self):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
@@ -125,7 +147,7 @@ class WeeklyTest(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         app = WebApplication("src", environ={"PI_MEDIA_WEB_SUBSONIC_URL": "http://127.0.0.1:4040"},
                              data_dir=temp.name)
-        app.musicbrainz.fetcher = self
+        app.musicbrainz.http = self
         app.db.execute("INSERT INTO users(username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
                        "VALUES ('alice', '', '', 0, 0)")
         app.accounts.user_for = lambda token: self.alice if token == "test-token" else None
@@ -144,7 +166,8 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(request("POST", path + "/follow", cookie, body).status, 403)
         self.assertEqual(request("POST", path + "/follow", headers, body).status, 200)
         self.assertEqual(json.loads(request("GET", path + "/genres", cookie).body)["followed"], [GENRE])
-        params = urlencode({"genre": GENRE, "monday": "2026-11-23"})
+        this_monday = date.today() - timedelta(days=date.today().weekday())
+        params = urlencode({"genre": GENRE, "monday": this_monday.isoformat()})
         reply = request("GET", path + "?" + params, cookie)
         self.assertEqual(reply.status, 200)
         self.assertEqual(json.loads(reply.body)["albums"][0]["id"], GROUP)

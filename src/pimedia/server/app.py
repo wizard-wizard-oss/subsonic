@@ -16,7 +16,9 @@ from .controllers.player import PlayerController
 from .controllers.podcasts import PodcastController
 from .controllers.queue import QueueController
 from .controllers.settings import SettingsController
-from .external import ExternalInfo, FactsBuilder, JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
+from ..shared.providers.cache import MemoryStore
+from ..shared.providers.musicbrainz import MusicBrainz
+from .external import ExternalInfo, FactsBuilder, JsonFetcher, LyricsFinder, Wikipedia
 from .extmusic.service import ExtMusicService
 from .extmusic.sources import JamendoSource, YouTubeSource
 from .extmusic.ytmusic import YouTubeMusicSearch
@@ -100,7 +102,7 @@ class Application:
         self.library = LibraryCache(self.cache)
         self.watcher = LibraryWatcher(self.api, self.library, NewestAlbums(self.paths.newest_file))
         fetcher = JsonFetcher()
-        musicbrainz = MusicBrainz(fetcher)
+        musicbrainz = MusicBrainz(MemoryStore())    # le Pi garde ses résultats dans son propre cache
         lyrics = LyricsFinder(fetcher, self._subsonic_lyrics)
         facts = FactsBuilder(musicbrainz, Wikipedia(fetcher), self._artist_biography)
         self.external = ExternalInfo(self.cache, self.keys, lyrics, facts, musicbrainz)

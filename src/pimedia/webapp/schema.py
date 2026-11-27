@@ -564,4 +564,8 @@ MIGRATIONS = [
     DROP TABLE release_subscriptions;
     ALTER TABLE release_subscriptions_by_name RENAME TO release_subscriptions
     """,
+    # 27 : le cache MusicBrainz passe sous le préfixe « musicbrainz: » ; les anciennes clés (adresses complètes) partent.
+    """
+    DELETE FROM music_metadata WHERE cache_key LIKE 'https://musicbrainz.org/%'
+    """,
 ]

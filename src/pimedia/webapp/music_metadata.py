@@ -12,8 +12,7 @@ from ..shared.providers.cache import CachedMetadata
 CACHE_SECONDS = 86400
 
 
-class MusicSourceError(ValueError):
-    """Échec public, exprimé par une clé i18n, sans URL ni secret du fournisseur."""
+from ..shared.providers.metadata import ProviderUnavailable as MusicSourceError  # noqa: E402  (tâche 4)
 
 
 class MetadataHttp:

@@ -4,8 +4,8 @@ from dataclasses import asdict, dataclass
 from typing import Optional
 
 from .discogs import discogs_id, image_url
-from .musicbrainz import ExplorationUnavailable, mbid
-from .music_metadata import MusicSourceError
+from ..shared.providers.metadata import ProviderUnavailable
+from ..shared.providers.musicbrainz import mbid
 
 SOURCES = ("musicbrainz", "discogs")
 MAX_SEARCH_LENGTH = 300
@@ -107,7 +107,7 @@ class TagSources:
                                                 cover_url=image_url(item.image) if source == "discogs" else "",
                                                 genres=tuple(item.genres) if source == "discogs" else (),
                                                 styles=tuple(item.styles) if source == "discogs" else ()) for item in found)
-        except (ExplorationUnavailable, MusicSourceError, OSError, ValueError, TypeError, KeyError, AttributeError):
+        except (ProviderUnavailable, OSError, ValueError, TypeError, KeyError, AttributeError):
             raise ValueError("tags.source_unavailable") from None
         return SourceMatches(source, candidates)
 
@@ -128,7 +128,7 @@ class TagSources:
             return SourceRelease(source, release.id, release.title, release.artist, release.date,
                                  year[0] if year else "", release.country, release.format,
                                  (styles or genres or ("",))[0], genres, styles, tracks)
-        except (ExplorationUnavailable, MusicSourceError, OSError, ValueError, TypeError, KeyError, AttributeError):
+        except (ProviderUnavailable, OSError, ValueError, TypeError, KeyError, AttributeError):
             raise ValueError("tags.source_unavailable") from None
 
 

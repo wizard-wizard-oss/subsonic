@@ -91,5 +91,16 @@ class DependencyRulesTest(unittest.TestCase):
         self.assertFalse(any(module.startswith("pimedia.webapp.") for module in modules), modules)
         self.assertIn("pimedia.shared.text", modules)
 
+    def test_only_the_musicbrainz_provider_calls_its_api(self):
+        own = os.path.join(PACKAGE, "shared", "providers", "musicbrainz")
+        for directory, _, names in os.walk(PACKAGE):
+            for name in (n for n in names if n.endswith(".py")):
+                path = os.path.join(directory, name)
+                if path.startswith(own):
+                    continue
+                with open(path, encoding="utf-8") as source:
+                    for line, value in runtime_strings(source.read()):
+                        self.assertNotIn("musicbrainz.org/ws/", value, "%s:%d" % (os.path.relpath(path, PACKAGE), line))
+
     def test_the_rule_is_really_checked(self):
         self.assertIn("pimedia.shared.external", imports_of("server")["server/external.py"])

@@ -5,7 +5,8 @@ from types import SimpleNamespace
 
 from pimedia.webapp.discogs import Discogs
 from pimedia.webapp.discogs_entities import DiscogsEdition
-from pimedia.webapp.musicbrainz import MusicBrainzMetadata
+from pimedia.shared.providers.metadata import Pacer
+from pimedia.shared.providers.musicbrainz import MusicBrainz
 from pimedia.webapp.tag_sources import SourceCandidate, TagSources
 from tests.fake_discogs import FakeDiscogs, edition
 from tests.test_tag_sources import EditionMusicBrainz, MemoryCache
@@ -17,7 +18,7 @@ class TagCandidatesTest(unittest.TestCase):
         self.options = dict(clock=lambda: 100000, sleep=lambda seconds: None)
         self.client = Discogs(self.cache, "secret-token", self.http, **self.options)
         self.mb_http = EditionMusicBrainz()
-        self.mb = MusicBrainzMetadata(self.cache, self.mb_http, **self.options)
+        self.mb = MusicBrainz(self.cache, self.mb_http, pacer=Pacer(0), **self.options)
         self.sources = TagSources(self.mb, self.client)
         self.http.editions = [edition(39001571, 10, "Trentemøller", "Trentemøller", 2026,
             thumb="https://i.discogs.com/example-cover.jpg", country="Denmark", track_count=10,

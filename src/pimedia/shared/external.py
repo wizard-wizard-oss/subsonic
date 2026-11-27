@@ -1,9 +1,7 @@
 """Sources externes, communes aux deux éditions : paroles (LRCLIB, lyrics.ovh, sinon Subsonic), anecdotes et photo
-(MusicBrainz, Wikipédia). Rien ici ne dépend du Pi ni du site : chaque édition garde ses résultats à sa façon."""
+(Wikipédia ; MusicBrainz est dans providers/musicbrainz). Rien ici ne dépend du Pi ni du site : chaque édition garde ses résultats à sa façon."""
 import json
 import re
-import threading
-import time
 import urllib.parse
 import urllib.request
 
@@ -11,24 +9,6 @@ from .text import normalize
 
 USER_AGENT = "PiMediaStation/1.0 (lecteur personnel)"
 
-
-class MusicBrainzPacer:
-    """Un départ de requête par seconde pour tout le processus (paroles, anecdotes et exploration)."""
-    def __init__(self, clock=time.monotonic, sleep=time.sleep):
-        self.clock, self.sleep = clock, sleep
-        self.lock = threading.Lock()
-        self.last = None
-
-    def wait(self):
-        with self.lock:
-            if self.last is not None:
-                delay = 1.05 - (self.clock() - self.last)
-                if delay > 0:
-                    self.sleep(delay)
-            self.last = self.clock()
-
-
-MUSICBRAINZ_PACER = MusicBrainzPacer()
 
 TITLE_NOISE = r"remaster|live|version|edit|mix|feat|ft\.|radio|mono|stereo|bonus|deluxe|acoustic"
 MUSIC_WORDS = r"chant|music|band|group|rap|dj|compos|singer|duo|trio|artist|musici|pianist|guitar"
@@ -101,8 +81,6 @@ def filter_lyrics_candidates(candidates, attempts):
 # ---------- accès HTTP ----------
 class JsonFetcher:
     def _open(self, url, timeout, accept):
-        if urllib.parse.urlsplit(url).hostname == "musicbrainz.org":
-            MUSICBRAINZ_PACER.wait()
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
         return urllib.request.urlopen(request, timeout=timeout)
 
@@ -208,46 +186,6 @@ class LyricsFinder:
 
 
 # ---------- anecdotes, genres, photo ----------
-class MusicBrainz:
-    BASE = "https://musicbrainz.org/ws/2/"
-
-    def __init__(self, fetcher):
-        self.fetcher = fetcher
-
-    def genres(self, artist):
-        """Genres d'après MusicBrainz (vocabulaire commun, plus fiable que les tags des fichiers)."""
-        data = self.fetcher.get(query_url(self.BASE + "artist", [
-            ("query", 'artist:"%s"' % artist.replace('"', "")), ("fmt", "json"), ("limit", "3")]))
-        for found in data.get("artists", []):
-            if found.get("score", 0) >= 90:
-                tags = sorted(found.get("tags", []), key=lambda t: -t.get("count", 0))
-                names = [t["name"] for t in tags if t.get("count", 0) >= 1][:8]
-                if names:
-                    return {"genres": names}
-        return {}
-
-    def release_fact(self, artist, album):
-        """« Album X, sorti en 1999 (il y a N ans) » d'après le groupe de sorties (les recherches par titre de chanson sont peu fiables)."""
-        if not album:
-            return None
-        query = 'releasegroup:"%s" AND artist:"%s"' % (album.replace('"', ""), artist.replace('"', ""))
-        data = self.fetcher.try_get(query_url(self.BASE + "release-group", [
-            ("query", query), ("fmt", "json"), ("limit", "3")]))
-        for group in (data or {}).get("release-groups", []):
-            year = re.match(r"(\d{4})", group.get("first-release-date") or "")
-            if group.get("score", 0) >= 90 and year:
-                return self._describe(group.get("title") or album, int(year.group(1)))
-        return None
-
-    @staticmethod
-    def _describe(title, year):
-        text = "Album « %s », sorti en %d" % (title, year)
-        age = time.localtime().tm_year - year
-        if age > 0:
-            text += " (il y a %d an%s)" % (age, "s" if age > 1 else "")
-        return text + "."
-
-
 class Wikipedia:
     LANGUAGES = ("fr", "en")
 

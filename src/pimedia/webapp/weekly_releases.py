@@ -2,15 +2,18 @@
 from dataclasses import replace
 from datetime import date, timedelta
 
-from .weekly_release_entities import ReleaseGenre
+from ..shared.providers.musicbrainz.entities import ReleaseGenre
 
 
 class WeeklyReleases:
     PAGE_SIZE = 24
+    MAX_OFFSET = 10 * PAGE_SIZE
+    WINDOW = timedelta(days=366)        # semaines consultables autour d'aujourd'hui
 
-    def __init__(self, musicbrainz, repository):
+    def __init__(self, musicbrainz, repository, today=date.today):
         self.musicbrainz = musicbrainz
         self.repository = repository
+        self.today = today
 
     def genres(self):
         return self.musicbrainz.release_genres()
@@ -34,7 +37,9 @@ class WeeklyReleases:
 
     def week(self, name, start, offset):
         monday = date.fromisoformat(start or "")
-        if monday.weekday() or not 0 <= offset <= 100000 or monday.year >= 9999:
+        if monday.weekday() or abs(monday - self.today()) > self.WINDOW:
+            raise ValueError("week")
+        if offset % self.PAGE_SIZE or not 0 <= offset <= self.MAX_OFFSET:
             raise ValueError("week")
         sunday = monday + timedelta(days=6)
         genre = self.genre(name)

@@ -5,8 +5,8 @@ import urllib.parse
 from types import SimpleNamespace
 
 from pimedia.webapp.discogs import Discogs
-from pimedia.webapp.exploration import MusicBrainzMetadata as CompatibleMusicBrainz
-from pimedia.webapp.musicbrainz import MusicBrainzMetadata
+from pimedia.shared.providers.metadata import Pacer
+from pimedia.shared.providers.musicbrainz import MusicBrainz
 from pimedia.webapp.tag_sources import TagSources
 from tests.fake_discogs import FakeDiscogs
 from tests.fake_musicbrainz import ARTIST_CREDIT, EDITION, RELEASE
@@ -40,7 +40,7 @@ class EditionMusicBrainz:
                      **{"artist-credit": [dict(name="Invité", artist=dict(name="Canonical guest"))]}))]),
                    dict(position=2, format="CD", tracks=[dict(number="A1", position=1, title="Bonus", length=0)])])
 
-    def get(self, url, timeout=8):
+    def get_json(self, url, headers=None):
         self.calls.append(url)
         if self.failure:
             raise self.failure
@@ -66,12 +66,11 @@ class TagSourcesTest(unittest.TestCase):
         self.cache = MemoryCache()
         self.mb_http, self.discogs_http = EditionMusicBrainz(), EditionDiscogs()
         options = dict(clock=lambda: 100000, sleep=lambda seconds: None)
-        self.mb = MusicBrainzMetadata(self.cache, self.mb_http, **options)
+        self.mb = MusicBrainz(self.cache, self.mb_http, pacer=Pacer(0), **options)
         self.discogs = Discogs(self.cache, "secret-token", self.discogs_http, **options)
         self.sources = TagSources(self.mb, self.discogs)
 
     def test_client_is_extracted_without_a_second_transport(self):
-        self.assertIs(CompatibleMusicBrainz, MusicBrainzMetadata)
         self.assertEqual(self.sources.status(), {"musicbrainz": True, "discogs": True})
 
     def test_musicbrainz_search_preserves_candidates_when_tags_have_a_typo(self):

@@ -1,9 +1,18 @@
-"""Genres d'une édition : repli sur son groupe, cache public partagé et enrichissement facultatif."""
+"""La seule classe MusicBrainz : genres d'une édition, cache par préfixe, copie de secours, le Pi sans base du site."""
 import copy
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
+import urllib.error
 import urllib.parse
 
-from pimedia.webapp.musicbrainz import MusicBrainzMetadata
+from pimedia.shared.providers.cache import CachedMetadata, MemoryStore
+from pimedia.shared.providers.metadata import Pacer
+from pimedia.shared.providers.musicbrainz import MusicBrainz
+from pimedia.storage.database import Database
+from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.tag_sources import TagSources
 from tests.fake_musicbrainz import EDITION, RELEASE, identity
 from tests.test_tag_sources import MemoryCache
@@ -20,7 +29,7 @@ class MusicBrainzGenres:
         self.group = dict(id=GROUP, genres=[dict(name="Electronic", count=2), dict(name="Ambient", count=7)])
         self.group_failure = None
 
-    def get(self, url, timeout=8):
+    def get_json(self, url, headers=None):
         self.calls.append(url)
         parsed = urllib.parse.urlsplit(url)
         if parsed.path == "/ws/2/release/" + RELEASE:
@@ -35,8 +44,8 @@ class MusicBrainzGenres:
 class MusicBrainzGenresTest(unittest.TestCase):
     def setUp(self):
         self.cache, self.http, self.sleeps = MemoryCache(), MusicBrainzGenres(), []
-        self.options = dict(clock=lambda: 100000, sleep=self.sleeps.append)
-        self.client = MusicBrainzMetadata(self.cache, self.http, **self.options)
+        self.options = dict(clock=lambda: 100000, sleep=self.sleeps.append, pacer=Pacer(0))
+        self.client = MusicBrainz(self.cache, self.http, **self.options)
         self.sources = TagSources(self.client, None)
 
     def test_genres_present_only_on_release_group_are_exposed_with_tracks_preserved(self):
@@ -67,7 +76,7 @@ class MusicBrainzGenresTest(unittest.TestCase):
 
     def test_group_genres_use_the_existing_cache_across_client_instances(self):
         self.assertEqual(self.client.release(RELEASE).genres, ("Ambient", "Electronic"))
-        other = MusicBrainzMetadata(self.cache, self.http, **self.options)
+        other = MusicBrainz(self.cache, self.http, **self.options)
         self.assertEqual(other.release(RELEASE).genres, ("Ambient", "Electronic"))
         self.assertEqual(len(self.http.calls), 2)
         self.assertEqual(len(self.cache.entries), 2)
@@ -100,6 +109,60 @@ class MusicBrainzGenresTest(unittest.TestCase):
         result = self.client.release(RELEASE)
         self.assertEqual(result.genres, ())
         self.assertEqual(result.tracks[0].title, "Original track")
+
+
+class Catalog:
+    """Catalogue des styles : texte brut, puis erreur choisie par le test."""
+    def __init__(self):
+        self.failure, self.calls = None, []
+
+    def get_text(self, url, headers=None):
+        self.calls.append(url)
+        if self.failure:
+            raise self.failure
+        return "noise rock\nshoegaze\n"
+
+
+class MusicBrainzClientTest(unittest.TestCase):
+    def setUp(self):
+        self.now, self.store, self.http = 100000, MemoryStore(), Catalog()
+        self.client = MusicBrainz(self.store, self.http, clock=lambda: self.now, sleep=lambda s: None, pacer=Pacer(0))
+
+    def test_403_on_genre_catalog_serves_yesterdays_copy(self):
+        first = self.client.release_genres()
+        self.now += 86400 + 1
+        self.http.failure = urllib.error.HTTPError("https://musicbrainz.org", 403, "forbidden", {}, None)
+        self.assertEqual(self.client.release_genres(), first)
+        self.assertEqual(len(self.http.calls), 2)
+
+    def test_cache_keys_are_prefixed_and_expire(self):
+        self.store.save(CachedMetadata("musicbrainz:old", {"names": ["x"]}, self.now - 31 * 86400))
+        self.store.save(CachedMetadata("discogs:old", {}, self.now - 31 * 86400))
+        self.client.release_genres()
+        self.assertEqual(sorted(self.store.entries), ["discogs:old", "musicbrainz:genre/all?fmt=txt"])
+
+    def test_pi_uses_memory_store_without_webapp(self):
+        code = ("import sys; from pimedia.shared.providers.cache import MemoryStore; "
+                "from pimedia.shared.providers.musicbrainz import MusicBrainz; MusicBrainz(MemoryStore()); "
+                "print(sorted(m for m in sys.modules if m.startswith('pimedia.webapp')))")
+        source = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+        output = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True,
+                                env=dict(os.environ, PYTHONPATH=source)).stdout
+        self.assertEqual(output.strip(), "[]")
+
+
+class MusicBrainzCacheMigrationTest(unittest.TestCase):
+    def test_migration_27_purges_only_old_musicbrainz_keys(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "webapp.db")
+            old = Database(path, MIGRATIONS[:26])
+            for key in ("https://musicbrainz.org/ws/2/genre/all?fmt=txt", "discogs:release/1", "label-lastfm:a"):
+                old.execute("INSERT INTO music_metadata (cache_key, payload, fetched_at) VALUES (?, '{}', 1)", (key,))
+            old.close()
+            db = Database(path, MIGRATIONS)
+            self.addCleanup(db.close)
+            keys = sorted(row[0] for row in db.query("SELECT cache_key FROM music_metadata"))
+            self.assertEqual(keys, ["discogs:release/1", "label-lastfm:a"])
 
 
 if __name__ == "__main__":

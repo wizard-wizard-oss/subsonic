@@ -5,7 +5,7 @@ import unittest
 from urllib.error import HTTPError, URLError
 
 from pimedia.shared.providers.cache import CachedMetadata, MemoryStore
-from pimedia.shared.providers.metadata import Fetched, ProviderUnavailable, PublicMetadata
+from pimedia.shared.providers.metadata import Fetched, Pacer, ProviderUnavailable, PublicMetadata
 
 
 class Fake(PublicMetadata):
@@ -34,7 +34,7 @@ def http_error(code, retry_after=None):
 class PublicMetadataTest(unittest.TestCase):
     def setUp(self):
         self.store, self.clock = MemoryStore(), Clock()
-        self.provider = Fake(self.store, clock=self.clock, sleep=self.clock.sleep)
+        self.provider = Fake(self.store, clock=self.clock, sleep=self.clock.sleep, pacer=Pacer(0))
         self.calls = []
 
     def reader(self, *results):
@@ -58,9 +58,14 @@ class PublicMetadataTest(unittest.TestCase):
         result = self.provider.fetch("a", "https://api.test/a", read=self.reader(http_error(403)))
         self.assertEqual(result, Fetched({"v": 1}, stale=True))
 
+    def test_deleted_entity_is_never_served_from_stale_copy(self):
+        self.store.save(CachedMetadata("fake:a", {"v": 1}, int(self.clock.now) - 3600))
+        with self.assertRaises(ProviderUnavailable):
+            self.provider.fetch("a", "https://api.test/a", read=self.reader(http_error(404)))
+
     def test_no_copy_raises_provider_unavailable(self):
         with self.assertRaises(ProviderUnavailable) as raised:
-            self.provider.fetch("a", "https://api.test/a", read=self.reader(http_error(404)))
+            self.provider.fetch("a", "https://api.test/a", read=self.reader(http_error(400)))
         self.assertEqual(str(raised.exception), "discovery.unavailable")
         with self.assertRaises(ProviderUnavailable) as raised:
             self.provider.fetch("b", "https://api.test/b", read=self.reader(http_error(429, "120")))

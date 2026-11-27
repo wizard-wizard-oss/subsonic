@@ -7,7 +7,7 @@ from ..i18n import Texts
 from ..server.transport import Reply, Router, HttpApp, ThreadedServer, make_request_handler
 from ..server.podcasts.directories import JsonHttp
 from ..server.webfiles import WebFiles
-from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
+from ..shared.external import JsonFetcher, LyricsFinder, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
 from .album_tags import AlbumTags
@@ -51,15 +51,15 @@ from .extmusic import KEPT_SECONDS, ExternalMusic, ExtMusicError, SearchMemory
 from .import_readers import DeezerReader, ImportFailed
 from .playlist_import import PlaylistImport
 from .facts import Facts
-from .exploration import Exploration, ExplorationUnavailable
-from .musicbrainz import MusicBrainzMetadata
+from .exploration import Exploration
+from ..shared.providers.musicbrainz import MusicBrainz
 from .discogs import Discogs
 from .discogs_catalogs import CatalogError, DiscogsCatalogs
 from .discogs_exploration import DiscogsExploration
 from .lastfm import LastFm
 from .label_discovery import LabelDiscovery
 from .youtube_versions import YouTubeVersions
-from .music_metadata import MusicSourceError
+from ..shared.providers.metadata import ProviderUnavailable
 from .tag_entities import TAG_BODY_LIMIT, TAG_EDIT_RIGHT, TagError
 from .tag_sources import TagSources
 from .library_scan import LibraryScan
@@ -133,9 +133,7 @@ def error_reply(error):
     if isinstance(error, AudioTagError):
         return Reply.error(409 if error.args and error.args[0] == "tags.conflict" else 400,
                            error.args[0] if error.args else "tags.write_failed")
-    if isinstance(error, ExplorationUnavailable):
-        return Reply.error(503, "explore.unavailable")
-    if isinstance(error, MusicSourceError):
+    if isinstance(error, ProviderUnavailable):
         return Reply.error(429 if error.args[0] == "discovery.rate_limited" else 503, error.args[0])
     if isinstance(error, CatalogError):
         return Reply.error(400, error.args[0])
@@ -190,7 +188,7 @@ class WebApplication:
         self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
         self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
-        self.musicbrainz = MusicBrainzMetadata(ExplorationRepository(self.db))
+        self.musicbrainz = MusicBrainz(ExplorationRepository(self.db))
         self.exploration = Exploration(self.musicbrainz, self.folders, self.library)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
@@ -232,7 +230,7 @@ class WebApplication:
                                                youtube_versions=self.youtube_versions)
         self.lyrics = Lyrics(LyricsFinder(JsonFetcher(), lambda artist, title: ""))    # sans Subsonic
         fetcher = JsonFetcher()
-        self.facts = Facts(self.subsonic, MusicBrainz(fetcher), Wikipedia(fetcher))
+        self.facts = Facts(self.subsonic, self.musicbrainz, Wikipedia(fetcher))
         self.artist_portraits = ArtistPortraits(self.artist_discogs, self.discogs, self.subsonic, self.facts.wikipedia)
         self.news = News(NewsRepository(self.db))
         self.releases = read_releases(os.path.join(code_dir, "i18n", "versions.yaml"))

@@ -10,6 +10,7 @@ import urllib.parse
 from pimedia.webapp.app import WebApplication
 from pimedia.webapp.avatars import GravatarUnreachable
 from tests.fake_subsonic import PNG, FakeSubsonicFull
+from pimedia.shared.providers.metadata import Pacer
 from tests.fake_musicbrainz import FakeMusicBrainz
 from tests.support import HttpClient, youtube_music_down
 
@@ -91,9 +92,17 @@ class FakeInfoSites:
             return None
 
 
+def use_fake_musicbrainz(app):
+    """La seule instance MusicBrainz du site, simulée, sans cadence ni attente."""
+    app.musicbrainz.http = FakeMusicBrainz()
+    app.musicbrainz.sleep = lambda seconds: None
+    app.musicbrainz.pacer = Pacer(0)
+    return app.musicbrainz.http
+
+
 def use_fake_info_sites(app):
-    """Biographies et anecdotes : Wikipédia et MusicBrainz simulés (un seul faux pour les deux)."""
-    app.facts.wikipedia.fetcher = app.facts.musicbrainz.fetcher = FakeInfoSites()
+    """Biographies et anecdotes : Wikipédia simulé ; MusicBrainz (« Arrival », 1976) par use_fake_musicbrainz."""
+    app.facts.wikipedia.fetcher = FakeInfoSites()
     return app.facts.wikipedia.fetcher
 
 
@@ -119,8 +128,7 @@ class WebAppTestCase(unittest.TestCase):
         self.app = WebApplication(PROJECT, environ=dict(self.environ, PI_MEDIA_WEB_SUBSONIC_URL=self.subsonic.url),
                                   data_dir=self.tmp)
         self.app.lyrics.finder.fetcher = FakeLyricsSites()          # jamais les vrais sites pendant les tests
-        self.app.exploration.metadata.fetcher = FakeMusicBrainz()
-        self.app.exploration.metadata.sleep = lambda seconds: None
+        use_fake_musicbrainz(self.app)
         use_fake_info_sites(self.app)
         self.app.extmusic.youtube.music = youtube_music_down()      # ni YouTube Music
         self.app.avatars.gravatar = FakeGravatar()                  # ni gravatar.com
