@@ -9,13 +9,14 @@ from tests.support import ROOT
 
 PI_HARNESS = "tests.e2e_harness"
 PC_HARNESS = "tests.e2e_webapp_harness"
-JOURNEYS = [   # (parcours, serveur de test)
+JOURNEYS = [   # (parcours, serveur de test[, variables d'environnement du serveur])
     ("e2e_podcasts.js", PI_HARNESS),
     ("e2e_music.js", PI_HARNESS),
     ("e2e_queue.js", PI_HARNESS),
     ("e2e_hifi.js", PI_HARNESS),
     ("e2e_webapp.js", PC_HARNESS),
     ("e2e_help.js", PC_HARNESS),
+    ("e2e_help_first_visit.js", PC_HARNESS, {"E2E_HELP_UNSEEN": "1"}),   # ici le compte n'a pas encore vu Help
     ("e2e_mobile_page.js", PC_HARNESS),
     ("e2e_webapp_queue.js", PC_HARNESS),
     ("e2e_listen_later.js", PC_HARNESS),
@@ -25,9 +26,9 @@ JOURNEYS = [   # (parcours, serveur de test)
 TIMEOUT = 300
 
 
-def run_journey(script, harness, jsdom):
+def run_journey(script, harness, jsdom, environment=None):
     server = subprocess.Popen([sys.executable, "-m", harness, str(TIMEOUT)], cwd=ROOT,
-                              stdout=subprocess.PIPE, text=True)
+                              stdout=subprocess.PIPE, text=True, env=dict(os.environ, **(environment or {})))
     try:
         port = server.stdout.readline().strip()
         if not port.isdigit():
@@ -48,9 +49,9 @@ def main():
         result = subprocess.run(["node", os.path.join("tests", script), jsdom], cwd=ROOT, timeout=TIMEOUT)
         if result.returncode:
             failed.append(script)
-    for script, harness in JOURNEYS:
+    for script, harness, *environment in JOURNEYS:
         print("== " + script, flush=True)
-        if not run_journey(script, harness, jsdom):
+        if not run_journey(script, harness, jsdom, *environment):
             failed.append(script)
     print("Parcours en échec : " + ", ".join(failed) if failed else "Tous les parcours sont OK")
     sys.exit(1 if failed else 0)

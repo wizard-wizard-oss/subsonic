@@ -22,6 +22,14 @@ et 34 cartes par trois mises en avant puis sept thèmes et 40 guides.
 5. Les **7 thèmes et 40 guides** (sommaire inchangé, liste des guides alignée à gauche).
 6. **Help!** : dépannage en cinq questions repliables (YouTube, paroles, droits, mot de passe, import).
 
+**Première visite (1.22.2)** : le réglage `help_seen` (booléen, défaut `False`, défini une seule fois dans
+`webapp/preferences.py`) est mémorisé par compte. Tant qu’il est faux, `MusicApp.openHelpFirst()` remplace
+l’adresse d’accueil par `#/whatsnew` (`history.replaceState`, une seule navigation) au démarrage ; un lien direct
+vers une autre page est respecté. Ouvrir Help, d’office ou par choix, appelle `noteHelpSeen()` qui enregistre
+`help_seen = true` (`App.savePreference`). Les comptes déjà actifs sont concernés une fois aussi. La page Help
+elle-même n’écrit rien. Tests : `tests/test_help_first_visit.py`, `tests/e2e_help_first_visit.js` (serveur de test
+lancé avec `E2E_HELP_UNSEEN=1` ; les autres parcours partent d’un compte qui a déjà vu Help).
+
 Les titres de chansons sont des clins d’œil : la phrase dessous dit toujours l’essentiel. Le nom « Help »
 reste celui du menu. Podcasts et lecteur hi-fi ne sont **pas** décrits : ils n’existent que sur le Pi.
 

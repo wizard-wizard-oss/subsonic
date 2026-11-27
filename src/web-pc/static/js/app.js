@@ -111,7 +111,20 @@ class MusicApp {
     this.showUploadLink();
     App.chatPanel.start();
     window.addEventListener("hashchange", () => this.navigate());
+    this.openHelpFirst();
     this.navigate();
+  }
+
+  /** Help s'ouvre d'office tant que le compte ne l'a pas vue (y compris un compte ancien) ; un lien direct vers
+      une autre page est respecté. replaceState : le retour arrière ne ramène pas sur l'accueil pour rebondir. */
+  openHelpFirst() {
+    if (App.preferences.help_seen || MusicApp.parse(location.hash).view !== "home") return;
+    history.replaceState(null, "", "#/whatsnew");
+  }
+
+  /** Help ouverte, d'office ou par choix : on le note une fois pour le compte. */
+  noteHelpSeen() {
+    if (!App.preferences.help_seen) App.savePreference("help_seen", true);
   }
 
   /** L'historique est accessible à tous les comptes connectés. */
@@ -200,6 +213,7 @@ class MusicApp {
     if (this.view && this.view.destroy) this.view.destroy();
     this.route = MusicApp.parse(location.hash);
     this.view = Views[this.route.view];
+    if (this.route.view === "whatsnew") this.noteHelpSeen();
     const section = hash => (hash || "#/").split("/")[1] || "";      // « #/albums/frequent » -> « albums »
     document.querySelectorAll(".topnav a").forEach(a =>
       a.classList.toggle("active", section(a.getAttribute("href")) === section(location.hash)));

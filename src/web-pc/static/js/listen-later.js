@@ -413,8 +413,30 @@ const ListenLaterUI = (() => {
       el("div.recommendation-songs-scroll", {}, table));
   }
 
+  /** Charge les envois ou archives page par page (« Voir les recommandations précédentes »). */
+  function discussionPager({scope, route, root, more, error, add}) {
+    const owner = App.user.id;
+    let before = null, loading = false;
+    const current = () => !route.stale && root.isConnected && App.user && App.user.id === owner;
+    return async () => {
+      if (loading) return;
+      loading = more.disabled = true;
+      error.textContent = "";
+      try {
+        const data = await App.api.get("/api/recommendation/discussions", Object.assign({scope}, before ? {before} : {}));
+        if (!current()) return;
+        data.recommendations.forEach(recommendation => add(recommendation, false));
+        root.applyFilter();
+        if (data.recommendations.length) before = data.recommendations[data.recommendations.length - 1].id;
+        more.hidden = !data.hasMore;
+      } catch (failure) {
+        if (current()) { error.textContent = App.errorText(failure); more.hidden = false; }
+      } finally { loading = more.disabled = false; }
+    };
+  }
+
   function discussionList(scope, route, show) {
-    const owner = App.user.id, list = el("div.listen-later-list.listen-later-grid"), error = el("p.page-error", {role: "alert"});
+    const list = el("div.listen-later-list.listen-later-grid"), error = el("p.page-error", {role: "alert"});
     const more = el("button.recommendation-discussions-more", {type: "button", text: t("more_recommendations"), hidden: true});
     const empty = el("p.muted", {hidden: true});
     const root = el("div.recommendation-discussions", {}, list, empty, error, more);
@@ -432,23 +454,7 @@ const ListenLaterUI = (() => {
       if (first) list.prepend(node); else list.appendChild(node);
     };
     root.prepend = recommendation => { add(recommendation, true); root.applyFilter(); };
-    let before = null, loading = false;
-    const current = () => !route.stale && root.isConnected && App.user && App.user.id === owner;
-    const fetchPage = async () => {
-      if (loading) return;
-      loading = more.disabled = true;
-      error.textContent = "";
-      try {
-        const data = await App.api.get("/api/recommendation/discussions", Object.assign({scope}, before ? {before} : {}));
-        if (!current()) return;
-        data.recommendations.forEach(recommendation => add(recommendation, false));
-        root.applyFilter();
-        if (data.recommendations.length) before = data.recommendations[data.recommendations.length - 1].id;
-        more.hidden = !data.hasMore;
-      } catch (failure) {
-        if (current()) { error.textContent = App.errorText(failure); more.hidden = false; }
-      } finally { loading = more.disabled = false; }
-    };
+    const fetchPage = discussionPager({scope, route, root, more, error, add});
     more.onclick = fetchPage;
     // Start once the surrounding page has attached the list.
     Promise.resolve().then(fetchPage);
