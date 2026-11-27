@@ -362,6 +362,7 @@ function client() {
     $(".listen-later-sent .recommendation-bubble").click();
     await until(() => /Pour les arrangements de ce disque/.test($(".listen-later-sent").textContent), "sent thread opens in place");
     $(".listen-later-sent .recommendation-bubble").click();
+    await until(() => !$(".listen-later-sent .recommendation-comment"), "sent thread folds away");
     $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Rare")).querySelector(".recommendation-open").click();
     await until(() => $(".recommendation-recipient"), "existing advice form");
     $(".recommendation-recipient").value = "alice";
@@ -454,7 +455,7 @@ function client() {
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6, "catch up more than one page of new comments");
     const sentToggle = '.listen-later-sent .recommendation-bubble[data-recommendation-id="' + sentArtist.id + '"]';
     $(sentToggle).click();   // referme le fil déplié
-    assert(!$(".recommendation-comment"), "collapsing removes the inline thread");
+    await until(() => !$(".recommendation-comment"), "collapsing hides the inline thread once folded");
     $(sentToggle).click();
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize && !$(".recommendation-comments-older").hidden
       && !$(".recommendation-comments-older").disabled, "bounded initial comment page");
@@ -493,8 +494,10 @@ function client() {
     assert(!grouped.querySelector(".recommendation-comment-others").hidden, "Voir les autres conseillers les ouvre");
     await until(() => grouped.querySelectorAll(".recommendation-comment-form").length === 2, "other advisers threads open");
     grouped.querySelector(".recommendation-bubble").click();
-    assert(!grouped.classList.contains("expanded"));
-    assert(!grouped.querySelector(".recommendation-thread:not([hidden])"), "tous les fils se referment");
+    assert(grouped.querySelector(".recommendation-thread.folding"), "le repli s'anime avant de masquer le fil");
+    await until(() => !grouped.classList.contains("expanded") && !grouped.querySelector(".recommendation-thread:not([hidden])"),
+      "tous les fils se referment");
+    assert(!grouped.querySelector(".recommendation-thread.folding"));
 
     const tabs = Object.fromEntries($$(".listen-later-tab").map(tab => [tab.dataset.tab, tab]));
     tabs.bookmarks.click();

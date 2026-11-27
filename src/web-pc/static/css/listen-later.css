@@ -72,13 +72,14 @@
 .recommendation-songs-table .recommendation-advisers { font-size: .8rem; }
 .recommendation-songs-table .recommendation-avatars .avatar { border-color: var(--bg); }
 .recommendation-song-extra td { padding: 0 .5rem .5rem 4.25rem; border-top: 0; }
-.recommendation-song-extra:not(:has(.recommendation-comment-summary.open)) { display: none; }
+.recommendation-song-extra:not(:has(.recommendation-thread:not([hidden]))) { display: none; }
 
 /* Fil déplié en place sous l'aperçu. */
 .recommendation-comment-group { display: grid; gap: .25rem; min-width: 0; }
 .recommendation-thread { display: grid; width: 100%; min-width: 0; transform-origin: top center;
   animation: thread-unfold .38s ease-out both, thread-pop .5s cubic-bezier(.2, .9, .3, 1.3) both; }
 .recommendation-thread[hidden], .recommendation-comment-others[hidden] { display: none; }
+.recommendation-thread.folding { animation: thread-fold .3s ease-in both; pointer-events: none; }
 .recommendation-thread-inner { min-height: 0; overflow: hidden; padding: 0 2px 2px; }
 .recommendation-comment { animation: comment-in .45s ease-out both; }
 .recommendation-comment:nth-child(2) { animation-delay: .07s; }
@@ -90,9 +91,10 @@
 .recommendation-bubble[aria-expanded="true"] svg { transform: scale(1.18); }
 @keyframes thread-unfold { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
 @keyframes thread-pop { from { transform: translateY(-10px) scaleY(.94); } to { transform: none; } }
+@keyframes thread-fold { from { grid-template-rows: 1fr; opacity: 1; transform: none; } to { grid-template-rows: 0fr; opacity: 0; transform: translateY(-8px) scaleY(.96); } }
 @keyframes comment-in { from { opacity: 0; transform: translateY(-8px) scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .recommendation-thread, .recommendation-comment, .recommendation-comment-form { animation: none; }
+  .recommendation-thread, .recommendation-thread.folding, .recommendation-comment, .recommendation-comment-form { animation: none; }
   .recommendation-bubble svg { transition: none; }
 }
 .recommendation-comment-others { display: grid; gap: .25rem; }

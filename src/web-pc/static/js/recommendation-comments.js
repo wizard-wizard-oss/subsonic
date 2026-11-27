@@ -165,9 +165,16 @@ const RecommendationComments = (() => {
     return view;
   }
 
-  function unmount(view) {
+  const FOLD_MS = 300;  // durée de l'animation de repli (voir listen-later.css)
+  const calm = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /** Referme un fil : il n'est plus suivi tout de suite, mais reste à l'écran le temps de l'animation. */
+  function fold(view, thread, done) {
     views.delete(view);
-    view.root.remove();
+    const finish = () => { view.root.remove(); thread.hidden = true; thread.classList.remove("folding"); done(); };
+    if (calm()) { finish(); return null; }
+    thread.classList.add("folding");
+    return {finish, timer: setTimeout(finish, FOLD_MS)};
   }
 
   /** Fil d'une recommandation : replié au départ, il se déplie sous la carte ou la ligne. */
@@ -182,11 +189,21 @@ const RecommendationComments = (() => {
       node.classList.toggle("open", !!view);
       if (options.onPaint) options.onPaint(node);
     };
+    let folding = null;
+    const toggled = () => node.dispatchEvent(new CustomEvent("thread-toggle", {bubbles: true}));
+    const settle = () => { if (folding) { clearTimeout(folding.timer); const {finish} = folding; folding = null; finish(); } };
     node.toggle = () => {
-      if (view) { unmount(view); view = null; thread.hidden = true; }
-      else { thread.hidden = false; view = mount(current, inner); }
+      if (view) {
+        const closing = view;
+        view = null;
+        folding = fold(closing, thread, () => { folding = null; toggled(); });
+      } else {
+        settle();
+        thread.hidden = false;
+        view = mount(current, inner);
+        toggled();
+      }
       paint();
-      node.dispatchEvent(new CustomEvent("thread-toggle", {bubbles: true}));
     };
     node.update = rec => { current = rec; paint(); };
     node.recommendation = () => current;
