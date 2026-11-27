@@ -11,6 +11,7 @@
   title: "Sorties de la semaine : plus de pochettes"
   changes:
     - "Les sorties récentes ont bien plus souvent leur pochette : celle de l'édition qui en a une, sinon celle de Last.fm."
+    - "Le radar remonte maintenant trois mois en arrière. Plus loin encore, la semaine est cherchée à la demande pour vos sources : la première fois prend quelques dizaines de secondes."
     - "Quand MusicBrainz ne répond pas, la recherche d'un style ou d'un label est relancée 10 minutes plus tard (au lieu de 30)."
 
 - version: "1.24.1"

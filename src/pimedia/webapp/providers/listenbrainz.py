@@ -1,7 +1,7 @@
 """La seule classe ListenBrainz du site : sorties récentes et à venir (radar des sorties).
 
 Lecture en direct, sans cache : la synchronisation de nuit garde ce qu'il faut dans les tables du radar."""
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import urlencode
 
 from ...shared.providers.metadata import ProviderUnavailable, PublicMetadata
@@ -10,6 +10,7 @@ from ...shared.providers.musicbrainz.parsing import mbid
 
 FRESH_RELEASES = "https://api.listenbrainz.org/1/explore/fresh-releases/"
 COVER_ART_ARCHIVE = "https://coverartarchive.org"
+PAST_SLICE = 30                                 # jours de sorties passées par requête (réponse de quelques Mo)
 KINDS = {"album": "Album", "ep": "EP"}          # les singles et compilations sans type ne sont pas gardés
 
 
@@ -19,19 +20,25 @@ class ListenBrainz(PublicMetadata):
     unavailable_code = "explore.unavailable"
 
     def fresh_releases(self, today, start, end):
-        """Albums et EP sortis entre start et aujourd'hui, ou annoncés d'aujourd'hui à end : deux requêtes.
-        Un groupe de sorties vu plusieurs fois (plusieurs éditions) garde sa date la plus ancienne."""
+        """Albums et EP sortis entre start et aujourd'hui (par tranches de PAST_SLICE jours), ou annoncés
+        d'aujourd'hui à end. Un groupe vu plusieurs fois (plusieurs éditions) garde sa date la plus ancienne."""
         found = {}
-        windows = ({"release_date": today.isoformat(), "days": (today - start).days, "past": "true",
-                    "future": "false"},
-                   {"release_date": today.isoformat(), "days": (end - today).days, "past": "false",
-                    "future": "true"})
-        for params in windows:
+        for params in self._windows(today, start, end):
             for raw in self._releases(params):
                 release = _release(raw)
                 if release and (release.id not in found or release.released_on < found[release.id].released_on):
                     found[release.id] = release
         return tuple(found.values())
+
+    @staticmethod
+    def _windows(today, start, end):
+        day, left = today, (today - start).days
+        while left > 0:
+            days = min(PAST_SLICE, left)
+            yield {"release_date": day.isoformat(), "days": days, "past": "true", "future": "false"}
+            day, left = day - timedelta(days=days), left - days
+        if end > today:
+            yield {"release_date": today.isoformat(), "days": (end - today).days, "past": "false", "future": "true"}
 
     def _releases(self, params):
         try:

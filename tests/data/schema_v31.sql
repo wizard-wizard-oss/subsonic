@@ -217,7 +217,7 @@ table | radar_sync | CREATE TABLE radar_sync (
         source_kind TEXT NOT NULL,
         source_identity TEXT NOT NULL,
         synced_at INTEGER,
-        failed_at INTEGER,
+        failed_at INTEGER, past_synced_at INTEGER,
         PRIMARY KEY (source_kind, source_identity)
     )
 table | recommendation_comments | CREATE TABLE "recommendation_comments" (

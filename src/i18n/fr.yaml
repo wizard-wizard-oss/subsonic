@@ -1293,7 +1293,7 @@ webapp:
               - "Dans Actualités, ouvrez Sorties de la semaine : votre radar réunit les sorties de vos styles, labels et artistes."
               - "Filtrez d’un clic avec les pastilles (un style, Labels, Mes artistes) et changez de semaine avec les flèches."
               - "Avec « Autour de… », choisissez un de vos artistes pour voir les sorties de ses proches ; dans ⚙ Mes sources, ajoutez ou retirez ce que vous suivez."
-            note: "Le radar se remplit d’après vos favoris : vos artistes, les labels de vos albums et les styles qui reviennent le plus chez vos artistes. Sans favori, il propose les styles les plus présents dans le sub. Les sorties sont cherchées chaque nuit (MusicBrainz et ListenBrainz) ; ↻ relance la recherche pour vous."
+            note: "Le radar se remplit d’après vos favoris : vos artistes, les labels de vos albums et les styles qui reviennent le plus chez vos artistes. Sans favori, il propose les styles les plus présents dans le sub. Les sorties sont cherchées chaque nuit (MusicBrainz et ListenBrainz) sur trois mois en arrière et deux mois en avant ; plus loin dans le passé, la semaine est cherchée quand vous y allez. ↻ relance la recherche pour vous."
       settings:
         title: "Personnaliser et gérer"
         summary: "Affichage et bibliothèque"
@@ -1583,7 +1583,7 @@ webapp:
     radar_empty: "Aucune sortie cette semaine dans ce que vous suivez."
     no_sources: "Vous ne suivez encore rien. Choisissez des styles, des labels ou des artistes pour remplir votre radar."
     choose_sources: "Choisir mes sources"
-    out_of_window: "Cette semaine sort de la période suivie par le radar (deux semaines avant aujourd’hui, deux mois après)."
+    out_of_window: "Cette semaine est trop loin dans le futur pour le radar (deux mois au plus) : parcourez un style à la place."
     browse_style: "Parcourir un style"
     back_to_radar: "Revenir à mon radar"
     listen_title: "« {title} » — {artist}"

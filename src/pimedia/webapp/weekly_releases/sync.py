@@ -9,8 +9,9 @@ from datetime import date, datetime, time as day_time, timedelta
 
 from ...shared.providers.musicbrainz.client import MAX_LIMIT
 from .entities import RadarError, RadarRelease
-from .limits import (ARTIST, COVER_LOOKUPS, FRESH, FRESH_IDENTITY, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER,
-                     REFRESH_COOLDOWN, RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
+from .limits import (ARTIST, COVER_LOOKUPS, FRESH, FRESH_IDENTITY, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR,
+                     OLD_WEEK_AGAIN_AFTER, PAST_REFRESH_EVERY, PURGE_AFTER, RECENT_BEFORE, REFRESH_COOLDOWN,
+                     RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
 from .trends import SERVICE_ERRORS
 
 
@@ -192,18 +193,52 @@ class ReleaseSync:
             self.releases.mark_synced(kind, identity, self.clock())
 
     # ---------- requêtes ----------
+    def sync_week(self, user, monday):
+        """Semaine plus ancienne que la fenêtre : ses sorties pour les sources de ce compte seulement (styles, labels,
+        et ListenBrainz pour ses artistes), cherchées à la demande et gardées OLD_WEEK_AGAIN_AFTER secondes."""
+        run = "week:%d:%s" % (user.id, monday.isoformat())
+        last = self.releases.run_at(run)
+        if last is not None and self.clock() - last < OLD_WEEK_AGAIN_AFTER:
+            return
+        sunday = monday + timedelta(days=6)
+        for source in self.sources.for_user(user.id):
+            if source.kind == STYLE:
+                self._quietly(source.name, lambda: self._style_week(source.identity, monday))
+            elif source.kind == LABEL:
+                self._quietly(source.name, lambda: self._label(source.identity, monday, sunday))
+        self._quietly("ListenBrainz", lambda: self.releases.save(
+            FRESH, FRESH_IDENTITY, [radar_release(a) for a in self.listenbrainz.fresh_releases(sunday, monday, sunday)],
+            monday, sunday))
+        self.releases.mark_run(run, self.clock())
+
+    def _quietly(self, name, work):
+        """Recherche à la demande : un échec est journalisé sans changer l'état de synchronisation de la source."""
+        try:
+            work()
+        except SERVICE_ERRORS as error:
+            self.log("Radar des sorties : %s (semaine ancienne) en échec (%r)" % (name, error))
+
     def _style(self, name, start, end):
-        """Une requête par semaine : un style large dépasserait tout plafond sur toute la fenêtre."""
-        monday = start - timedelta(days=start.weekday())
+        """Une requête par semaine : un style large dépasserait tout plafond sur toute la fenêtre. Les semaines
+        anciennes (avant RECENT_BEFORE) ne changent presque plus : relues une fois par PAST_REFRESH_EVERY."""
+        past = self.releases.past_synced_at(STYLE, name)
+        whole = past is None or self.clock() - past >= PAST_REFRESH_EVERY
+        first = start if whole else self.today() - RECENT_BEFORE
+        monday = first - timedelta(days=first.weekday())
         while monday <= end:
-            sunday, found = monday + timedelta(days=6), []
-            for page in range(STYLE_PAGES_PER_WEEK):
-                result = self.musicbrainz.weekly_groups(name, monday, sunday, MAX_LIMIT, page * MAX_LIMIT)
-                found += result.albums
-                if result.next_offset is None:
-                    break
-            self.releases.save(STYLE, name, [radar_release(a) for a in found], monday, sunday)
+            self._style_week(name, monday)
             monday += timedelta(days=7)
+        if whole:
+            self.releases.mark_past_synced(STYLE, name, self.clock())
+
+    def _style_week(self, name, monday):
+        sunday, found = monday + timedelta(days=6), []
+        for page in range(STYLE_PAGES_PER_WEEK):
+            result = self.musicbrainz.weekly_groups(name, monday, sunday, MAX_LIMIT, page * MAX_LIMIT)
+            found += result.albums
+            if result.next_offset is None:
+                break
+        self.releases.save(STYLE, name, [radar_release(a) for a in found], monday, sunday)
 
     def _label(self, identity, start, end):
         page = self.musicbrainz.label_groups(identity, start, end)

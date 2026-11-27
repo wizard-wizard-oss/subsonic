@@ -1,9 +1,12 @@
 """Limites et valeurs du radar des sorties : seule définition, envoyée au front quand il en a besoin."""
 from datetime import timedelta
 
-WINDOW_BEFORE = timedelta(days=14)        # sorties gardées en base avant aujourd'hui
+WINDOW_BEFORE = timedelta(days=90)        # sorties gardées en base avant aujourd'hui (trois mois)
+RECENT_BEFORE = timedelta(days=14)        # semaines passées relues chaque nuit ; les plus anciennes, une fois par semaine
+PAST_REFRESH_EVERY = 7 * 86400
+OLD_WEEK_AGAIN_AFTER = 86400              # au-delà des trois mois : une semaine cherchée à la demande, gardée un jour
 WINDOW_AFTER = timedelta(days=60)         # … et annoncées après aujourd'hui
-PURGE_AFTER = timedelta(days=30)          # une sortie plus ancienne que ça quitte la base
+PURGE_AFTER = timedelta(days=120)         # une sortie plus ancienne que ça quitte la base
 FULL_SYNC_EVERY = 86400                   # synchronisation complète au plus tard toutes les 24 h
 NIGHT_HOUR = 4                            # heure locale de la synchronisation de nuit
 REFRESH_COOLDOWN = 600                    # « Actualiser » : une fois toutes les 10 min par compte

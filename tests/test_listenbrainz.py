@@ -73,6 +73,23 @@ class ListenBrainzTest(unittest.TestCase):
             self.client.fresh_releases(TODAY, date(2026, 11, 13), date(2027, 1, 26))
 
 
+class LongPastTest(ListenBrainzTest):
+    def test_three_months_back_are_read_in_slices_of_thirty_days(self):
+        self.client.fresh_releases(TODAY, date(2026, 8, 29), date(2027, 1, 26))
+        past = [parse_qs(urlsplit(url).query) for url in self.urls if "past=true" in url]
+        self.assertEqual([(q["release_date"][0], q["days"][0]) for q in past],
+                         [("2026-11-27", "30"), ("2026-10-28", "30"), ("2026-09-28", "30")])
+        self.assertEqual(len(self.urls), 4)
+
+
+class OneWeekTest(ListenBrainzTest):
+    def test_a_past_week_needs_a_single_request(self):
+        self.client.fresh_releases(date(2026, 6, 7), date(2026, 6, 1), date(2026, 6, 7))
+        self.assertEqual(len(self.urls), 1)
+        query = parse_qs(urlsplit(self.urls[0]).query)
+        self.assertEqual((query["release_date"], query["days"], query["past"]), (["2026-06-07"], ["6"], ["true"]))
+
+
 class GroupedArtistTagsTest(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()

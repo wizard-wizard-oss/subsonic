@@ -84,7 +84,11 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   lien vers la recherche habituelle (`web-pc/static/js/weekly-listen.js`).
 - **« Autour de… »** : on choisit un de ses artistes ; Last.fm donne ses proches (une requête) ; on cherche leurs
   sorties parmi celles de ListenBrainz déjà en base (MBID quand Last.fm le donne, sinon nom normalisé).
-- **Hors période** (plus de 14 jours en arrière, plus de 60 jours en avant) : consultation « un style à la fois ».
+- **Fenêtre** : 90 jours en arrière, 60 en avant, synchronisés. Les semaines de plus de 14 jours ne sont relues
+  qu’une fois par semaine (`radar_sync.past_synced_at`) ; ListenBrainz est lu par tranches de 30 jours.
+- **Plus ancien que 90 jours** : la semaine est cherchée à la demande pour les sources du compte (`ReleaseSync.sync_week` :
+  une requête par style et par label, une ListenBrainz), puis gardée un jour (`radar_runs`, `week:<compte>:<lundi>`).
+- **Plus de 60 jours en avant** : consultation « un style à la fois ».
 
 ### Synchronisation de fond
 - Fil lancé par `app.run()` (`ReleaseSync.run`) : au démarrage si la dernière synchronisation complète date de plus

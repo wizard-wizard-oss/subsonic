@@ -60,7 +60,7 @@ class FakeLastFm:
 
 class FakeSync:
     def __init__(self):
-        self.new, self.refreshed = [], []
+        self.new, self.refreshed, self.weeks = [], [], []
 
     def sync_new_source(self, source):
         self.new.append(source.identity)
@@ -68,6 +68,9 @@ class FakeSync:
     def refresh_user(self, user):
         self.refreshed.append(user.id)
         return 1000 + REFRESH_COOLDOWN
+
+    def sync_week(self, user, monday):
+        self.weeks.append((user.id, monday))
 
 
 def release(number, day=27, artist="Artiste", artists=()):
@@ -175,6 +178,18 @@ class RadarServiceTest(unittest.TestCase):
         self.assertEqual(page["cards"], [])
         with self.assertRaises(ValueError):
             self.week(self.alice, monday="2026-11-24")                   # pas un lundi
+
+    def test_an_older_week_is_searched_on_demand_then_read_in_base(self):
+        self.follow_all()
+        old = date(2026, 6, 3)
+        self.releases.save("label", WARP, [RadarRelease(mbid(30), "Vieux", "X", old, "Album")],
+                           date(2026, 6, 1), date(2026, 6, 7))
+        page = self.week(self.alice, monday="2026-06-01")
+        self.assertEqual(self.sync.weeks, [(1, date(2026, 6, 1))])
+        self.assertFalse(page["outOfWindow"])
+        self.assertEqual([c["id"] for c in page["cards"]], [mbid(30)])
+        self.week(self.alice, monday="2026-11-23")
+        self.assertEqual(len(self.sync.weeks), 1)                         # dans les trois mois : rien à chercher
 
     def test_account_without_sources(self):
         page = self.week(self.bob)

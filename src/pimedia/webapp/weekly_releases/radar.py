@@ -45,12 +45,18 @@ class RadarService:
         return monday + timedelta(days=6) >= today - WINDOW_BEFORE and monday <= today + WINDOW_AFTER
 
     def week(self, user, start, selected="all", offset=0):
+        """Une semaine du radar. Dans la fenêtre synchronisée : lue en base. Plus ancienne : cherchée d'abord à la
+        demande pour les sources du compte (quelques dizaines de secondes, une fois par jour). Trop loin dans le
+        futur : consultation par style."""
         monday = self._monday(start, offset)
-        if not self._in_window(monday):
+        older = monday + timedelta(days=6) < self.today() - WINDOW_BEFORE
+        if not older and not self._in_window(monday):
             return RadarWeek(monday, out_of_window=True, default_style=self.styles.DEFAULT_GENRE)
         sources = self.sources.for_user(user.id)
         if not sources:
             return RadarWeek(monday, empty="no-sources", default_style=self.styles.DEFAULT_GENRE)
+        if older and not offset:
+            self.sync.sync_week(user, monday)
         cards = self._cards(sources, monday, monday + timedelta(days=6))
         filters = self._filters(sources, cards)
         if selected not in {f.key for f in filters}:

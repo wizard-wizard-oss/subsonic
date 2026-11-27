@@ -11,12 +11,13 @@ from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.release_radar import RadarProfiles, RadarReleases, ReleaseSources
 from pimedia.webapp.weekly_releases.entities import RadarError, RadarRelease
-from pimedia.webapp.weekly_releases.limits import (FULL_SYNC_EVERY, REFRESH_COOLDOWN, RETRY_FAILED_AFTER, WINDOW_AFTER,
-                                                    WINDOW_BEFORE)
+from pimedia.webapp.weekly_releases.limits import (FULL_SYNC_EVERY, PAST_REFRESH_EVERY, PURGE_AFTER, RECENT_BEFORE,
+                                                    REFRESH_COOLDOWN, RETRY_FAILED_AFTER, WINDOW_AFTER, WINDOW_BEFORE)
 from pimedia.webapp.weekly_releases.sync import ReleaseSync
 
 TODAY = date(2026, 11, 27)
 START, END = TODAY - WINDOW_BEFORE, TODAY + WINDOW_AFTER
+RECENT = TODAY - RECENT_BEFORE
 
 
 def mbid(number):
@@ -129,10 +130,24 @@ class ReleaseSyncTest(unittest.TestCase):
         self.sources.add(1, "style", "techno", "techno", "manual")
         self.sync.sync_all()
         mondays = {c[2] for c in self.musicbrainz.calls if c[0] == "style"}
-        self.assertEqual(min(mondays), START - timedelta(days=START.weekday()))
+        self.assertEqual(min(mondays), START - timedelta(days=START.weekday()))       # trois mois en arrière
         self.assertEqual(max(mondays), END - timedelta(days=END.weekday()))
-        self.assertEqual(len(mondays), 12)            # 74 jours à cheval sur 12 semaines du calendrier
+        self.assertEqual(len(mondays), 23)            # 150 jours à cheval sur 23 semaines du calendrier
         self.assertTrue(self.found("style", "techno"))
+
+    def test_past_weeks_are_read_once_a_week_recent_ones_every_night(self):
+        self.sources.add(1, "style", "techno", "techno", "manual")
+        self.sync.sync_all()
+        self.musicbrainz.calls.clear()
+        self.now += 86400
+        self.sync.sync_all()                                          # le lendemain : semaines récentes et à venir
+        mondays = {c[2] for c in self.musicbrainz.calls if c[0] == "style"}
+        self.assertEqual(min(mondays), RECENT - timedelta(days=RECENT.weekday()))
+        self.musicbrainz.calls.clear()
+        self.now += PAST_REFRESH_EVERY
+        self.sync.sync_all()                                          # une semaine plus tard : tout de nouveau
+        mondays = {c[2] for c in self.musicbrainz.calls if c[0] == "style"}
+        self.assertEqual(min(mondays), START - timedelta(days=START.weekday()))
 
     def test_fresh_releases_are_read_once_for_everyone(self):
         self.sources.add(1, "artist", mbid(800), "Moderat", "trends")
@@ -142,6 +157,22 @@ class ReleaseSyncTest(unittest.TestCase):
         found = {r.id: r.artist_ids for r in self.releases.window(START, END)}
         self.assertEqual(found, {mbid(2): (mbid(800),), mbid(3): (mbid(801),)})
         self.assertIsNotNone(self.releases.synced_at("artist", mbid(800)))
+
+    def test_an_older_week_is_searched_once_a_day_for_this_account(self):
+        self.sources.add(1, "style", "techno", "techno", "manual")
+        self.sources.add(1, "label", mbid(700), "Warp", "manual")
+        self.sources.add(2, "style", "folk", "folk", "manual")
+        monday = date(2026, 6, 1)
+        self.sync.sync_week(self.alice, monday)
+        kinds = sorted((c[0], c[1]) for c in self.musicbrainz.calls)
+        self.assertEqual(kinds, [("fresh", date(2026, 6, 7)), ("label", mbid(700)), ("style", "techno")])
+        self.assertEqual([c for c in self.musicbrainz.calls if c[0] == "label"][0][2:], (monday, date(2026, 6, 7)))
+        self.musicbrainz.calls.clear()
+        self.sync.sync_week(self.alice, monday)
+        self.assertEqual(self.musicbrainz.calls, [])                       # déjà cherchée aujourd'hui
+        self.now += 86400
+        self.sync.sync_week(self.alice, monday)
+        self.assertTrue(self.musicbrainz.calls)
 
     def test_missing_covers_are_looked_up_on_lastfm_once(self):
         self.sync.sync_all()
@@ -259,7 +290,7 @@ class ReleaseSyncTest(unittest.TestCase):
         self.assertEqual(self.musicbrainz.calls, [])
 
     def test_purge_removes_old_releases(self):
-        old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - timedelta(days=60), "Album", ())
+        old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - PURGE_AFTER - timedelta(days=1), "Album", ())
         self.releases.save("label", "x", [old], START - timedelta(days=90), END)
         self.sync.sync_all()
         self.assertEqual(self.releases.for_sources({("label", "x")}, START - timedelta(days=90), END), [])

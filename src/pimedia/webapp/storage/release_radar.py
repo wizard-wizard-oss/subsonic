@@ -125,6 +125,15 @@ class RadarReleases:
         self.db.execute("INSERT INTO radar_sync (source_kind, source_identity, failed_at) VALUES (?, ?, ?) "
                         "ON CONFLICT DO UPDATE SET failed_at = excluded.failed_at", (kind, identity, int(at)))
 
+    def past_synced_at(self, kind, identity):
+        row = self.db.one("SELECT past_synced_at FROM radar_sync WHERE source_kind = ? AND source_identity = ?",
+                          (kind, identity))
+        return row["past_synced_at"] if row else None
+
+    def mark_past_synced(self, kind, identity, at):
+        self.db.execute("INSERT INTO radar_sync (source_kind, source_identity, past_synced_at) VALUES (?, ?, ?) "
+                        "ON CONFLICT DO UPDATE SET past_synced_at = excluded.past_synced_at", (kind, identity, int(at)))
+
     def synced_at(self, kind, identity):
         row = self.db.one("SELECT synced_at FROM radar_sync WHERE source_kind = ? AND source_identity = ?",
                           (kind, identity))
@@ -150,11 +159,17 @@ class RadarReleases:
         return sorted(union, key=lambda source: synced.get(source[:2], 0))
 
     def mark_full_sync(self, at):
-        self.db.execute("INSERT INTO radar_runs (name, finished_at) VALUES (?, ?) ON CONFLICT DO UPDATE SET "
-                        "finished_at = excluded.finished_at", (FULL_SYNC, int(at)))
+        self.mark_run(FULL_SYNC, at)
 
     def last_full_sync(self):
-        row = self.db.one("SELECT finished_at FROM radar_runs WHERE name = ?", (FULL_SYNC,))
+        return self.run_at(FULL_SYNC)
+
+    def mark_run(self, name, at):
+        self.db.execute("INSERT INTO radar_runs (name, finished_at) VALUES (?, ?) ON CONFLICT DO UPDATE SET "
+                        "finished_at = excluded.finished_at", (name, int(at)))
+
+    def run_at(self, name):
+        row = self.db.one("SELECT finished_at FROM radar_runs WHERE name = ?", (name,))
         return row["finished_at"] if row else None
 
 
