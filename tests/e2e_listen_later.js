@@ -359,7 +359,9 @@ function client() {
     $(".recommendation-comment-input").value = "Pour les arrangements de ce disque.";
     $(".recommendation-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
     await until(() => $$(".listen-later-sent .listen-later-card").length === sentBefore + 1, "sent list updates without navigating or a server event");
-    assert.match($(".listen-later-sent").textContent, /Pour les arrangements de ce disque/);
+    $(".listen-later-sent .recommendation-bubble").click();
+    await until(() => /Pour les arrangements de ce disque/.test($(".listen-later-sent").textContent), "sent thread opens in place");
+    $(".listen-later-sent .recommendation-bubble").click();
     $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Rare")).querySelector(".recommendation-open").click();
     await until(() => $(".recommendation-recipient"), "existing advice form");
     $(".recommendation-recipient").value = "alice";
@@ -380,9 +382,9 @@ function client() {
       recipient: "bob", kind: "album", source: "subsonic", sourceId: "al1",
       comment: '<img src=x onerror="alert(1)"> Pour la basse.'})).json()).recommendation;
     live({discussionId: shared.id});
-    await until(() => $('.recommendation-list .recommendation-comments-open[data-recommendation-id="' + shared.id + '"]'), "private thread entry");
+    await until(() => $('.recommendation-list .recommendation-bubble[data-recommendation-id="' + shared.id + '"]'), "private thread entry");
     assert(!$(".recommendation-comment-summary img"), "comment text must not become HTML");
-    $('.recommendation-list .recommendation-comments-open[data-recommendation-id="' + shared.id + '"]').click();
+    $('.recommendation-list .recommendation-bubble[data-recommendation-id="' + shared.id + '"]').click();
     await until(() => $(".recommendation-comment-form") && $$(".recommendation-comment").length === 1, "initial comment");
     assert.match($(".recommendation-comment p").textContent, /<img src=x/);
     assert.equal($(".recommendation-comment-input").maxLength, receivedByAlice.commentMaxLength);
@@ -436,8 +438,8 @@ function client() {
     const sentArtist = receivedByAlice.recommendations[0].recommendations[0];
     await alice.post("/api/recommendation/comment", {recommendationId: sentArtist.id, body: "J’ai adoré cet artiste."});
     live({discussionId: sentArtist.id});
-    await until(() => $('.listen-later-sent .recommendation-comments-open.unread[data-recommendation-id="' + sentArtist.id + '"]'), "reply on a sent recommendation");
-    $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]').click();
+    await until(() => $('.listen-later-sent .recommendation-bubble.unread[data-recommendation-id="' + sentArtist.id + '"]'), "reply on a sent recommendation");
+    $('.listen-later-sent .recommendation-bubble[data-recommendation-id="' + sentArtist.id + '"]').click();
     await until(() => $$(".recommendation-comment").length === 2 && $(".recommendation-comment-form"), "same thread component on sent advice");
     submitComment("Je suis content que ça te plaise !");
     await until(() => $$(".recommendation-comment").length === 3 && !$(".recommendation-comment-form button").disabled, "sender replies again");
@@ -450,7 +452,7 @@ function client() {
     }
     live({discussionId: sentArtist.id});
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6, "catch up more than one page of new comments");
-    const sentToggle = '.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]';
+    const sentToggle = '.listen-later-sent .recommendation-bubble[data-recommendation-id="' + sentArtist.id + '"]';
     $(sentToggle).click();   // referme le fil déplié
     assert(!$(".recommendation-comment"), "collapsing removes the inline thread");
     $(sentToggle).click();
@@ -471,19 +473,28 @@ function client() {
     await until(() => $$(".recommendation-list .listen-later-tile").some(tile =>
       tile.querySelector(".recommendation-comments-all")), "grouped advisers");
     const grouped = $$(".recommendation-list .listen-later-tile").find(tile => tile.querySelector(".recommendation-comments-all"));
-    assert.match(grouped.querySelector(".recommendation-comment-preview").textContent, /avis d’Alice|celui de Charlie/);
     assert.equal(grouped.querySelectorAll(".recommendation-comment-others .recommendation-comment-summary").length, 1);
-    assert(grouped.querySelector(".recommendation-comment-others").hidden, "les autres conseillers sont repliés");
-    grouped.querySelector(".recommendation-comments-all").click();
-    assert(!grouped.querySelector(".recommendation-comment-others").hidden, "Voir tout ouvre les autres conseillers");
     assert(grouped.querySelector(".listen-later-new"), "pastille de nouveauté sur la pochette");
-    assert(!grouped.querySelector(".recommendation-thread:not([hidden])"), "aucun fil ouvert au départ");
+    assert(!grouped.querySelector(".recommendation-thread:not([hidden])"), "commentaires repliés au départ");
+    assert(!grouped.querySelector(".recommendation-comment"), "aucun commentaire affiché tant qu'on ne déplie pas");
+    assert(grouped.querySelector(".recommendation-comments-all").hidden, "les autres conseillers attendent le premier fil");
     grouped.querySelector(".recommendation-bubble").click();
     await until(() => grouped.querySelector(".recommendation-thread:not([hidden]) .recommendation-comment-form"), "thread opens in place");
     assert(grouped.classList.contains("expanded"), "la carte s’élargit quand le fil est ouvert");
     assert(!$(".dialog"), "aucune fenêtre superposée");
+    assert(grouped.querySelector(".recommendation-comment-input").rows === 1, "saisie d'une ligne, à la Facebook");
+    assert(grouped.querySelector(".recommendation-comment-others").hidden, "les autres conseillers sont repliés");
+    const quick = grouped.querySelector(".recommendation-comment-input");
+    quick.value = "Envoyé avec Entrée.";
+    quick.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Enter", bubbles: true, cancelable: true}));
+    await until(() => /Envoyé avec Entrée/.test(grouped.textContent), "Entrée envoie le commentaire");
+    assert(!grouped.querySelector(".recommendation-comments-all").hidden);
+    grouped.querySelector(".recommendation-comments-all").click();
+    assert(!grouped.querySelector(".recommendation-comment-others").hidden, "Voir les autres conseillers les ouvre");
+    await until(() => grouped.querySelectorAll(".recommendation-comment-form").length === 2, "other advisers threads open");
     grouped.querySelector(".recommendation-bubble").click();
     assert(!grouped.classList.contains("expanded"));
+    assert(!grouped.querySelector(".recommendation-thread:not([hidden])"), "tous les fils se referment");
 
     const tabs = Object.fromEntries($$(".listen-later-tab").map(tab => [tab.dataset.tab, tab]));
     tabs.bookmarks.click();

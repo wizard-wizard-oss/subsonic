@@ -12,6 +12,15 @@ const RecommendationComments = (() => {
       el("small.muted", {text: t("comment_limit", {count: maxLength})}))};
   }
 
+  /** Saisie d'une ligne à la Facebook : Entrée envoie, Maj+Entrée passe à la ligne. */
+  function compactField(maxLength, send) {
+    const input = el("textarea.recommendation-comment-input", {rows: 1, maxLength, required: true,
+      placeholder: t("write_comment"), "aria-label": t("new_comment"),
+      onkeydown: event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } },
+      oninput: () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 140) + "px"; }});
+    return {input, node: el("div.recommendation-comment-field.compact", {}, input)};
+  }
+
   function current(view) {
     return views.has(view) && view.root.isConnected && App.user && App.user.id === view.owner;
   }
@@ -94,9 +103,10 @@ const RecommendationComments = (() => {
   }
 
   function compose(view, maxLength) {
-    const comment = field(maxLength);
+    const comment = compactField(maxLength, () => view.composer.dispatchEvent(new Event("submit", {cancelable: true})));
     comment.input.value = view.draft;
-    const submit = el("button.primary", {type: "submit", text: t("post_comment")});
+    const submit = el("button.primary", {type: "submit", text: t("send_comment"), title: t("post_comment"),
+      "aria-label": t("post_comment")});
     let request = null;
     view.composer = el("form.recommendation-comment-form", {onsubmit: async event => {
       event.preventDefault();
@@ -160,29 +170,14 @@ const RecommendationComments = (() => {
     view.root.remove();
   }
 
-  /** Aperçu du dernier commentaire + bouton qui déplie le fil de cette recommandation, sous l'aperçu. */
+  /** Fil d'une recommandation : replié au départ, il se déplie sous la carte ou la ligne. */
   function summary(recommendation, options = {}) {
     let current = recommendation, view = null;
     const other = rec => App.user.id === rec.senderId ? rec.recipient : rec.sender;
-    const preview = el("p.recommendation-comment-preview");
-    const thread = el("div.recommendation-thread", {hidden: true});
-    const button = el("button.recommendation-comments-open", {
-      type: "button", "aria-expanded": "false", dataset: {recommendationId: String(recommendation.id)},
-      onclick: event => { event.stopPropagation(); node.toggle(); },
-      ondblclick: event => event.stopPropagation()});
-    const node = el("div.recommendation-comment-summary", {}, preview, button, thread);
+    const thread = el("div.recommendation-thread", {hidden: true},
+      options.named ? el("p.recommendation-thread-name", {text: other(recommendation)}) : null);
+    const node = el("div.recommendation-comment-summary", {dataset: {recommendationId: String(recommendation.id)}}, thread);
     const paint = () => {
-      preview.textContent = "";
-      if (current.commentPreview) {
-        if (options.named) preview.append(el("strong", {text: other(current)}), " ");
-        preview.append(current.commentPreview);
-      }
-      preview.hidden = !current.commentPreview || !!view;
-      const key = view ? "hide_comments" : current.commentsUnread ? "unread_comments_with" : "comments_with";
-      button.textContent = t(key, {name: other(current), count: current.commentCount});
-      button.classList.toggle("unread", !!current.commentsUnread);
-      button.setAttribute("aria-expanded", String(!!view));
-      node.classList.toggle("no-comments", !current.commentCount);
       node.classList.toggle("open", !!view);
       if (options.onPaint) options.onPaint(node);
     };
@@ -210,20 +205,23 @@ const RecommendationComments = (() => {
   }
 
   /**
-   * Fils d'une même carte : celui du conseiller le plus récent, les autres derrière « Voir tout ».
-   * node.bubble est le bouton « commentaires » (avec son compteur) à placer dans les commandes de la carte.
+   * Fils d'une même carte : repliés au départ ; la bulle déplie celui du conseiller le plus récent, et
+   * « Voir les autres conseillers » ouvre les autres. node.bubble est le bouton « commentaires » (avec son
+   * compteur) à placer dans les commandes de la carte.
    */
   function group(recommendations) {
     const first = latest(recommendations);
     const summaries = [];
     const bubble = el("button.recommendation-bubble", {type: "button", title: t("comments"), "aria-label": t("comments"),
-      onclick: event => { event.stopPropagation(); main.toggle(); }, ondblclick: event => event.stopPropagation()});
+      dataset: {recommendationId: String(first.id)},
+      onclick: event => { event.stopPropagation(); node.toggle(); }, ondblclick: event => event.stopPropagation()});
     const count = el("small");
     const paintBubble = () => {
       const recs = summaries.map(item => item.recommendation());
       const total = recs.reduce((sum, rec) => sum + rec.commentCount, 0);
       count.textContent = total ? String(total) : "";
       bubble.classList.toggle("unread", recs.some(rec => rec.commentsUnread));
+      bubble.setAttribute("aria-expanded", String(summaries.some(item => item.isOpen())));
     };
     const make = (rec, named) => {
       const item = summary(rec, {named, onPaint: paintBubble});
@@ -234,17 +232,20 @@ const RecommendationComments = (() => {
     const others = recommendations.filter(rec => rec !== first).map(rec => make(rec, true));
     App.append(bubble, [App.icon("chat", 18), count]);
     const rest = el("div.recommendation-comment-others", {hidden: true}, others);
-    const all = recommendations.length > 1 ? el("button.link-button.recommendation-comments-all", {
-      type: "button", "aria-expanded": "false", text: t("all_advisers", {count: recommendations.length}),
-      onclick: event => {
-        event.stopPropagation();
-        rest.hidden = !rest.hidden;
-        all.setAttribute("aria-expanded", String(!rest.hidden));
-        all.textContent = rest.hidden ? t("all_advisers", {count: recommendations.length}) : t("fewer_advisers");
-      }}) : null;
+    const all = others.length ? el("button.link-button.recommendation-comments-all", {
+      type: "button", hidden: true, text: t("all_advisers", {count: others.length}),
+      onclick: event => { event.stopPropagation(); showOthers(rest.hidden); }}) : null;
+    const showOthers = visible => {
+      rest.hidden = !visible;
+      all.textContent = t(visible ? "fewer_advisers" : "all_advisers", {count: others.length});
+      others.forEach(item => { if (item.isOpen() !== visible) item.toggle(); });
+    };
     const node = el("div.recommendation-comment-group", {}, main, all, rest);
     node.bubble = bubble;
-    node.toggle = () => main.toggle();
+    node.toggle = () => {
+      main.toggle();
+      if (all) { all.hidden = !main.isOpen(); if (!main.isOpen() && !rest.hidden) showOthers(false); }
+    };
     node.isOpen = () => summaries.some(item => item.isOpen());
     paintBubble();
     return node;

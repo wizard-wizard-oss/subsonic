@@ -119,8 +119,10 @@ webapp:
     new_badge: "Nouveau"
     play_album: "Écouter l’album"
     play_artist: "Radio de l’artiste"
-    hide_comments: "Masquer les commentaires"
-    all_advisers: "Voir tous les conseillers ({count})"
+    sent_to: "Envoyé à {name}"
+    write_comment: "Écrire un commentaire…"
+    send_comment: "Envoyer"
+    all_advisers: "Voir les autres conseillers ({count})"
     fewer_advisers: "Masquer les autres conseillers"
     add_bookmark: "Garder dans À écouter"
     remove_bookmark: "Retirer de mes marque-pages"
@@ -1037,13 +1039,13 @@ webapp:
               - "Sur un artiste, un album ou un morceau de la bibliothèque, choisissez Conseiller à quelqu’un. Le conseil est aussi proposé sur les fiches Discogs d’artistes et d’albums."
               - "Choisissez un membre qui s’est déjà connecté au site et ajoutez un commentaire si vous le souhaitez."
               - "Retrouvez le conseil dans À écouter, onglet Envoyées, et poursuivez l’échange privé avec cette personne."
-            note: "La discussion reste liée à cette recommandation : elle n’est publiée ni dans le salon ni sous l’album. Si plusieurs personnes conseillent la même référence, leurs noms sont regroupés sur une même pochette, avec un fil privé par conseiller. Le fil du conseiller le plus récent s’affiche d’abord ; « Voir tous les conseillers » ouvre les autres."
+            note: "La discussion reste liée à cette recommandation : elle n’est publiée ni dans le salon ni sous l’album. Si plusieurs personnes conseillent la même référence, leurs noms sont regroupés sur une même pochette, avec un fil privé par conseiller. Le fil du conseiller le plus récent s’ouvre d’abord ; « Voir les autres conseillers » ouvre les autres."
           g6:
             title: "Retrouver ses conseils et archives"
             steps:
               - "Ouvrez À écouter : l’onglet Reçues s’ouvre en premier, avec une pastille rouge quand un conseil ou un commentaire est nouveau. Le filtre sépare artistes, albums et morceaux."
               - "Chaque pochette a sa flèche de lecture (album, radio de l’artiste ou morceau). Les morceaux forment une liste avec leur petite pochette : Tout écouter les enchaîne, ou commencez par une ligne."
-              - "Sous une pochette, le dernier commentaire s’affiche ; la bulle ou « Voir les commentaires » déplie l’échange en place, avec le champ de réponse. L’onglet Envoyées garde vos envois et les archives."
+              - "Sous une pochette, la bulle déplie les commentaires en place, avec une ligne pour répondre (Entrée envoie). L’onglet Envoyées garde vos envois, en pochettes aussi, et les archives."
             note: "Retirer une recommandation l’archive sans effacer les échanges. Les nouveaux commentaires restent accessibles, même dans les archives. Le marque-page personnel se retire indépendamment du conseil. Les titres YouTube ne peuvent pas être conseillés : seuls les artistes, albums et morceaux de la bibliothèque, et les artistes et albums Discogs."
       explore:
         title: "Explorer de nouvelles musiques"

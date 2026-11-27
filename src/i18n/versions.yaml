@@ -6,6 +6,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.21"
+  date: 2026-11-27
+  title: "À écouter : commentaires repliés et envois en pochettes"
+  changes:
+    - "Les commentaires sont repliés sous chaque pochette : un clic sur la bulle les déplie, avec juste en dessous une ligne pour écrire (Entrée envoie), comme sur un réseau social."
+    - "L'onglet Envoyées reprend la grille de pochettes, avec la bulle de commentaires et le destinataire de chaque conseil."
+    - "Quand plusieurs personnes ont conseillé la même chose, « Voir les autres conseillers » déplie leurs échanges."
+
 - version: "1.20"
   date: 2026-11-27
   title: "À écouter, version pochettes"

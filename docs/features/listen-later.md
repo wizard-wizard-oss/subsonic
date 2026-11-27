@@ -39,8 +39,10 @@
 - Artistes et albums : tuiles en grille avec la pochette (`image_ref`), badge de type, point rouge « nouveau »,
   avatars des conseillers, flèche de lecture (album Subsonic, radio de l'artiste Subsonic, morceau). Les cartes
   Discogs gardent « Rechercher pour écouter » : rien à lire directement. Morceaux : liste avec petite pochette.
-- Commentaires : `RecommendationComments.group()` affiche l'aperçu du fil le plus récent (non lu d'abord, puis avec
-  message, puis le plus récent), la bulle avec son compteur et « Voir tous les conseillers » pour les autres fils.
+- Commentaires (1.21) : repliés au départ. `RecommendationComments.group()` fournit la bulle (compteur, accent si non lu)
+  qui déplie le fil du conseiller le plus récent (non lu d'abord, puis avec message, puis le plus récent) ; « Voir les
+  autres conseillers » ouvre les autres. La saisie est une ligne (Entrée envoie, Maj+Entrée = nouvelle ligne).
+  L'onglet Envoyées (et archivées) utilise les mêmes tuiles.
   Le fil se déplie en place (`mount`) ; la fenêtre ne sert plus qu'à l'ouverture depuis la notification ou après
   un envoi. Plusieurs fils peuvent être dépliés ; l'actualisation temps réel les met à jour sans redessiner la page.
 - Pas de changement de données, de routes ni de migration. Les conseils YouTube restent hors périmètre.

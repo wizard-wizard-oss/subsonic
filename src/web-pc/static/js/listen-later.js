@@ -60,8 +60,8 @@ const ListenLaterUI = (() => {
     try {
       const data = await App.api.get("/api/recommendation/comments", {id});
       if (route.stale || !App.user || App.user.id !== owner || !page.lists.sent.isConnected) return;
-      const summaries = document.querySelectorAll('.recommendation-comments-open[data-recommendation-id="' + id + '"]');
-      summaries.forEach(button => button.closest(".recommendation-comment-summary").update(data.recommendation));
+      const summaries = document.querySelectorAll('.recommendation-comment-summary[data-recommendation-id="' + id + '"]');
+      summaries.forEach(summary => summary.update(data.recommendation));
       if (summaries.length) return;
       // Discussion absente de la page : un conseil envoyé s'ajoute à sa liste, un conseil reçu recharge la page.
       if (data.recommendation.senderId === owner) page.lists.sent.prepend(data.recommendation);
@@ -280,22 +280,6 @@ const ListenLaterUI = (() => {
     return image;
   }
 
-  function card(target, controls, caption) {
-    const image = coverImage(target, 72);
-    const artwork = el("div.listen-later-artwork", {},
-      App.icon({artist: "mic", album: "disc", song: "music"}[target.kind], 30), image);
-    return el("article.listen-later-card", {}, artwork,
-      el("div.listen-later-details", {}, openLink(target),
-        target.artist ? el("span.muted", {text: target.artist}) : null,
-        el("span.muted", {text: t("kinds." + target.kind) + " · " + t("sources." + target.source)}),
-        caption || null,
-        el("div.listen-later-actions", {},
-          target.kind === "song" && App.can("stream") ? App.setIcon(el("button.listen-later-play", {
-            type: "button", onclick: event => playSongs([target], event.currentTarget)}),
-            "play", 16, false, t("play_song")) : null,
-          searchLink(target), controls)));
-  }
-
   async function playCollection(target, node) {
     if (node.disabled || !App.can("stream")) return;
     const owner = App.user.id;
@@ -320,10 +304,17 @@ const ListenLaterUI = (() => {
     }
   }
 
-  function advisers(names) {
+  function advisers(names, text = App.t("listen_later.recommended_by", {names: names.join(", ")})) {
     return el("div.recommendation-advisers.recommendation-senders", {},
       el("span.recommendation-avatars", {}, names.map(name => App.avatar(name, 24))),
-      el("span.muted", {text: App.t("listen_later.recommended_by", {names: names.join(", ")})}));
+      el("span.muted", {text}));
+  }
+
+  /** Une recommandation envoyée ou archivée : l'autre personne de l'échange et le sens du conseil. */
+  function participant(recommendation) {
+    const sent = recommendation.senderId === App.user.id;
+    const name = sent ? recommendation.recipient : recommendation.sender;
+    return {name, text: t(sent ? "sent_to" : "recommended_by", {name, names: name})};
   }
 
   /** Carte « pochette » d'un artiste, d'un album ou d'un morceau gardé : la lecture part de la pochette. */
@@ -346,7 +337,7 @@ const ListenLaterUI = (() => {
         options.isNew ? el("span.listen-later-new", {title: t("new_badge"), "aria-label": t("new_badge")}) : null, play),
       el("div.listen-later-details", {}, openLink(target),
         target.artist ? el("span.muted", {text: target.artist}) : null,
-        options.names && options.names.length ? advisers(options.names) : null,
+        options.names && options.names.length ? advisers(options.names, options.label) : null,
         el("div.listen-later-actions", {}, thread ? thread.bubble : null, options.controls || [],
           target.source === "discogs" ? searchLink(target) : null),
         thread));
@@ -423,7 +414,7 @@ const ListenLaterUI = (() => {
   }
 
   function discussionList(scope, route, show) {
-    const owner = App.user.id, list = el("div.listen-later-list"), error = el("p.page-error", {role: "alert"});
+    const owner = App.user.id, list = el("div.listen-later-list.listen-later-grid"), error = el("p.page-error", {role: "alert"});
     const more = el("button.recommendation-discussions-more", {type: "button", text: t("more_recommendations"), hidden: true});
     const empty = el("p.muted", {hidden: true});
     const root = el("div.recommendation-discussions", {}, list, empty, error, more);
@@ -434,8 +425,9 @@ const ListenLaterUI = (() => {
       empty.hidden = cards.some(({node}) => !node.hidden);
     };
     const add = (recommendation, first) => {
-      const node = card(recommendation.target, [], el("div", {}, el("p.muted", {text: t("discussion_participants", {
-        sender: recommendation.sender, recipient: recommendation.recipient})}), RecommendationComments.group([recommendation])));
+      const who = participant(recommendation);
+      const node = tile(recommendation.target, {names: [who.name], label: who.text,
+        thread: RecommendationComments.group([recommendation])});
       cards.push({node, target: recommendation.target});
       if (first) list.prepend(node); else list.appendChild(node);
     };

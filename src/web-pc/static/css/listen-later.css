@@ -36,8 +36,6 @@
 
 /* Pochette invisible jusqu'à son chargement ; l'icône de remplacement reste dessous. */
 .listen-later-cover:not(.loaded) { visibility: hidden; }
-.recommendation-comments-open { background: none; border: 0; padding: 0; font-size: .8rem; color: var(--text-soft); cursor: pointer; text-align: left; }
-.recommendation-comments-open:hover { color: var(--text); text-decoration: underline; }
 
 /* Grille de pochettes pour les artistes, albums et morceaux gardés. */
 .listen-later-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; align-items: stretch; }
@@ -61,7 +59,7 @@
 .recommendation-bubble:hover { background: var(--bg-hover); color: var(--text); }
 .recommendation-bubble.unread { color: var(--accent); }
 .recommendation-bubble small { font-size: .75rem; }
-@media (max-width: 480px) { .listen-later-tile.expanded { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .listen-later-tile.expanded { grid-template-columns: 88px minmax(0, 1fr); } .listen-later-tile.expanded .listen-later-kind, .listen-later-tile.expanded .listen-later-play { display: none; } }
 
 /* Liste de morceaux : petite pochette, ligne dépliable. */
 .recommendation-songs-table .song-title-cell { display: flex; align-items: center; gap: .75rem; min-width: 0; }
@@ -74,12 +72,10 @@
 .recommendation-songs-table .recommendation-advisers { font-size: .8rem; }
 .recommendation-songs-table .recommendation-avatars .avatar { border-color: var(--bg); }
 .recommendation-song-extra td { padding: 0 .5rem .5rem 4.25rem; border-top: 0; }
-.recommendation-song-extra:not(:has(.recommendation-comment-summary:not(.no-comments), .recommendation-comment-summary.open)) { display: none; }
+.recommendation-song-extra:not(:has(.recommendation-comment-summary.open)) { display: none; }
 
 /* Fil déplié en place sous l'aperçu. */
 .recommendation-comment-group { display: grid; gap: .25rem; min-width: 0; }
-.recommendation-comment-summary.no-comments:not(.open) .recommendation-comments-open { display: none; }
-.recommendation-comment-summary.no-comments:not(.open) { margin: 0; }
 .recommendation-thread { width: 100%; min-width: 0; }
 .recommendation-thread[hidden], .recommendation-comment-others[hidden] { display: none; }
 .recommendation-comment-others { display: grid; gap: .25rem; }
@@ -91,20 +87,24 @@
 /* Private threads use the existing dialog, typography and theme palette. */
 .recommendation-comment-field { display: grid !important; gap: .4rem; min-width: 0; }
 .recommendation-comment-input { display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; }
-.recommendation-comment-summary { display: grid; gap: .3rem; margin: .5rem 0; justify-items: start; min-width: 0; }
-.recommendation-comment-preview { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.recommendation-comments-open { white-space: normal; text-align: left; }
-.recommendation-comments-open.unread, .recommendation-unread-comments { color: var(--accent); font-weight: 600; }
+.recommendation-comment-summary { display: grid; min-width: 0; }
+.recommendation-unread-comments { color: var(--accent); font-weight: 600; }
 .recommendation-discussion { display: grid; gap: .75rem; min-width: 0; }
 .recommendation-discussion > p { margin: 0; overflow-wrap: anywhere; }
 .recommendation-comment-list { display: grid; align-content: start; gap: .75rem; padding: 0 .25rem; margin: 0; list-style: none; max-height: 45vh; overflow-y: auto; }
-.recommendation-comment { min-width: 0; border-left: 3px solid var(--line); padding: .5rem .75rem; background: var(--bg-raised); border-radius: .3rem; }
-.recommendation-comment.own { border-left-color: var(--accent); }
-.recommendation-comment-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: .75rem; }
-.recommendation-comment p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .4rem 0 0; }
-.recommendation-comment-form { display: grid; gap: .5rem; }
-.recommendation-comment-form > button, .recommendation-comments-older { justify-self: start; }
+.recommendation-comment { min-width: 0; padding: .4rem .8rem; background: var(--bg-hover); border-radius: 1rem; font-size: .9rem; }
+.recommendation-comment.own { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.recommendation-comment-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem; font-size: .8rem; }
+.recommendation-comment p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .1rem 0 0; }
+.recommendation-comment-form { display: flex; align-items: flex-end; gap: .5rem; }
+.recommendation-comment-form > button { flex: none; }
+.recommendation-comments-older { justify-self: start; }
+.recommendation-comment-field.compact { flex: 1; min-width: 0; }
+.recommendation-comment-field.compact .recommendation-comment-input { border-radius: 1.2rem; padding: .5rem .9rem; resize: none; max-height: 140px; }
+.recommendation-thread .recommendation-comments-retry, .recommendation-thread .recommendation-comment-list { margin-top: 0; }
+.recommendation-thread .recommendation-comments-retry { display: none; }
+.recommendation-thread-name { margin: .5rem 0 .25rem; font-weight: 600; font-size: .85rem; }
+.recommendation-thread .recommendation-discussion { gap: .5rem; padding-top: .5rem; }
 .recommendation-discussions { display: grid; gap: .75rem; }
 .listen-later-archived { margin-top: 1.5rem; }
 .listen-later-archived > summary { cursor: pointer; margin-bottom: .75rem; font-weight: 600; }
-.recommendation-songs-table .recommendation-comment-summary { max-width: 22rem; }
