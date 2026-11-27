@@ -18,7 +18,7 @@ class FakeDiscogs:
         self.editions = copy.deepcopy(EDITIONS)
         self.page_size = 2
 
-    def get(self, url, headers):
+    def get_json(self, url, headers=None):
         self.calls.append((url, headers))
         if self.fail:
             raise self.fail
@@ -69,7 +69,7 @@ class FakeLastFm:
         self.calls = []
         self.fail = None
 
-    def get(self, url, headers):
+    def get_json(self, url, headers=None):
         self.calls.append((url, headers))
         if self.fail:
             raise self.fail

@@ -18,7 +18,10 @@ from .controllers.queue import QueueController
 from .controllers.settings import SettingsController
 from ..shared.providers.cache import MemoryStore
 from ..shared.providers.musicbrainz import MusicBrainz
-from .external import ExternalInfo, FactsBuilder, JsonFetcher, LyricsFinder, Wikipedia
+from ..shared.providers.http import HttpClient
+from ..shared.providers.lyrics import LyricsFinder
+from ..shared.providers.wikipedia import Wikipedia
+from .external import ExternalInfo, FactsBuilder
 from .extmusic.service import ExtMusicService
 from .extmusic.sources import JamendoSource, YouTubeSource
 from .extmusic.ytmusic import YouTubeMusicSearch
@@ -101,10 +104,10 @@ class Application:
         self.covers = CoverService(self.client, self.covers_cache, self.keys)
         self.library = LibraryCache(self.cache)
         self.watcher = LibraryWatcher(self.api, self.library, NewestAlbums(self.paths.newest_file))
-        fetcher = JsonFetcher()
-        musicbrainz = MusicBrainz(MemoryStore())    # le Pi garde ses résultats dans son propre cache
-        lyrics = LyricsFinder(fetcher, self._subsonic_lyrics)
-        facts = FactsBuilder(musicbrainz, Wikipedia(fetcher), self._artist_biography)
+        http = HttpClient()
+        musicbrainz = MusicBrainz(MemoryStore(), http)    # le Pi garde ses résultats dans son propre cache
+        lyrics = LyricsFinder(http, self._subsonic_lyrics)
+        facts = FactsBuilder(musicbrainz, Wikipedia(http), self._artist_biography)
         self.external = ExternalInfo(self.cache, self.keys, lyrics, facts, musicbrainz)
 
     def _subsonic_lyrics(self, artist, title):

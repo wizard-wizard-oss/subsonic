@@ -8,11 +8,11 @@ import tempfile
 
 from pimedia.storage.database import Database
 from pimedia.webapp.config import WebConfig
-from pimedia.webapp.discogs import Discogs
+from pimedia.webapp.providers.discogs import Discogs
 from pimedia.webapp.discogs_catalogs import DiscogsCatalogs
 from pimedia.webapp.label_discovery import LabelDiscovery
-from pimedia.webapp.lastfm import LastFm
-from pimedia.webapp.music_metadata import MusicSourceError
+from pimedia.webapp.providers.lastfm import LastFm
+from pimedia.shared.providers.metadata import ProviderUnavailable as MusicSourceError
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 

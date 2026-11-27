@@ -2,13 +2,13 @@
 import re
 import urllib.parse
 
-from ..shared.external import query_url
-from ..shared.text import normalize
+from ...shared.external import query_url
+from ...shared.providers.metadata import ProviderUnavailable, PublicMetadata
+from ...shared.text import normalize
 from .discogs_entities import (DiscogsArtist, DiscogsCredit, DiscogsEdition, DiscogsIdentity, DiscogsLabel, DiscogsMatches, DiscogsPage,
                               DiscogsRelease, DiscogsTrack, DiscogsVideo)
-from .external_links import parse_link
-from .extmusic import ExtMusicError
-from .music_metadata import MusicSourceError, PublicMetadata
+from ..external_links import parse_link
+from ..extmusic import ExtMusicError
 
 PAGE_SIZE = 100
 MAX_PAGES = 1000
@@ -49,12 +49,22 @@ class Discogs(PublicMetadata):
     interval = 1.1
     base = "https://api.discogs.com/"
 
+    def __init__(self, store, api_key, http=None, **options):
+        super().__init__(store, http, **options)
+        self.api_key = api_key
+
+    @property
+    def enabled(self):
+        return bool(self.api_key)
+
     def _get(self, path, params, project, cached=False, cache_version=1, refresh=False):
         url = query_url(path, sorted(params.items()))
         key = url if cache_version == 1 else url + "|v" + str(cache_version)
         if cached:
             return self.cached(key)
-        return self.read(key, self.base + url, {"Authorization": "Discogs token=" + self.api_key}, project, refresh)
+        headers = {"Authorization": "Discogs token=" + self.api_key}
+        return self.fetch(key, self.base + url, read=lambda address: project(self.http.get_json(address, headers)),
+                          refresh=refresh).data
 
     @staticmethod
     def _kind(kind):
@@ -166,7 +176,7 @@ class Discogs(PublicMetadata):
         if data is None:
             return None
         if refresh:
-            self.repository.discard(self.prefix + path + "?", self.prefix + query_url(path, sorted(params.items())))
+            self.store.discard(self.prefix + path + "?", self.prefix + query_url(path, sorted(params.items())))
         return DiscogsPage(tuple(self._edition_entity(e) for e in data["editions"]), page, data["pages"], data["total"])
 
     @staticmethod
@@ -201,7 +211,7 @@ class Discogs(PublicMetadata):
         if data is None:
             return None
         if data["id"] != identity:
-            raise MusicSourceError("discovery.unavailable")
+            raise ProviderUnavailable("discovery.unavailable")
         return DiscogsRelease(data["id"], data["title"], data["artist"],
                               tuple(DiscogsIdentity(**i) for i in data["labels"]), data["rating"], data["votes"],
                               tuple(self._track(t) for t in data["tracks"]), tuple(DiscogsCredit(**c) for c in data["credits"]),

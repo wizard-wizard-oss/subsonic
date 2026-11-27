@@ -91,17 +91,26 @@ class PublicMetadata:
             cached = self._fresh(key, ttl, refresh)
             if isinstance(cached, Fetched):
                 return cached
-            if self.clock() < self._retry_at.get(key, 0):
-                return self._fallback(cached, self.unavailable_code)
+            until, code = self._retry_at.get(key, (0, self.unavailable_code))
+            if self.clock() < until:
+                return self._fallback(None if refresh else cached, code)
             try:
                 data = self._attempts(url, read or (lambda address: self.http.get_json(address, headers)))
             except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
-                return self._failed(key, cached, error)
+                # Un rafraîchissement demandé ne se contente pas de l'ancienne copie : l'échec est signalé.
+                return self._failed(key, None if refresh else cached, error)
             self._retry_at.pop(key, None)
             now = int(self.clock())
             self.store.save(CachedMetadata(key, data, now))
             self.store.expire(self.prefix, now - self.stale_ttl)
             return Fetched(data)
+
+    def cached(self, key, ttl=None):
+        """Données encore fraîches en cache, sans aucun appel au service (None sinon)."""
+        entry = self.store.get(self.prefix + key)
+        if entry and self.clock() - entry.fetched_at < (self.ttl if ttl is None else ttl):
+            return entry.data
+        return None
 
     def _fresh(self, key, ttl, refresh):
         cached = self.store.get(key)
@@ -149,9 +158,9 @@ class PublicMetadata:
             # L'entité n'existe plus : ni reprise ni copie périmée.
             raise ProviderUnavailable(code) from None
         delay = self._retry_delay(error) if not isinstance(error, ProviderUnavailable) else None
-        self._retry_at = {k: date for k, date in self._retry_at.items() if date > self.clock()}
+        self._retry_at = {k: entry for k, entry in self._retry_at.items() if entry[0] > self.clock()}
         if delay is not None:
-            self._retry_at[key] = self.clock() + max(MIN_BACKOFF, delay)
+            self._retry_at[key] = (self.clock() + max(MIN_BACKOFF, delay), code)
         return self._fallback(cached, code)
 
     def _fallback(self, cached, code):

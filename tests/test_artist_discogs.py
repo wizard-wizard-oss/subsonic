@@ -29,7 +29,7 @@ class ArtistDiscogsTest(WebAppTestCase):
     def test_choice_survives_cache_expiry_and_another_database_connection(self):
         link = self.choose().json()
         self.assertEqual(link["artistId"], "fdir-ar1")
-        self.app.discogs.repository.expire("discogs:", 10**12)
+        self.app.discogs.store.expire("discogs:", 10**12)
         self.source.fail = OSError("offline")
         self.assertEqual(self.bob.get("/api/discogs/artist-link?id=ar1").json()["link"], link)
         db = Database(self.app.db.path, MIGRATIONS)
@@ -134,7 +134,7 @@ class ArtistDiscogsTest(WebAppTestCase):
         image = self.bob.get("/api/artist/image?id=ar1").json()
         self.assertEqual(image["source"], "discogs")
         self.assertEqual(image["imageUrl"], "https://i.discogs.com/artist-test.jpg")
-        cached = self.app.discogs.repository.get("discogs:artists/7?|v2").data
+        cached = self.app.discogs.store.get("discogs:artists/7?|v2").data
         self.assertNotIn("profile", cached)
         self.assertNotIn("contact_info", cached)
 

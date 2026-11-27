@@ -9,7 +9,10 @@ import urllib.parse
 from unittest.mock import patch
 
 from pimedia.shared.text import normalize
-from pimedia.webapp.avatars import Gravatar, GravatarUnreachable, gravatar_url, image_type
+from pimedia.shared.providers.http import HttpClient
+from pimedia.webapp.avatars import image_type
+from pimedia.webapp.providers.gravatar import Gravatar, GravatarUnreachable, gravatar_url
+from tests.test_providers_http import FakeResponse
 from pimedia.webapp.mixes import MixError, MixOptions, spread_artists
 from pimedia.webapp.subsonic import SubsonicError, SubsonicUnreachable
 from tests.fake_subsonic import PNG
@@ -61,8 +64,8 @@ class GravatarTest(unittest.TestCase):
             self.url = request.full_url
             if isinstance(outcome, Exception):
                 raise outcome
-            return io.BytesIO(outcome)
-        return urlopen
+            return FakeResponse(outcome, "image/png")
+        return HttpClient(opener=urlopen)
 
     def test_photo_missing_or_unreachable(self):
         self.assertEqual(Gravatar(self.opener(PNG)).fetch("a@b.fr"), PNG)
@@ -271,7 +274,7 @@ class SimilarArtistsHttpTest(WebAppTestCase):
 class LyricsHttpTest(WebAppTestCase):
     def setUp(self):
         super().setUp()
-        self.sites = self.app.lyrics.finder.fetcher
+        self.sites = self.app.lyrics.finder.http
 
     def test_synced_then_plain_then_nothing_without_subsonic(self):
         bob = self.client("bob", "pw2")

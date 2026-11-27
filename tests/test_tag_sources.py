@@ -4,7 +4,7 @@ import unittest
 import urllib.parse
 from types import SimpleNamespace
 
-from pimedia.webapp.discogs import Discogs
+from pimedia.webapp.providers.discogs import Discogs
 from pimedia.shared.providers.metadata import Pacer
 from pimedia.shared.providers.musicbrainz import MusicBrainz
 from pimedia.webapp.tag_sources import TagSources

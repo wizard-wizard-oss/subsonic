@@ -3,24 +3,13 @@ collée à la main) est téléchargée, vérifiée et écrite en cover.jpg (ou c
 Subsonic V1. Une pochette « cover.* » déjà là est gardée à côté, en « .bak » ; Subsonic n'est pas invité à scanner.
 Le site téléchargeant une adresse donnée par une personne, il refuse tout ce qui n'est pas http(s) public (adresses
 privées, boucle locale, y compris par redirection), les fichiers trop gros et tout ce qui n'est pas un jpg ou un png."""
-import ipaddress
 import os
-import socket
-import urllib.error
-import urllib.parse
-import urllib.request
 
-from ..shared.external import USER_AGENT, query_url
-from ..shared.text import normalize
-from .library.catalog import text
-from .lastfm import LASTFM_BLANK
+from ..shared.providers.http import NotPublic, TooLarge
+from ..shared.providers.metadata import ProviderUnavailable
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
-MAX_CANDIDATES = 12
 MAX_TERM = 200
-CHUNK = 65536
-LASTFM = "https://ws.audioscrobbler.com/2.0/"
-SIZES = ("mega", "extralarge", "large", "medium")           # du plus grand au plus petit
 SIGNATURES = ((b"\xff\xd8\xff", "jpg"), (b"\x89PNG\r\n\x1a\n", "png"))
 COVER_NAMES = ("cover.jpg", "cover.jpeg", "cover.png")
 
@@ -34,106 +23,12 @@ def image_extension(data):
     return next((extension for signature, extension in SIGNATURES if data.startswith(signature)), None)
 
 
-def is_public_host(host, resolve=socket.getaddrinfo):
-    """Le nom ne désigne que des adresses publiques (ni privée, ni boucle locale, ni lien local, ni réservée)."""
-    try:
-        addresses = {ipaddress.ip_address(info[4][0]) for info in resolve(host, None)}
-    except (OSError, ValueError):
-        return False
-    return bool(addresses) and all(a.is_global and not a.is_multicast for a in addresses)
-
-
-class _PublicRedirects(urllib.request.HTTPRedirectHandler):
-    """Chaque redirection est vérifiée comme l'adresse de départ."""
-
-    def __init__(self, check):
-        self.check = check
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        self.check(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
-
-
-class ImageDownloader:
-    def __init__(self, resolve=socket.getaddrinfo, timeout=10):
-        self.resolve = resolve
-        self.timeout = timeout
-
-    def check(self, url):
-        parts = urllib.parse.urlsplit(url)
-        if parts.scheme not in ("http", "https") or not parts.hostname:
-            raise CoverError("cover.bad_url")
-        if not is_public_host(parts.hostname, self.resolve):
-            raise CoverError("cover.bad_url")
-
-    def fetch(self, url):
-        """Octets de l'image (jpg ou png de 10 Mo au plus)."""
-        self.check(url)
-        opener = urllib.request.build_opener(_PublicRedirects(self.check))
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "image/jpeg,image/png"})
-        try:
-            with opener.open(request, timeout=self.timeout) as response:
-                data = response.read(MAX_IMAGE_BYTES + 1)
-        except CoverError:
-            raise
-        except (urllib.error.URLError, OSError, ValueError):
-            raise CoverError("cover.download_failed")
-        if len(data) > MAX_IMAGE_BYTES:
-            raise CoverError("cover.too_big")
-        if not image_extension(data):
-            raise CoverError("cover.not_image")
-        return data
-
-
-class LastFmAlbums:
-    """Pochettes proposées par Last.fm : l'album exact d'abord (album.getInfo), puis les albums de ce nom (album.search),
-    ceux du même artiste en tête."""
-
-    def __init__(self, fetcher, api_key):
-        self.fetcher = fetcher
-        self.api_key = api_key
-
-    @property
-    def enabled(self):
-        return bool(self.api_key)
-
-    def search(self, artist, album):
-        exact = self._call({"method": "album.getinfo", "artist": artist, "album": album}).get("album") or {}
-        found = self._call({"method": "album.search", "album": album, "limit": 30}).get("results") or {}
-        matches = (found.get("albummatches") or {}).get("album") or []
-        matches = [matches] if isinstance(matches, dict) else matches
-        matches.sort(key=lambda m: normalize(text(m.get("artist"))) != normalize(artist))     # tri stable
-        candidates, seen = [], set()
-        for match in [exact] + matches:
-            candidate = self._candidate(match)
-            if candidate and candidate["url"] not in seen:
-                seen.add(candidate["url"])
-                candidates.append(candidate)
-        return candidates[:MAX_CANDIDATES]
-
-    def _call(self, params):
-        url = query_url(LASTFM, dict(params, api_key=self.api_key, format="json"))
-        reply = self.fetcher.try_get(url)
-        if reply is None:
-            raise CoverError("cover.search_failed")
-        return reply if isinstance(reply, dict) else {}
-
-    @staticmethod
-    def _candidate(match):
-        images = {i.get("size"): text(i.get("#text")) for i in match.get("image") or [] if isinstance(i, dict)}
-        urls = [images[size] for size in SIZES if images.get(size) and LASTFM_BLANK not in images[size]]
-        if not urls:
-            return None
-        return {"url": urls[0], "thumb": urls[min(1, len(urls) - 1)], "name": text(match.get("name")),
-                "artist": text(match.get("artist"))}
-
-
 class Covers:
-    def __init__(self, folders, music_dir, lastfm, downloader):
+    def __init__(self, folders, music_dir, lastfm, http):
         self.folders = folders
         self.music_dir = music_dir
         self.lastfm = lastfm
-        self.downloader = downloader
+        self.http = http
 
     def status(self):
         """Last.fm réglé ? La racine de la musique est-elle réglée ?"""
@@ -143,18 +38,37 @@ class Covers:
         artist, album = self._term(artist), self._term(album)
         if not self.lastfm.enabled:
             raise CoverError("cover.no_lastfm")
-        return self.lastfm.search(artist, album)
+        try:
+            return [candidate.to_api() for candidate in self.lastfm.album_images(artist, album)]
+        except ProviderUnavailable:
+            raise CoverError("cover.search_failed") from None
 
     def save(self, user, album_id, url):
         """Écrit l'image de url comme pochette de l'album : renvoie son nom de fichier. Rien n'est écrit si l'image est refusée."""
         folder = self._album_directory(user, album_id)
-        data = self.downloader.fetch(url)
+        data = self.download(url)
         name = "cover." + image_extension(data)
         try:
             self._write(folder, name, data)
         except OSError:
             raise CoverError("cover.write_failed")
         return {"file": name}
+
+    def download(self, url):
+        """Octets de l'image : adresse publique (redirections comprises), jpg ou png de 10 Mo au plus."""
+        try:
+            data = self.http.get_bytes(url, accept="image/jpeg,image/png", public_only=True)
+        except NotPublic:
+            raise CoverError("cover.bad_url") from None
+        except TooLarge:
+            raise CoverError("cover.too_big") from None
+        except (OSError, ValueError):
+            raise CoverError("cover.download_failed") from None
+        if len(data) > MAX_IMAGE_BYTES:
+            raise CoverError("cover.too_big")
+        if not image_extension(data):
+            raise CoverError("cover.not_image")
+        return data
 
     @staticmethod
     def _term(value):

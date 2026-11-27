@@ -6,9 +6,9 @@ import io
 import plistlib
 import re
 import urllib.parse
-import urllib.request
 
 from ..server.podcasts.directories import DirectoryError
+from ..shared.providers.http import HttpClient
 from .entities import ImportedTrack
 
 MAX_TRACKS = 1000
@@ -185,13 +185,11 @@ def deezer_playlist_id(link):
     return match.group(1)
 
 
-def follow_short_link(link, timeout=10):
+def follow_short_link(link, http=None):
     """Adresse finale d'un lien court Deezer (on ne suit que les liens courts de Deezer, rien d'autre)."""
-    request = urllib.request.Request(link, headers={"User-Agent": "Mozilla/5.0 (pimedia)"})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.geturl()
-    except OSError:
+        return (http or HttpClient()).final_url(link)
+    except (OSError, ValueError):
         raise ImportFailed("import.unreachable")
 
 

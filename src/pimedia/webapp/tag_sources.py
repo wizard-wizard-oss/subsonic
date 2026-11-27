@@ -3,7 +3,7 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Optional
 
-from .discogs import discogs_id, image_url
+from .providers.discogs import discogs_id, image_url
 from ..shared.providers.metadata import ProviderUnavailable
 from ..shared.providers.musicbrainz import mbid
 

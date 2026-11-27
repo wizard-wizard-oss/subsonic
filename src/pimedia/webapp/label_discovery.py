@@ -6,7 +6,7 @@ from dataclasses import replace
 from ..shared.text import normalize
 from .entities import ImportedTrack
 from .label_entities import LabelAlbumTracks, LabelRanking, LabelScore, LabelTrack
-from .music_metadata import MusicSourceError
+from ..shared.providers.metadata import ProviderUnavailable
 
 SELECTION_SIZE = 15
 RANK_BATCH = 5
@@ -82,7 +82,7 @@ class LabelDiscovery:
             return LabelScore(album, source, edition.rating if edition.votes else 0, edition.votes, edition=edition.id)
         popularity = self.lastfm.album(album.artist, album.title, cached=cached)
         if popularity is None:
-            raise MusicSourceError("discovery.rank_restart")
+            raise ProviderUnavailable("discovery.rank_restart")
         value = popularity.listeners if source == "lastfm_listeners" else popularity.plays
         return LabelScore(album, source, value, listeners=popularity.listeners, plays=popularity.plays)
 
@@ -116,7 +116,7 @@ class LabelDiscovery:
         for candidate in album.editions[:MAX_EDITION_CHECKS]:
             edition = self.discogs.release(candidate.id, cached=cached)
             if edition is None:
-                raise MusicSourceError("discovery.rank_restart")
+                raise ProviderUnavailable("discovery.rank_restart")
             if str(label) in {l.id for l in edition.labels}:
                 return edition
         return None

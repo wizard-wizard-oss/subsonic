@@ -162,7 +162,7 @@ class MusicBrainzCacheMigrationTest(unittest.TestCase):
             db = Database(path, MIGRATIONS)
             self.addCleanup(db.close)
             keys = sorted(row[0] for row in db.query("SELECT cache_key FROM music_metadata"))
-            self.assertEqual(keys, ["discogs:release/1", "label-lastfm:a"])
+            self.assertEqual(keys, ["discogs:release/1", "lastfm:a"])
 
 
 if __name__ == "__main__":

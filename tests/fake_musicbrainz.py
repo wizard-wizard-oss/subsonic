@@ -68,5 +68,3 @@ class FakeMusicBrainz:
             return {"release-groups": [{"id": WORK, "title": "Arrival", "artist-credit": ARTIST_CREDIT,
                                          "first-release-date": "1976"}], "release-group-count": 1}
         raise AssertionError("Requête MusicBrainz inattendue : " + url)
-
-    get = get_json   # pour les sources encore lues par JsonFetcher

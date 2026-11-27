@@ -7,7 +7,9 @@ from ..i18n import Texts
 from ..server.transport import Reply, Router, HttpApp, ThreadedServer, make_request_handler
 from ..server.podcasts.directories import JsonHttp
 from ..server.webfiles import WebFiles
-from ..shared.external import JsonFetcher, LyricsFinder, Wikipedia
+from ..shared.providers.http import HttpClient
+from ..shared.providers.lyrics import LyricsFinder
+from ..shared.providers.wikipedia import Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
 from .album_tags import AlbumTags
@@ -21,7 +23,7 @@ from .artist_discogs import ArtistDiscogsLinks
 from .artist_portraits import ArtistPortraits
 from .avatars import Avatars, InvalidAvatar
 from .chat import Chat, ChatError
-from .covers import CoverError, Covers, ImageDownloader, LastFmAlbums
+from .covers import MAX_IMAGE_BYTES, CoverError, Covers
 from .config import WebConfig, default_data_dir
 from .controllers.auth import AuthController
 from .controllers.base import Forbidden, Guard, MissingRight, Unauthorized
@@ -53,10 +55,10 @@ from .playlist_import import PlaylistImport
 from .facts import Facts
 from .exploration import Exploration
 from ..shared.providers.musicbrainz import MusicBrainz
-from .discogs import Discogs
+from .providers.discogs import Discogs
 from .discogs_catalogs import CatalogError, DiscogsCatalogs
 from .discogs_exploration import DiscogsExploration
-from .lastfm import LastFm
+from .providers.lastfm import LastFm
 from .label_discovery import LabelDiscovery
 from .youtube_versions import YouTubeVersions
 from ..shared.providers.metadata import ProviderUnavailable
@@ -188,7 +190,11 @@ class WebApplication:
         self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
         self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
-        self.musicbrainz = MusicBrainz(ExplorationRepository(self.db))
+        # Une seule instance par service externe, toutes sur le même cache de métadonnées et le même transport.
+        metadata, http = ExplorationRepository(self.db), HttpClient()
+        self.musicbrainz = MusicBrainz(metadata, http)
+        self.discogs = Discogs(metadata, self.config.discogs_api_key, http)
+        self.lastfm = LastFm(metadata, self.config.lastfm_api_key, http)
         self.exploration = Exploration(self.musicbrainz, self.folders, self.library)
         self.chat = Chat(self.messages, self.users, self.hub, self._album_info)
         self.mixes = Mixes(self.subsonic)
@@ -199,8 +205,7 @@ class WebApplication:
         self.library_scan = LibraryScan(self.subsonic, self.users)
         self.uploads = Uploads(self.subsonic, self.users, library_files, UploadRepository(self.db), self.library_scan)
         self.upload_attribution = UploadAttribution(self.uploads, self.subsonic)
-        self.covers = Covers(self.folders, self.config.music_dir, LastFmAlbums(JsonFetcher(), self.config.lastfm_api_key),
-                             ImageDownloader())
+        self.covers = Covers(self.folders, self.config.music_dir, self.lastfm, HttpClient(max_bytes=MAX_IMAGE_BYTES))
         self.incoming = IncomingSorter(library_files, self.config.incoming_wait_hours, self.uploads.scan_as_admin)
         videos = YouTubeVideoRepository(self.db, KEPT_SECONDS)
         self.extmusic = ExternalMusic(self.config, SearchMemory(ExtSearchRepository(self.db, KEPT_SECONDS),
@@ -210,8 +215,6 @@ class WebApplication:
                                    PlaylistExtRepository(self.db), self.ext_favorites)
         self.imports = PlaylistImport(self.subsonic, self.extmusic, self.playlists, self.ext_favorites,
                                       DeezerReader(JsonHttp()))
-        metadata = ExplorationRepository(self.db)
-        self.discogs = Discogs(metadata, self.config.discogs_api_key)
         self.tag_sources = TagSources(self.musicbrainz, self.discogs)
         self.audio_tags = AudioTags(self.config.music_dir, os.path.join(self.data_dir, "audio-tag-backups"))
         self.album_tags = AlbumTags(self.folders, self.subsonic, self.audio_tags, self.tag_sources,
@@ -224,13 +227,11 @@ class WebApplication:
         self.recommendations = Recommendations(RecommendationRepository(self.db), RecommendationCommentRepository(self.db),
                                              targets, self.users, self.hub)
         self.discogs_exploration = DiscogsExploration(self.discogs, self.folders)
-        self.lastfm = LastFm(metadata, self.config.lastfm_api_key)
         self.youtube_versions = YouTubeVersions(self.extmusic)
         self.label_discovery = LabelDiscovery(self.discogs_catalogs, self.discogs, self.lastfm, self.imports,
                                                youtube_versions=self.youtube_versions)
-        self.lyrics = Lyrics(LyricsFinder(JsonFetcher(), lambda artist, title: ""))    # sans Subsonic
-        fetcher = JsonFetcher()
-        self.facts = Facts(self.subsonic, self.musicbrainz, Wikipedia(fetcher))
+        self.lyrics = Lyrics(LyricsFinder(http, lambda artist, title: ""))    # sans Subsonic
+        self.facts = Facts(self.subsonic, self.musicbrainz, Wikipedia(http))
         self.artist_portraits = ArtistPortraits(self.artist_discogs, self.discogs, self.subsonic, self.facts.wikipedia)
         self.news = News(NewsRepository(self.db))
         self.releases = read_releases(os.path.join(code_dir, "i18n", "versions.yaml"))

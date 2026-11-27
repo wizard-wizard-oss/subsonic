@@ -102,5 +102,13 @@ class DependencyRulesTest(unittest.TestCase):
                     for line, value in runtime_strings(source.read()):
                         self.assertNotIn("musicbrainz.org/ws/", value, "%s:%d" % (os.path.relpath(path, PACKAGE), line))
 
+    def test_http_goes_through_the_provider_transport(self):
+        # Exceptions : le serveur Subsonic local et le flux audio en direct d'une radio, lus en continu.
+        allowed = {"shared/providers/http.py", "webapp/subsonic.py", "webapp/radios.py"}
+        for part in ("shared", "webapp"):
+            for path, modules in imports_of(part).items():
+                if path.replace(os.sep, "/") not in allowed:
+                    self.assertFalse(any(m in ("urllib.request", "requests", "http.client") for m in modules), path)
+
     def test_the_rule_is_really_checked(self):
         self.assertIn("pimedia.shared.external", imports_of("server")["server/external.py"])

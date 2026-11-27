@@ -15,7 +15,7 @@ Une règle de ce fichier ne se contourne pas : si elle bloque, le dire dans la r
 Chacune a été enfreinte au moins une fois. Avant de rendre un travail, relire cette liste et vérifier chaque point.
 
 ### Services externes
-1. **Une seule classe par service externe** (MusicBrainz, Last.fm, Discogs, Wikipédia, paroles, Gravatar…), dans `src/pimedia/shared/providers/`. Elle porte la connexion, la cadence, le cache, les reprises et **toutes** les requêtes vers ce service. Avant d'appeler un service, chercher sa classe et y ajouter la méthode manquante ; ne jamais créer un second client.
+1. **Une seule classe par service externe** (MusicBrainz, Last.fm, Discogs, Wikipédia, paroles, Gravatar…), bâtie sur le socle `src/pimedia/shared/providers/` (transport, cache, cadence) : dans `shared/providers/` si les deux éditions l'utilisent, dans `webapp/providers/` si seul le site l'utilise. Elle porte la connexion, la cadence, le cache, les reprises et **toutes** les requêtes vers ce service. Avant d'appeler un service, chercher sa classe et y ajouter la méthode manquante ; ne jamais créer un second client.
 2. **Aucune URL d'API externe hors de sa classe.** Un autre module n'écrit jamais `musicbrainz.org/ws/…`, `ws.audioscrobbler.com…`, etc., et ne lit pas le JSON brut d'un service : la classe renvoie des entités.
 3. **Un seul transport HTTP** (`shared/providers/http.py`) : pas de `urllib.request`, `requests` ou `urlopen` ailleurs dans le code du site et le code commun (exception : le client Subsonic).
 4. **Une même chose a une seule identité** envoyée au service et stockée en base (ex. un style = son nom exact dans le catalogue MusicBrainz). Pas de colonne qui accepte deux formats.

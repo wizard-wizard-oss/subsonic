@@ -3,7 +3,11 @@ import os
 import stat
 import unittest
 
-from pimedia.webapp.covers import CoverError, ImageDownloader, LastFmAlbums, image_extension, is_public_host
+from pimedia.shared.providers.cache import MemoryStore
+from pimedia.shared.providers.http import HttpClient, TooLarge, is_public_host
+from pimedia.webapp.providers.lastfm import LastFm
+from pimedia.shared.providers.metadata import Pacer
+from pimedia.webapp.covers import CoverError, Covers, image_extension
 from tests.webapp_support import WebAppTestCase
 
 JPEG = b"\xff\xd8\xff\xe0" + bytes(range(100))
@@ -26,25 +30,31 @@ class FakeLastFm:
             {"name": "Vide", "artist": "ABBA", "image": [
                 {"#text": "https://img/2a96cbd8b46e442fc41c2b86b821562f.png", "size": "extralarge"}]}]
 
-    def try_get(self, url, timeout=8):
+    def get_json(self, url, headers=None):
         self.urls.append(url)
         if self.down:
-            return None
+            raise OSError("Last.fm injoignable")
         if "method=album.getinfo" in url:
             return {"album": self.exact}
         return {"results": {"albummatches": {"album": self.found}}}
 
 
 class FakeDownloader:
+    """Transport des images : get_bytes, comme HttpClient."""
     def __init__(self):
         self.data = JPEG
         self.fetched = []
 
-    def fetch(self, url):
+    def get_bytes(self, url, headers=None, accept="*/*", public_only=False):
+        assert public_only, "une adresse donnée par une personne doit être publique"
         self.fetched.append(url)
         if self.data is None:
-            raise CoverError("cover.download_failed")
+            raise OSError("téléchargement impossible")
         return self.data
+
+
+def lastfm(http, key="k3y"):
+    return LastFm(MemoryStore(), key, http=http, sleep=lambda seconds: None, pacer=Pacer(0))
 
 
 class CoverHttpTest(WebAppTestCase):
@@ -55,9 +65,9 @@ class CoverHttpTest(WebAppTestCase):
         os.makedirs(os.path.join(self.album, "CD1"))
         self.app.covers.music_dir = self.music
         self.lastfm = FakeLastFm()
-        self.app.covers.lastfm = LastFmAlbums(self.lastfm, "k3y")
+        self.app.covers.lastfm = lastfm(self.lastfm)
         self.downloader = FakeDownloader()
-        self.app.covers.downloader = self.downloader
+        self.app.covers.http = self.downloader
         self.bob = self.client("bob", "pw2")
 
     def save(self, url="https://img/x.jpg", album="al1", client=None):
@@ -81,7 +91,7 @@ class CoverHttpTest(WebAppTestCase):
         self.lastfm.down = True
         response = self.bob.get("/api/cover/search?artist=ABBA&album=Arrival")
         self.assertEqual((response.status, response.json()["error"]), (400, "cover.search_failed"))
-        self.app.covers.lastfm = LastFmAlbums(self.lastfm, "")
+        self.app.covers.lastfm = lastfm(self.lastfm, "")
         response = self.bob.get("/api/cover/search?artist=ABBA&album=Arrival")
         self.assertEqual((response.status, response.json()["error"]), (400, "cover.no_lastfm"))
         self.assertEqual(self.bob.get("/api/cover/status").json(), {"search": False, "writable": True})
@@ -161,12 +171,19 @@ class ImageDownloaderTest(unittest.TestCase):
         self.assertFalse(is_public_host("x", lambda host, port: (_ for _ in ()).throw(OSError())))
 
     def test_refuses_other_schemes_and_private_hosts(self):
-        downloader = ImageDownloader(resolve=lambda host, port: [(2, 1, 6, "", ("127.0.0.1", 0))])
+        covers = Covers(None, None, None, HttpClient(resolve=lambda host, port: [(2, 1, 6, "", ("127.0.0.1", 0))]))
         for url in ("file:///etc/passwd", "ftp://example.com/a.jpg", "http://", "http://localhost/a.jpg", "javascript:alert(1)"):
             with self.assertRaises(CoverError, msg=url) as caught:
-                downloader.fetch(url)
+                covers.download(url)
             self.assertEqual(caught.exception.args[0], "cover.bad_url")
 
+    def test_too_big_image_is_refused(self):
+        class TooBig:
+            def get_bytes(self, url, headers=None, accept="*/*", public_only=False):
+                raise TooLarge("image trop grosse")
+        with self.assertRaises(CoverError) as caught:
+            Covers(None, None, None, TooBig()).download("https://img.test/a.jpg")
+        self.assertEqual(caught.exception.args[0], "cover.too_big")
 
 if __name__ == "__main__":
     unittest.main()

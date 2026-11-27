@@ -10,6 +10,14 @@ from ..external import USER_AGENT
 MAX_BYTES = 8 * 1024 * 1024
 
 
+class TooLarge(ValueError):
+    """Réponse plus grosse que la taille maximale du client."""
+
+
+class NotPublic(ValueError):
+    """Adresse (ou redirection) qui n'est pas en http(s) vers des adresses publiques."""
+
+
 def is_public_host(host, resolve=socket.getaddrinfo):
     """Le nom ne désigne que des adresses publiques (ni privée, ni boucle locale, ni lien local, ni réservée)."""
     try:
@@ -39,7 +47,7 @@ class HttpClient:
         with (opener or self.opener)(request, timeout=self.timeout) as response:
             body = response.read(self.max_bytes + 1)
             if len(body) > self.max_bytes:
-                raise ValueError("Response too large")
+                raise TooLarge("Response too large")
             return body, response.headers.get_content_type()
 
     def get_json(self, url, headers=None):
@@ -55,10 +63,16 @@ class HttpClient:
     def check_public(self, url):
         parts = urllib.parse.urlsplit(url)
         if parts.scheme not in ("http", "https") or not parts.hostname or not is_public_host(parts.hostname, self.resolve):
-            raise ValueError("Not a public http(s) address")
+            raise NotPublic("Not a public http(s) address")
 
     def public_redirects(self):
         return _PublicRedirects(self.check_public)
+
+    def final_url(self, url, headers=None):
+        """Adresse atteinte après les redirections (liens courts), sans lire la réponse."""
+        request = urllib.request.Request(url, headers=dict(headers or {}, **{"User-Agent": USER_AGENT}))
+        with self.opener(request, timeout=self.timeout) as response:
+            return response.geturl()
 
     def get_bytes(self, url, headers=None, accept="*/*", public_only=False):
         """Octets d'une adresse ; avec public_only, l'adresse et chaque redirection doivent être publiques."""

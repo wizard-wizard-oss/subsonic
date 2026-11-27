@@ -12,14 +12,16 @@ from types import SimpleNamespace
 
 from pimedia.storage.database import Database
 from pimedia.webapp.config import WebConfig
-from pimedia.webapp.discogs import Discogs, discogs_id
+from pimedia.webapp.providers.discogs import Discogs, discogs_id
 from pimedia.webapp.discogs_catalogs import CatalogError, DiscogsCatalogs, group_editions
-from pimedia.webapp.discogs_entities import DiscogsEdition, DiscogsTrack
+from pimedia.webapp.providers.discogs_entities import DiscogsEdition, DiscogsTrack
 from pimedia.webapp.discogs_exploration import DiscogsExploration
 from pimedia.shared.providers.cache import CachedMetadata
 from pimedia.webapp.label_discovery import LabelDiscovery, playable_tracks, varied_albums
-from pimedia.webapp.lastfm import LastFm
-from pimedia.webapp.music_metadata import CACHE_SECONDS, MusicSourceError
+from pimedia.webapp.providers.lastfm import LastFm
+from pimedia.shared.providers.metadata import Pacer, ProviderUnavailable as MusicSourceError
+
+CACHE_SECONDS = 86400
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from tests.fake_discogs import FakeDiscogs, FakeLastFm, edition
@@ -35,7 +37,7 @@ class LabelSourcesTest(unittest.TestCase):
         self.repository = ExplorationRepository(self.db)
         self.now = 100000
         self.http, self.fm_http = FakeDiscogs(), FakeLastFm()
-        options = dict(clock=lambda: self.now, sleep=lambda seconds: None)
+        options = dict(clock=lambda: self.now, sleep=lambda seconds: None, pacer=Pacer(0))
         self.discogs = Discogs(self.repository, "discogs-secret", self.http, **options)
         self.lastfm = LastFm(self.repository, "lastfm-secret", self.fm_http, **options)
         self.catalogs = DiscogsCatalogs(self.discogs)
@@ -104,7 +106,7 @@ class LabelSourcesTest(unittest.TestCase):
 
     def test_cached_reads_and_new_instances_do_not_fetch_again(self):
         self.discogs.release("101")
-        again = Discogs(self.repository, "another-secret", self.http, clock=lambda: self.now)
+        again = Discogs(self.repository, "another-secret", self.http, clock=lambda: self.now, pacer=Pacer(0))
         self.assertEqual(again.release("101").votes, 20)
         self.assertEqual(len(self.http.calls), 1)
 
@@ -150,13 +152,15 @@ class LabelSourcesTest(unittest.TestCase):
                 self.discogs.identity("label", "7")
         self.assertEqual(len(self.http.calls), 1)
 
-    def test_expired_data_is_not_used_when_source_is_down(self):
-        self.discogs.identity("label", "7")
+    def test_recent_copy_is_served_when_source_is_down_but_not_after_thirty_days(self):
+        first = self.discogs.identity("label", "7")
         self.now += CACHE_SECONDS + 1
         self.http.fail = OSError("secret")
+        self.assertEqual(self.discogs.identity("label", "7"), first)       # copie de secours pendant la panne
+        self.assertIsNone(self.discogs.cached("labels/7?"))                # jamais présentée comme fraîche
+        self.now += 31 * 86400
         with self.assertRaisesRegex(MusicSourceError, "discovery.unavailable"):
             self.discogs.identity("label", "7")
-        self.assertIsNone(self.discogs.cached("labels/7?"))
 
     def test_complete_catalog_requires_all_pages(self):
         self.catalogs.page("label", "7", 1)

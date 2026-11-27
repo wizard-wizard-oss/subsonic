@@ -1,7 +1,7 @@
 """Disques regroupés et catalogue musical : utilisables pour un artiste comme pour un label."""
 from dataclasses import dataclass
 
-from .discogs_entities import DiscogsIdentity
+from .providers.discogs_entities import DiscogsIdentity
 
 
 @dataclass(frozen=True)

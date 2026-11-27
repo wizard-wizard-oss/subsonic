@@ -568,4 +568,8 @@ MIGRATIONS = [
     """
     DELETE FROM music_metadata WHERE cache_key LIKE 'https://musicbrainz.org/%'
     """,
+    # 28 : une seule classe Last.fm ; son cache passe sous le préfixe « lastfm: ».
+    """
+    UPDATE music_metadata SET cache_key = 'lastfm:' || substr(cache_key, 14) WHERE cache_key LIKE 'label-lastfm:%'
+    """,
 ]

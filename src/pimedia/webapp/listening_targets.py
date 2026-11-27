@@ -1,5 +1,5 @@
 """Resolve musical references using the existing Subsonic and Discogs services."""
-from .discogs import discogs_id
+from .providers.discogs import discogs_id
 from .listen_later_entities import ListeningTarget
 
 TARGET_TYPES = (("artist", "subsonic"), ("artist", "discogs"),
