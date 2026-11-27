@@ -68,8 +68,8 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
   pendant une panne, jamais pour un rafraîchissement demandé ni pour une entité supprimée).
 - Une classe par service : `shared/providers/` pour ceux des deux éditions (MusicBrainz, Wikipédia, paroles, Deezer,
   Spotify), `webapp/providers/` pour ceux du site seul (Discogs, Last.fm, Gravatar).
-- YouTube garde ses transports pour l'instant (décision du 27/11) ; recherche de podcasts iTunes, PodcastIndex et Jamendo
-  passent encore par `JsonHttp` côté Pi.
+- YouTube garde ses transports pour l'instant (`JsonHttp`, YouTube Music ; décision du 27/11). iTunes, PodcastIndex et
+  Jamendo passent par le transport commun (`json_get` garde leurs erreurs `DirectoryError`).
 
 ## Couches dans chaque édition
 L'exploration des labels et collaborations est propre au site (`webapp/exploration*`) ; toutes ses requêtes passent par

@@ -15,6 +15,7 @@ from ..server.extmusic.service import ExtMusicService
 from ..server.extmusic.sources import JamendoSource, YouTubeSource
 from ..server.extmusic.ytmusic import YouTubeMusicSearch
 from ..server.podcasts.directories import DirectoryError, JsonHttp
+from ..shared.providers.http import HttpClient
 
 YOUTUBE_SEARCHES_PER_HOUR = 120          # par personne ; YouTube Music n'a pas de quota
 OFFICIAL_SEARCHES_PER_HOUR = 20          # pour tout le site, quand YouTube Music est en panne (100 unités chacune)
@@ -95,7 +96,8 @@ class ExternalMusic:
         http = http or JsonHttp()
         self.official_budget = SearchBudget(OFFICIAL_SEARCHES_PER_HOUR, clock)
         youtube = YouTubeSource(http, settings, YouTubeMusicSearch(), lambda: self.official_budget.spend(SITE))
-        self.service = ExtMusicService(settings, [JamendoSource(http, settings), youtube], None, videos)
+        jamendo = JamendoSource(HttpClient(timeout=12) if isinstance(http, JsonHttp) else http, settings)
+        self.service = ExtMusicService(settings, [jamendo, youtube], None, videos)
         self.service.cache = searches          # en base : une recherche refaite (par n'importe qui) est gratuite
         self.youtube = self.service.sources["youtube"]
         self.videos = videos

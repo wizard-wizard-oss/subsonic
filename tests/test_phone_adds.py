@@ -14,7 +14,7 @@ from pimedia.shared.providers.deezer import Deezer
 from pimedia.shared.providers.spotify import Spotify
 from pimedia.server.links import LinkError, LinkResolver
 from pimedia.server.phone_files import PhoneFiles, UploadError, title_from_filename
-from pimedia.server.podcasts.directories import DirectoryError
+from pimedia.server.podcasts.directories import DirectoryError, ItunesDirectory
 from pimedia.server.transport import parse_range
 from pimedia.tracks import clean_track
 from tests.support import AppTestCase
@@ -103,7 +103,8 @@ class LinkResolverTest(unittest.TestCase):
     def resolver(self, routes, library=LIBRARY, youtube=()):
         self.http = FakeHttp(routes)
         return LinkResolver(self.http, lambda text: [t for t in library if any(w in t.title.lower() for w in text.lower().split())],
-                            lambda text: list(youtube), deezer=Deezer(self.http), spotify=Spotify(self.http))
+                            lambda text: list(youtube), deezer=Deezer(self.http), itunes=ItunesDirectory(self.http),
+                            spotify=Spotify(self.http))
 
     def test_youtube_link_prefers_the_library(self):
         r = self.resolver({"youtube.com/oembed": {"title": "The Doors - L.A. Woman (Official Audio)", "author_name": "The Doors - Topic"}})

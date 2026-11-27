@@ -9,6 +9,7 @@ import urllib.parse
 from ..entities import Track
 from .extmusic.sources import song_parts
 from ..shared.providers.deezer import Deezer, DeezerNotFound
+from ..shared.providers.http import HttpClient
 from ..shared.providers.metadata import ProviderUnavailable
 from ..shared.providers.spotify import Spotify
 from .podcasts.directories import DirectoryError, ItunesDirectory
@@ -54,7 +55,7 @@ class LinkResolver:
     def __init__(self, http, search_library, search_youtube, deezer=None, itunes=None, spotify=None):
         self.http = http                         # JsonHttp : oEmbed YouTube (YouTube garde son transport)
         self.deezer = deezer or Deezer()
-        self.itunes = itunes or ItunesDirectory(http)
+        self.itunes = itunes or ItunesDirectory(HttpClient(timeout=12))
         self.spotify = spotify or Spotify()
         self.search_library = search_library     # texte -> [Track]
         self.search_youtube = search_youtube     # texte -> [Track] (vide si YouTube n'est pas activé)

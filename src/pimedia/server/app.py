@@ -162,7 +162,7 @@ class Application:
         router.add("POST", "/player/cmd", player.command)
 
     def _add_podcast_routes(self, router):
-        http = JsonHttp()
+        http = HttpClient(timeout=12)
         hub = DirectoryHub(ItunesDirectory(http), PodcastIndexDirectory(http, self.config))
         self.podcasts = PodcastService(self.config, hub, FeedReader(FeedFetcher()), PodcastLibrary(self.db))
         podcasts = PodcastController(self.config, self.podcasts, self.pages)
@@ -176,7 +176,7 @@ class Application:
     def _add_extmusic_routes(self, router):
         """Jamendo, YouTube et playlists locales."""
         http = JsonHttp()
-        sources = [JamendoSource(http, self.config), YouTubeSource(http, self.config, YouTubeMusicSearch())]
+        sources = [JamendoSource(HttpClient(timeout=12), self.config), YouTubeSource(http, self.config, YouTubeMusicSearch())]
         self.extmusic = ExtMusicService(self.config, sources, LocalPlaylists(self.db), UnplayableVideos(self.db))
         ext = ExtMusicController(self.extmusic)
         for name in ("status", "search", "playlists", "playlist", "favorites", "alternative"):
