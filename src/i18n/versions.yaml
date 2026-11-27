@@ -6,6 +6,12 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.22.1"
+  date: 2026-11-27
+  title: "Help : captures plus nettes"
+  changes:
+    - "Dans les guides de Help, les captures d'écran (salon, paroles…) ne s'étirent plus en très hauteur : elles tiennent dans un cadre régulier, et un clic ouvre la capture en entier."
+
 - version: "1.22"
   date: 2026-11-27
   title: "Help : bienvenue dans le sub"

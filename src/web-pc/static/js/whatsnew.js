@@ -94,8 +94,11 @@ Views.whatsnew = (() => {
       const body = el("div.help-lesson-body" + (capture ? ".has-illustration" : ""), {},
         el("ol.help-steps", {"aria-label": t("whatsnew.steps_label")}, (App.texts[key + ".steps"] || []).map(text => el("li", {text}))));
       if (capture) {
+        // Cadre de hauteur fixe recadré en haut (certaines captures sont au format téléphone) ; un clic ouvre l'image entière.
+        const src = "/static/help/" + capture + ".png";
         body.appendChild(el("figure.help-illustration", {},
-          el("img", {src: "/static/help/" + capture + ".png", alt: t(key + ".title"), loading: "lazy", decoding: "async"}),
+          el("a.help-illustration-frame", {href: src, target: "_blank", rel: "noopener", title: t("whatsnew.illustration_open")},
+            el("img", {src, alt: t(key + ".title"), loading: "lazy", decoding: "async"})),
           el("figcaption", {text: t("whatsnew.illustration_label")})));
       }
       return body;

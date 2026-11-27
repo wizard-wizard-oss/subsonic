@@ -173,6 +173,11 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
           assert.ok($$(".help-steps li").every(item => item.textContent.trim().length > 0));
           assert.ok(!/whatsnew\./.test($(".help-page").textContent), `Traduction manquante : ${theme}/${guide}`);
           assert.ok(!$(".help-page script"), "Le contenu des guides reste du texte");
+          for (const frame of $$(".help-illustration-frame")) {
+            assert.equal(frame.getAttribute("href"), frame.querySelector("img").getAttribute("src"), "Le clic ouvre la capture entière");
+            assert.equal(frame.target, "_blank");
+            assert.match(frame.rel, /noopener/);
+          }
           for (const image of $$(".help-illustration img")) {
             assert.ok(image.alt.trim(), "Chaque capture possède une alternative textuelle");
             assert.match(image.getAttribute("src"), /^\/static\/help\//);

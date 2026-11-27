@@ -937,6 +937,7 @@ webapp:
     versions: "Les dernières nouveautés"
     footer: "Une question, une idée ou un disque à conseiller ? Retrouvons-nous dans le salon."
     illustration_label: "Capture de l’application avec des données d’exemple"
+    illustration_open: "Voir la capture en entier"
     import_guide: "Voir le guide d’export"
     actions:
       chat: "Ouvrir le salon"
