@@ -1257,18 +1257,18 @@ function makeEventSource(jar) {
   // --- Help : thèmes, mises en avant et guides utilisateurs ---
   w.location.hash = "#/whatsnew";
   check("help : page et lien du menu conservés", await until(() => $(".help-page") &&
-        $("#main h1").textContent === "Help") &&
+        $("#main h1").textContent === "Bienvenue dans le sub") &&
         $('.topnav a[href="#/whatsnew"]').classList.contains("active"));
-  check("help : trois mises en avant et sept thèmes", $$("button.help-feature").length === 3 &&
+  check("help : quatre piliers et sept thèmes", $$(".help-pillar").length === 4 &&
         $$("button.help-theme").length === 7);
   check("help : paroles synchronisées en pas à pas", $("#help-guide-title").textContent.includes("paroles") &&
         $$(".help-steps li").length === 3);
-  $('.help-feature[data-feature="chat"]').click();
-  check("help : la mise en avant ouvre le guide du salon",
+  $('.help-pillar[data-pillar="share"] .help-pillar-go').click();
+  check("help : le pilier « échanger » ouvre le guide du salon",
         $('.help-theme[data-theme="social"]').getAttribute("aria-pressed") === "true" &&
         $("#help-guide-title").textContent.includes("salon"));
-  $('.help-feature[data-feature="press"]').click();
-  check("help : la presse mène à l’ajout d’un journal ou flux RSS",
+  $$(".help-space-item")[0].click();
+  check("help : « C’est votre espace » mène à l’ajout d’un journal ou flux RSS",
         $('.help-theme[data-theme="press"]').getAttribute("aria-pressed") === "true" &&
         /RSS/.test($(".help-lesson").textContent));
   $('.help-theme[data-theme="save"]').click();

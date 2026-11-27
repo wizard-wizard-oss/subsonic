@@ -920,11 +920,16 @@ webapp:
     import_see: "Voir dans Favoris"
     import_accounts: "Relier son compte YouTube ou SoundCloud (pour importer ses « J'aime » privés) : pas encore possible."
   whatsnew:
-    title: "Help"
-    eyebrow: "Faites comme chez vous"
-    intro: "Écouter, échanger, explorer. Retrouvez les bons gestes et découvrez tout ce que l’application vous propose."
-    featured_title: "À essayer en premier"
-    themes_title: "Les guides, par thème"
+    title: "Bienvenue dans le sub"
+    eyebrow: "Help"
+    intro: "La discothèque de la bande. On y écoute ce qu’il y a sur le serveur, mais pas que : on y découvre des trucs, on suit ce qui sort et on s’envoie des disques. Fais comme chez toi."
+    journey_button: "Le parcours en 2 minutes"
+    search_label: "Chercher dans l’aide"
+    search_placeholder: "Un mot, une fonction : RSS, playlist, paroles…"
+    search_empty: "Aucun guide ne correspond. Essaie un autre mot."
+    pillars_title: "Ce qu’on fait ici"
+    pillar_go: "Voir comment"
+    themes_title: "Tous les guides, par thème"
     themes_label: "Choisir un thème"
     guides_label: "Choisir un guide"
     steps_label: "Pas à pas"
@@ -932,6 +937,7 @@ webapp:
     versions: "Les dernières nouveautés"
     footer: "Une question, une idée ou un disque à conseiller ? Retrouvons-nous dans le salon."
     illustration_label: "Capture de l’application avec des données d’exemple"
+    illustration_open: "Voir la capture en entier"
     import_guide: "Voir le guide d’export"
     actions:
       chat: "Ouvrir le salon"
@@ -940,25 +946,85 @@ webapp:
       shortcuts: "Ouvrir l’aide des raccourcis"
       settings: "Ouvrir les réglages"
       search: "Ouvrir la recherche"
-    preview:
-      chat_question: "Une découverte à partager ce soir ?"
-      chat_answer: "Commencez par cet album."
-      lyrics_previous: "Le couplet commence…"
-      lyrics_current: "Les mots suivent la musique."
-      lyrics_next: "La chanson continue."
-      press_source: "Votre journal musical"
-      press_title: "Un nouveau disque à découvrir"
-      press_path: "Actualités → Dans la presse"
-    featured:
-      chat:
-        title: "On en parle ensemble ?"
-        text: "Ouvrez le salon, discutez en direct et faites circuler vos coups de cœur."
-      lyrics:
-        title: "Les paroles, en rythme"
-        text: "Quand elles sont synchronisées, la ligne chantée se surligne au fil du morceau."
+    pillars:
+      elsewhere:
+        song: "Voyage, voyage"
+        topic: "La musique d’ailleurs"
+        text: "Le sub n’a pas tout, et c’est pas grave. Cherche sur YouTube, Jamendo ou SoundCloud, colle un lien, importe tes playlists Deezer, Spotify ou Apple Music, et mélange le tout avec ce qu’il y a ici."
+        image_alt: "Pochette de l’album The Dark Side of the Moon de Pink Floyd, en noir et blanc"
       press:
-        title: "À lire, puis à écouter"
-        text: "Ajoutez vos journaux et leurs flux RSS, puis retrouvez leurs articles sous les artistes."
+        song: "Nouvelle Vague"
+        topic: "Rester au courant"
+        text: "Les nouveautés viennent à toi. Ajoute ton webzine préféré (un flux RSS suffit), suis un style et chaque semaine tu vois les albums qui sortent. La presse s’affiche aussi sous chaque artiste."
+        image_alt: "Pochette de l’album Unknown Pleasures de Joy Division, en noir et blanc"
+      discover:
+        song: "One More Time"
+        topic: "Découvrir"
+        text: "Pars d’un disque que tu aimes et vois où il t’emmène : radios, mix sur mesure, artistes proches, musiciens, labels. Juste de la curiosité, à toi de tirer le fil."
+        image_alt: "Pochette de l’album Discovery de Daft Punk, en noir et blanc"
+      share:
+        song: "Wish You Were Here"
+        topic: "Échanger entre potes"
+        text: "Un bon album, ça se partage. Dis-le dans le salon, laisse un mot sous l’album ou conseille-le en privé à celui qui va l’adorer. Et garde-en un de côté pour plus tard."
+        image_alt: "Pochette de l’album Abbey Road des Beatles, en noir et blanc"
+    journey:
+      song: "Start Me Up"
+      topic: "Le parcours en 2 minutes"
+      steps:
+        s1:
+          title: "Lance un album"
+          text: "Clique sur une pochette de l’accueil, puis sur Lire."
+        s2:
+          title: "Mets un cœur ou une note"
+          text: "Sur la fiche d’un album : le cœur le garde, les étoiles le notent."
+        s3:
+          title: "Dis un mot dans le salon"
+          text: "Un avis, une question, un « écoute ça » : tout le monde le voit."
+        s4:
+          title: "Garde un truc pour plus tard"
+          text: "Le marque-page met un disque de côté dans À écouter."
+    space:
+      song: "Come Together"
+      topic: "C’est votre espace"
+      text: "Le sub vit de ce que vous y mettez. Chaque geste ci-dessous profite à toute la bande, ou à toi, au choix."
+      items:
+        i1:
+          title: "Ajouter un journal"
+          text: "Un flux RSS de plus, et c’est toute la bande qui le lit."
+        i2:
+          title: "Suivre un style"
+          text: "Les sorties de la semaine arrivent chez toi."
+        i3:
+          title: "Conseiller un disque"
+          text: "À un pote, en privé, avec un petit mot."
+        i4:
+          title: "Lancer une playlist communautaire"
+          text: "Chacun y ajoute ses morceaux."
+        i5:
+          title: "Importer tes playlists"
+          text: "Deezer, Spotify ou Apple Music."
+        i6:
+          title: "Envoyer de la musique"
+          text: "Si ton compte en a le droit."
+    trouble:
+      song: "Help!"
+      topic: "Ça ne marche pas ?"
+      faq:
+        f1:
+          question: "YouTube refuse de lire une vidéo"
+          answer: "Certaines vidéos refusent le lecteur intégré. Essaie une autre version du titre, ou utilise Ouvrir sur YouTube."
+        f2:
+          question: "Je n’ai pas de paroles"
+          answer: "Certains morceaux n’en ont pas de disponibles. Quand seules des paroles simples existent, leur défilement est estimé au lieu d’être calé sur le morceau."
+        f3:
+          question: "Il me manque un bouton (télécharger, envoyer, modifier)"
+          answer: "Ces actions dépendent des droits de ton compte Subsonic. Demande à l’administrateur si tu en as besoin."
+        f4:
+          question: "J’ai oublié mon mot de passe"
+          answer: "Il se change dans Subsonic : demande à l’administrateur de le réinitialiser, puis reconnecte-toi ici avec le nouveau."
+        f5:
+          question: "Mon import ne trouve pas tous les titres"
+          answer: "Tu vérifies les correspondances avant de créer la playlist. Pour un titre absent de la bibliothèque, tu peux choisir une version YouTube."
     themes:
       listen:
         title: "Écouter sa musique"
