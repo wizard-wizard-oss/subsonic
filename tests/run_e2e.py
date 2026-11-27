@@ -19,6 +19,7 @@ JOURNEYS = [   # (parcours, serveur de test)
     ("e2e_mobile_page.js", PC_HARNESS),
     ("e2e_webapp_queue.js", PC_HARNESS),
     ("e2e_listen_later.js", PC_HARNESS),
+    ("e2e_notifications.js", PC_HARNESS),
     ("e2e_album_tags.js", PC_HARNESS),
 ]
 TIMEOUT = 300

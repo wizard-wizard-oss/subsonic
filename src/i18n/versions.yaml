@@ -6,6 +6,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.17"
+  date: 2026-11-27
+  title: "Messages privés de l’administration et envois d’albums"
+  changes:
+    - "Retrouvez les messages de l’administration dans Notifications, avec une pastille pour les messages non lus. Les administrateurs peuvent prévenir un membre depuis cette page."
+    - "Les envois sont réservés aux albums en ZIP organisés en Artiste/Album/titres. Les fichiers audio seuls sont refusés avec une explication."
+    - "L’auteur d’un envoi est relu après une correction de tags ; un dossier bloqué dans Incoming ne bloque plus les suivants."
+
 - version: "1.16"
   date: 2026-11-26
   title: "Help : les bons gestes, par thème"

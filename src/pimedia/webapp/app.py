@@ -11,6 +11,10 @@ from ..shared.external import JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
 from .album_tags import AlbumTags
+from .notification_entities import NotificationError
+from .notifications import Notifications
+from .storage.notifications import NotificationRepository
+from .controllers.notifications import NotificationController
 from .audio_tags import AudioTagError, AudioTags
 from .library.artists import ArtistIndexes
 from .artist_discogs import ArtistDiscogsLinks
@@ -119,6 +123,8 @@ IMPORT_CREATE_LIMIT = 1024 * 1024
 
 def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
+    if isinstance(error, NotificationError):
+        return Reply.error(400, str(error))
     if isinstance(error, TagError):
         return Reply.error(error.status, error.code)
     if isinstance(error, AudioTagError):
@@ -171,6 +177,7 @@ class WebApplication:
         # services
         self.subsonic = subsonic or SubsonicServer(self.config.subsonic_url)
         self.hub = EventHub()
+        self.notifications = Notifications(NotificationRepository(self.db), self.users, self.hub)
         self.accounts = Accounts(self.subsonic, self.users, self.sessions)
         self.preferences = Preferences(PreferenceRepository(self.db))
         self.ratings = Ratings(self.subsonic)
@@ -267,6 +274,12 @@ class WebApplication:
         news = NewsController(self.news)
         covers = CoverController(self.covers)
         tags = TagController(self.album_tags)
+        notifications = NotificationController(self.notifications)
+        router.add("GET", "/api/notifications", read(notifications.page))
+        router.add("GET", "/api/notifications/status", read(notifications.status))
+        router.add("GET", "/api/notifications/recipients", read(notifications.recipients, right="admin"))
+        router.add("POST", "/api/notifications/send", write(notifications.send, right="admin"))
+        router.add("POST", "/api/notifications/read", write(notifications.mark_read))
 
         router.add("GET", "/", self._page)
         router.add("GET", "/health", lambda r: Reply.json({"ok": True}))

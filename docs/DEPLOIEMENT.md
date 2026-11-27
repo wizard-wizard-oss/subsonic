@@ -1,5 +1,24 @@
 # Déployer le projet
 
+Publication 1.17 le 27/11/2026 : notifications administratives privées et refus des fichiers audio seuls.
+Livraison isolée issue du code de production 1.16, avec les correctifs de cache d’attribution et de rangement
+précédemment préparés en 1.16.1. Copie ciblée de `src/`, puis `docker compose up -d --build web` : configuration,
+volumes, documentation distante et autres fichiers préservés. Les 303 fichiers source préexistants avaient
+été comparés à l’instantané avant publication ; les 16 fichiers applicatifs modifiés ou ajoutés sont ceux testés.
+Migration 22 additive : table notifications indépendante. Répétition sur une copie de la base de production,
+contenu des 26 tables existantes conservé. Validation : 154 tests Python et parcours Notifications/PC/mobile ;
+Chrome à 1440/390/320 px clair/sombre. En production : 251 fichiers exécutés et 60 ressources HTTPS conformes,
+version 1.17, santé HTTP et Docker, intégrité SQLite et clés étrangères valides. Refus MP3 HTTP 400 sans
+écriture vérifié. Notification n° 1 envoyée à Mnu via l’API en service, en utilisant une session administrative
+temporaire supprimée après l’envoi ; clé de dédoublonnage liée à l’envoi 18. Aucun message envoyé à un autre membre.
+Le MP3 de cet envoi a été retiré sur demande ; copie de récupération hors catalogue dans
+`/data/removed-uploads/upload-18/`, SHA-256 `3509600ba2224c1095ff55750046911650c431b413787c1e588c72f25462043b`.
+Scan Subsonic terminé et disparition de la recherche vérifiée ; ancienne fiche encore lisible par son ID.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.17-20261127T002811Z/` ; image précédente :
+`pimedia-web:pre-1.17-20261127t002811z`. La migration ajoute une table sans modifier les tables existantes :
+l’ancien code peut conserver la base courante ; les notifications y restent stockées sans interface dans
+l’ancienne version. Toute restauration complète de SQLite doit préserver les écritures reçues depuis la sauvegarde.
+
 Publication 1.16 le 26/11/2026 : Help est organisé en sept thèmes et 39 guides pas à pas,
 avec mises en avant du salon, des paroles synchronisées et des journaux.
 Publication le 26/11/2026 depuis une livraison isolée de la production 1.15.2, par

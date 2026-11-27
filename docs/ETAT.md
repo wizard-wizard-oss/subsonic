@@ -1,5 +1,26 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Notifications privées et albums ZIP, 1.17 (27/11/2026, déployée et vérifiée)** : les administrateurs peuvent
+envoyer un message à un membre depuis Notifications. Messages persistants, lecture explicite, pagination,
+pastille privée et rattrapage SSE ; les réponses tardives sont écartées lors des changements de compte.
+Migration 22 : table notifications indépendante de l’attribution des envois. Fichiers audio seuls et ZIP
+sans artiste/album refusés avant toute publication. Le MP3 Baston 3000 de Mnu a été retiré sur demande ;
+son historique reste intact. Correctifs précédemment préparés en 1.16.1 inclus dans cette 1.17 :
+invalidation du cache d’attribution et poursuite du rangement après erreur. Aucun auteur de modification
+d’album n’est enregistré. Validation : 154 tests Python, parcours Notifications/PC/mobile et Chrome
+à 1440/390/320 px en clair/sombre. Migration répétée sur la sauvegarde de production : valeurs des
+26 tables existantes conservées, intégrité et clés étrangères valides. Détails :
+[Notifications](features/notifications.md), [Envois](features/envoi-fichiers.md).
+
+Publication vérifiée sur https://music2.foos.fr : version 1.17, conteneur sain, 251 fichiers exécutés et
+60 ressources HTTPS conformes à la livraison isolée de la production 1.16. Le refus HTTP d’un MP3 seul
+renvoie `upload.album_required` sans créer de fichier ni d’historique. SQLite intègre au schéma 22,
+clés étrangères valides. Notification privée n° 1 envoyée via l’API réelle à Mnu, non lue au contrôle ;
+l’historique de l’envoi 18 conserve Mnu. Scan Subsonic terminé, un titre en moins et MP3 absent de la recherche.
+`getSong` par son ancien identifiant conserve une ancienne fiche, sans fichier sur le disque.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.17-20261127T002811Z/` ; image précédente
+`pimedia-web:pre-1.17-20261127t002811z`. La source publiée n’inclut pas les autres travaux locaux de tags.
+
 **Diagnostic initial des envois (27/11/2026 ; correctifs intégrés à la 1.17)** : le cache des chemins
 utilisé pour afficher l’auteur d’un envoi est invalidé avec les autres caches avant/après un scan de tags.
 Les tests HTTP couvrent un style modifié par un autre compte et la réutilisation d’un identifiant ID3.

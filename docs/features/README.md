@@ -12,6 +12,7 @@ faux Subsonic, mpv et jsdom).
 ## Site web (édition PC)
 | Fiche | Résumé | Interface | Vérifié en vrai |
 |---|---|---|---|
+| [notifications](notifications.md) | messages privés de l’administration, pastille et lecture persistante | oui | oui (production, message à Mnu ; Chrome PC/mobile) |
 | [comptes-et-droits](comptes-et-droits.md) | connexion Subsonic, sessions, droits, réglages, page « Mon compte », photos (Gravatar) | oui | en partie (photos : Chromium) |
 | [barre-gauche](barre-gauche.md) | artistes + playlists, modes | oui | oui (liste d'artistes) |
 | [bibliotheque](bibliotheque.md) | accueil, artiste, album, albums, recherche, favoris | oui | en partie |

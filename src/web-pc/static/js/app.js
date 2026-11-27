@@ -29,6 +29,7 @@ class MusicApp {
     if (this.queueMemory) this.queueMemory.suspend();
     if (App.queuePanel) App.queuePanel.close();
     App.live.stop();
+    NotificationsUI.reset();
     document.getElementById("app").hidden = true;
     document.getElementById("login").hidden = false;
     document.getElementById("login-error").textContent = message || "";
@@ -61,6 +62,7 @@ class MusicApp {
       if (this.queueMemory) this.queueMemory.suspend();
     }
     App.user = me.user;
+    NotificationsUI.start();
     ListenLaterUI.reset();
     ListenLaterUI.start();
     App.preferences = me.preferences;
@@ -181,7 +183,7 @@ class MusicApp {
     if (view === "playlist") return id ? {view, id} : {view: "home"};
     if (view === "listen-later") return {view: "listenLater"};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
-        view === "account") return {view};
+        view === "account" || view === "notifications") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)
     if (view === "mix") return {view, id};                        // id : artiste de départ (facultatif)
     if (view === "news") return {view, id};                       // id : un seul flux (facultatif)

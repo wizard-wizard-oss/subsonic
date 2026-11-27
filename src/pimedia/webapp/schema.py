@@ -424,4 +424,20 @@ MIGRATIONS = [
     );
     CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id)
     """,
+    # 22: private administrative notifications and per-recipient read state.
+    """
+    CREATE TABLE notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 120),
+        body TEXT NOT NULL CHECK (length(trim(body)) BETWEEN 1 AND 2000),
+        client_token TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER,
+        UNIQUE (sender_id, recipient_id, client_token)
+    );
+    CREATE INDEX notifications_by_recipient ON notifications (recipient_id, id DESC);
+    CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
+    """,
 ]

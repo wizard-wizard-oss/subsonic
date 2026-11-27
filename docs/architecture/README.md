@@ -125,3 +125,9 @@ uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi r
 - Fonctionnalités, ce qui existe / n'existe pas : `docs/features/` (une fiche par fonctionnalité).
 - Où en est-on, décisions : `docs/ETAT.md`. Reprise par une autre IA : `docs/REPRISE.md`.
 - Déployer : `docs/DEPLOIEMENT.md`.
+
+- Notifications de service (1.17) : entités/limites dans `notification_entities.py`, SQL dans
+  `storage/notifications.py`, règles dans `notifications.py`, adaptation HTTP dans `controllers/notifications.py`.
+  Assemblage dans `app.py`, migration web 22, diffusion ciblée par EventHub/LiveEvents existants. Composant
+  `static/js/notifications.js` et styles propres, navigation mobile existante réutilisée. Aucune dépendance
+  externe ni couplage avec les auteurs d’envois ou l’édition Pi.

@@ -1175,9 +1175,9 @@ function makeEventSource(jar) {
         $("#main .muted").textContent.includes("« Incoming »"));
   w.eval(`Views.upload.add([new File([new Uint8Array(2000)], "Essai.flac"), new File(["x"], "virus.exe"), new File([new Uint8Array(10)], "Autre.mp3")])`);
   check("envoi : format refusé expliqué tout de suite", await until(() => $$(".upload-row.failed .upload-state").some(s => s.textContent === "Format non accepté")));
-  check("envoi : fichiers envoyés un par un", await until(() => $$(".upload-row.done").length === 2, 5000));
-  check("envoi : Subsonic invité à scanner", await until(() => $(".upload-summary").textContent.startsWith("2 fichiers envoyés. Subsonic scanne"), 5000));
-  check("envoi : fichier seul signalé hors nomenclature", $$(".upload-row.done .upload-state").every(s => s.textContent.includes("à ranger")));
+  check("envoi : titres seuls refusés avant l’envoi", await until(() => $$(".upload-row.failed").length === 3) &&
+    $$(".upload-row.failed .upload-state").filter(node => node.textContent.includes("fichiers audio seuls")).length === 2);
+  check("envoi : aucun titre seul envoyé ni scan lancé", $$(".upload-row.done").length === 0 && $(".upload-summary").textContent === "");
   // Album reçu en minuscules : rangé Artiste/Album avec son initiale majuscule (2 titres et une pochette).
   const albumZip = "UEsDBBQAAAAAAK+tcV3sfd8UGAAAABgAAAAWAAAAQUJCQS9hcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAEFCQkEvYXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAr61xXeka6EYDAAAAAwAAABYAAABBQkJBL2Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAr61xXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvYXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9hcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAK+tcV3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL2Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
   w.eval(`Views.upload.add([new File([Uint8Array.from(atob("${albumZip}"), c => c.charCodeAt(0))], "Album.zip")])`);
@@ -1191,6 +1191,7 @@ function makeEventSource(jar) {
       row.children[2].textContent === "Album.zip" && row.children[3].textContent === "3" &&
       row.children[4].textContent.includes("ABBA/Arrival")), 5000));
   check("historique : seuls les envois réussis apparaissent", $$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "Album.zip") && !$$(".upload-history tbody tr").some(row =>
     row.children[2].textContent === "Essai.flac") && !$$(".upload-history tbody tr").some(row =>
     row.children[2].textContent === "virus.exe"));
   w.location.hash = "#/news";
