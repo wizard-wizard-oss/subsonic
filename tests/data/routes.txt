@@ -51,6 +51,9 @@ GET /api/news/artist read right=None limit=None NewsController.about
 GET /api/news/feeds read right=None limit=None NewsController.feeds
 GET /api/news/releases read right=None limit=None WeeklyReleasesController.week
 GET /api/news/releases/genres read right=None limit=None WeeklyReleasesController.genres
+GET /api/news/releases/radar read right=None limit=None WeeklyReleasesController.radar
+GET /api/news/releases/search read right=None limit=None WeeklyReleasesController.search
+GET /api/news/releases/sources read right=None limit=None WeeklyReleasesController.sources
 GET /api/notifications read right=None limit=None NotificationController.page
 GET /api/notifications/recipients read right=admin limit=None NotificationController.recipients
 GET /api/notifications/status read right=None limit=None NotificationController.status
@@ -113,7 +116,11 @@ POST /api/mix/build write right=None limit=16384 MixController.build
 POST /api/news/feed/add write right=None limit=16384 NewsController.add
 POST /api/news/feed/remove write right=None limit=16384 NewsController.remove
 POST /api/news/feed/show write right=None limit=16384 NewsController.show
+POST /api/news/releases/discoveries write right=None limit=16384 WeeklyReleasesController.discoveries
 POST /api/news/releases/follow write right=None limit=16384 WeeklyReleasesController.follow
+POST /api/news/releases/refresh write right=None limit=16384 WeeklyReleasesController.refresh
+POST /api/news/releases/sources/add write right=None limit=16384 WeeklyReleasesController.add_source
+POST /api/news/releases/sources/hide write right=None limit=16384 WeeklyReleasesController.hide_source
 POST /api/notifications/read write right=None limit=16384 NotificationController.mark_read
 POST /api/notifications/send write right=admin limit=16384 NotificationController.send
 POST /api/play-queue/save write right=None limit=1048576 ListeningController.save_play_queue

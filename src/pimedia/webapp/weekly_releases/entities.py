@@ -69,3 +69,66 @@ class RadarCard:
     def to_api(self):
         return dict(self.release.to_api(), reasons=[reason.to_api() for reason in self.reasons],
                     score=round(self.score, 3), local=self.local)
+
+
+@dataclass(frozen=True)
+class RadarFilter:
+    """Pastille de la page : « all », « style:<nom> », « labels », « artists » ou « discoveries »."""
+    key: str
+    count: int
+    name: Optional[str] = None
+
+    def to_api(self):
+        return {"key": self.key, "count": self.count, "name": self.name}
+
+
+@dataclass(frozen=True)
+class RadarWeek:
+    monday: date
+    cards: tuple = ()
+    filters: tuple = ()
+    selected: str = "all"
+    next_offset: Optional[int] = None
+    updated_at: Optional[int] = None
+    refresh_after: Optional[int] = None
+    out_of_window: bool = False
+    empty: Optional[str] = None
+    default_style: str = ""
+
+    def to_api(self):
+        return {"monday": self.monday.isoformat(), "cards": [card.to_api() for card in self.cards],
+                "filters": [f.to_api() for f in self.filters], "filter": self.selected, "next": self.next_offset,
+                "updatedAt": self.updated_at, "refreshAfter": self.refresh_after, "outOfWindow": self.out_of_window,
+                "empty": self.empty, "defaultStyle": self.default_style}
+
+
+@dataclass(frozen=True)
+class RadarSettings:
+    """Sources visibles d'un compte et réglages du panneau « Mes sources »."""
+    sources: tuple
+    discoveries_enabled: bool
+    discoveries_available: bool
+    refresh_cooldown: int
+    refresh_after: Optional[int] = None
+
+    def to_api(self):
+        return {"sources": [s.to_api() for s in self.sources], "discoveriesEnabled": self.discoveries_enabled,
+                "discoveriesAvailable": self.discoveries_available, "refreshCooldown": self.refresh_cooldown,
+                "refreshAfter": self.refresh_after}
+
+
+@dataclass(frozen=True)
+class RadarRefresh:
+    refresh_after: int
+
+    def to_api(self):
+        return {"refreshAfter": self.refresh_after}
+
+
+@dataclass(frozen=True)
+class RadarSearch:
+    results: tuple
+    stale: bool = False
+
+    def to_api(self):
+        return {"results": [found.to_api() for found in self.results], "stale": self.stale}

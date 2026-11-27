@@ -67,7 +67,8 @@ class DataModelMigrationTest(unittest.TestCase):
         self.assertEqual(recipients, [BOB, BOB, ALICE])
 
     def test_one_subscription_per_style_identified_by_its_name(self):
-        rows = self.db.query("SELECT user_id, genre FROM release_subscriptions ORDER BY user_id, genre")
+        rows = self.db.query("SELECT user_id, identity FROM release_sources WHERE kind = 'style' "
+                             "ORDER BY user_id, identity")      # migration 29 : les styles suivis sont des sources
         self.assertEqual([tuple(row) for row in rows], [(ALICE, "noise rock"), (BOB, "shoegaze")])
 
     def test_notifications_are_copied_and_length_limits_left_to_the_code(self):

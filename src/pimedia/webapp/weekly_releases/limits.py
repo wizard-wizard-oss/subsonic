@@ -16,5 +16,12 @@ TREND_STYLES = 5                          # styles des tendances par compte
 SIMILAR_PER_ARTIST = 5                    # proches Last.fm gardés par artiste des tendances
 DISCOVERIES_PER_USER = 60                 # proches (découvertes) par compte
 
+RADAR_PAGE = 48                           # cartes par page de la semaine
+LOCAL_CACHE_SECONDS = 300                 # « Dans ta bibliothèque » gardé 5 min par compte et par sortie
+LOCAL_LOOKUPS_IN_PARALLEL = 4
+MAX_NAME = 300                            # longueur maximale d'un nom de source ou d'une recherche
+
 KINDS = ("style", "label", "artist", "similar")
+MANUAL_KINDS = ("style", "label", "artist")     # ce qu'on ajoute soi-même ; les proches viennent des découvertes
+SEARCH_KINDS = ("label", "artist")
 ORIGINS = ("manual", "trends", "discovery")

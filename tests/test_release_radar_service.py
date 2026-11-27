@@ -1,0 +1,211 @@
+"""Radar lu en base : semaine, filtres, raisons, tri, bibliothèque, sources, découvertes et actualisation."""
+import json
+import tempfile
+import unittest
+from datetime import date
+from pathlib import Path
+from types import SimpleNamespace
+
+from pimedia.shared.providers.musicbrainz.entities import MusicArtist, MusicLabel, ReleaseGenre, Result
+from pimedia.storage.database import Database
+from pimedia.webapp.controllers.weekly_releases import WeeklyReleasesController
+from pimedia.webapp.schema import MIGRATIONS
+from pimedia.webapp.storage.release_radar import RadarProfiles, RadarReleases, ReleaseSources
+from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
+from pimedia.webapp.weekly_releases.entities import RadarError, RadarRelease
+from pimedia.webapp.weekly_releases.limits import REFRESH_COOLDOWN
+from pimedia.webapp.weekly_releases.radar import RadarService
+from pimedia.webapp.weekly_releases.service import WeeklyReleases
+
+TODAY, MONDAY = date(2026, 11, 27), "2026-11-23"
+WEEK = (date(2026, 11, 23), date(2026, 11, 29))
+
+
+def mbid(number):
+    return "00000000-0000-4000-8000-%012d" % number
+
+
+WARP, MODERAT, APPARAT = mbid(700), mbid(800), mbid(801)
+
+
+class FakeMusicBrainz:
+    def __init__(self):
+        self.calls = []
+
+    def release_genres(self):
+        return (ReleaseGenre("techno"), ReleaseGenre("noise rock"))
+
+    def search_labels(self, name):
+        self.calls.append(("labels", name))
+        return Result((MusicLabel(WARP, "Warp", "GB"),))
+
+    def search_artists(self, name):
+        self.calls.append(("artists", name))
+        return Result((MusicArtist(MODERAT, "Moderat"),))
+
+
+class FakeSync:
+    def __init__(self):
+        self.new, self.refreshed = [], []
+
+    def sync_new_source(self, source):
+        self.new.append(source.identity)
+
+    def refresh_user(self, user):
+        self.refreshed.append(user.id)
+        return 1000 + REFRESH_COOLDOWN
+
+
+class RadarServiceTest(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        db = Database(Path(temp.name) / "web.db", MIGRATIONS)
+        self.addCleanup(db.close)
+        for name in ("alice", "bob"):
+            db.execute("INSERT INTO users(username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
+                       "VALUES (?, '', '', 0, 0)", (name,))
+        self.alice, self.bob = SimpleNamespace(id=1), SimpleNamespace(id=2)
+        self.musicbrainz, self.sync = FakeMusicBrainz(), FakeSync()
+        self.lastfm = SimpleNamespace(enabled=True)
+        self.sources, self.releases, self.profiles = ReleaseSources(db), RadarReleases(db), RadarProfiles(db)
+        self.local_calls = []
+        styles = WeeklyReleases(self.musicbrainz, ReleaseSubscriptions(db), today=lambda: TODAY)
+        self.radar = RadarService(self.musicbrainz, self.lastfm, self.sources, self.releases, self.profiles,
+                                  self.sync, styles, local=self.local, today=lambda: TODAY, clock=lambda: 1000)
+        self.controller = WeeklyReleasesController(styles, self.radar)
+        self.releases.save("label", WARP, [self.release(1, ("techno",)), self.release(2, ("folk",))], *WEEK)
+        self.releases.save("style", "techno", [self.release(1, ("techno",)), self.release(3, ("techno",))], *WEEK)
+        self.releases.save("similar", APPARAT, [self.release(4, ("techno",))], *WEEK)
+        self.releases.mark_synced("label", WARP, 900)
+
+    @staticmethod
+    def release(number, tags):
+        return RadarRelease(mbid(number), "Album %d" % number, "Artiste %d" % number, date(2026, 11, 27), "Album", tags)
+
+    def local(self, user, title, artist):
+        self.local_calls.append(title)
+        albums = [{"id": "al9", "coverId": "c9", "folderId": "f9"}] if title == "Album 3" else []
+        return {"albums": albums, "songs": []}
+
+    def follow_all(self, user_id=1):
+        self.sources.add(user_id, "label", WARP, "Warp", "manual")
+        self.sources.add(user_id, "style", "techno", "techno", "trends")
+        self.sources.add(user_id, "similar", APPARAT, "Apparat", "discovery", "Moderat")
+        self.profiles.save_tags(user_id, {"techno": 2}, 0)
+
+    def week(self, user, filter_key="all", monday=MONDAY):
+        params = {"monday": monday, "filter": filter_key}
+        request = SimpleNamespace(param=lambda name, default=None: params.get(name, default))
+        return json.loads(self.controller.radar(request, user).body)
+
+    def test_radar_reads_database_without_external_call(self):
+        self.follow_all()
+        page = self.week(self.alice)
+        self.assertEqual(self.musicbrainz.calls, [])
+        self.assertEqual({card["id"] for card in page["cards"]}, {mbid(1), mbid(2), mbid(3), mbid(4)})
+        self.assertEqual(page["updatedAt"], 900)
+
+    def test_radar_filters_and_counts(self):
+        self.follow_all()
+        page = self.week(self.alice)
+        self.assertEqual({f["key"]: f["count"] for f in page["filters"]},
+                         {"all": 4, "style:techno": 2, "labels": 2, "artists": 0, "discoveries": 1})
+        self.assertEqual({c["id"] for c in self.week(self.alice, "labels")["cards"]}, {mbid(1), mbid(2)})
+        self.assertEqual({c["id"] for c in self.week(self.alice, "discoveries")["cards"]}, {mbid(4)})
+        with self.assertRaises(ValueError):
+            self.week(self.alice, "style:folk")
+
+    def test_radar_card_reasons_order_and_local_match(self):
+        self.follow_all()
+        cards = self.week(self.alice)["cards"]
+        self.assertEqual(cards[-1]["id"], mbid(2))                       # folk : le moins proche des goûts
+        first = next(card for card in cards if card["id"] == mbid(1))
+        self.assertEqual({(r["kind"], r["name"]) for r in first["reasons"]}, {("label", "Warp"), ("style", "techno")})
+        local = next(card for card in cards if card["id"] == mbid(3))["local"]
+        self.assertEqual(local, {"id": "al9", "coverId": "c9", "folderId": "f9"})
+        self.week(self.alice)
+        self.assertEqual(len(self.local_calls), 4)                       # gardé quelques minutes
+
+    def test_discoveries_hidden_when_turned_off_or_without_lastfm(self):
+        self.follow_all()
+        self.controller.discoveries(None, self.alice, {"enabled": False})
+        page = self.week(self.alice)
+        self.assertNotIn("discoveries", {f["key"] for f in page["filters"]})
+        self.assertNotIn(mbid(4), {c["id"] for c in page["cards"]})
+        self.controller.discoveries(None, self.alice, {"enabled": True})
+        self.lastfm.enabled = False
+        self.assertNotIn("discoveries", {f["key"] for f in self.week(self.alice)["filters"]})
+
+    def test_out_of_window_week(self):
+        self.follow_all()
+        page = self.week(self.alice, monday="2027-03-01")
+        self.assertTrue(page["outOfWindow"])
+        self.assertEqual(page["cards"], [])
+        with self.assertRaises(ValueError):
+            self.week(self.alice, monday="2026-11-24")                   # pas un lundi
+
+    def test_account_without_sources(self):
+        page = self.week(self.bob)
+        self.assertEqual((page["empty"], page["cards"]), ("no-sources", []))
+        self.assertEqual(page["defaultStyle"], "noise rock")
+
+    def test_sources_are_isolated_between_accounts(self):
+        self.follow_all()
+        body = json.loads(self.controller.sources(None, self.bob).body)
+        self.assertEqual(body["sources"], [])
+        mine = json.loads(self.controller.sources(None, self.alice).body)
+        self.assertEqual({(s["kind"], s["origin"]) for s in mine["sources"]},
+                         {("label", "manual"), ("style", "trends"), ("similar", "discovery")})
+        self.assertTrue(mine["discoveriesAvailable"])
+        self.assertEqual(mine["refreshCooldown"], REFRESH_COOLDOWN)
+
+    def test_add_source_validates_and_syncs_at_once(self):
+        self.controller.add_source(None, self.alice, {"kind": "label", "identity": WARP, "name": "Warp"})
+        self.controller.add_source(None, self.alice, {"kind": "style", "identity": "techno", "name": "techno"})
+        self.assertEqual(self.sync.new, [WARP, "techno"])
+        for bad in ({"kind": "style", "identity": "inconnu", "name": "x"}, {"kind": "label", "identity": "x"},
+                    {"kind": "similar", "identity": APPARAT, "name": "Apparat"}, {"kind": "label", "identity": WARP}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.controller.add_source(None, self.alice, bad)
+
+    def test_hide_source(self):
+        self.follow_all()
+        warp = self.sources.get(1, "label", WARP)
+        self.controller.hide_source(None, self.bob, {"id": warp.id})      # pas la sienne : sans effet
+        self.assertFalse(self.sources.get(1, "label", WARP).hidden)
+        self.controller.hide_source(None, self.alice, {"id": warp.id})
+        self.assertNotIn(mbid(2), {c["id"] for c in self.week(self.alice)["cards"]})
+
+    def test_search(self):
+        def search(kind, query):
+            params = {"kind": kind, "q": query}
+            request = SimpleNamespace(param=lambda name, default=None: params.get(name, default))
+            return json.loads(self.controller.search(request, self.alice).body)["results"]
+        self.assertEqual(search("label", "Warp")[0]["id"], WARP)
+        self.assertEqual(search("artist", "Moderat")[0]["id"], MODERAT)
+        for kind, query in (("style", "x"), ("label", ""), ("label", "x" * 301)):
+            with self.subTest(kind=kind), self.assertRaises(ValueError):
+                search(kind, query)
+
+    def test_refresh(self):
+        reply = json.loads(self.controller.refresh(None, self.alice, {}).body)
+        self.assertEqual(reply["refreshAfter"], 1000 + REFRESH_COOLDOWN)
+        self.assertEqual(self.sync.refreshed, [1])
+
+    def test_refresh_after_is_sent_with_the_week(self):
+        self.follow_all()
+        self.assertIsNone(self.week(self.alice)["refreshAfter"])
+        self.profiles.request_refresh(1, 950)
+        self.assertEqual(self.week(self.alice)["refreshAfter"], 950 + REFRESH_COOLDOWN)
+
+    def test_refresh_too_soon_is_a_429(self):
+        self.sync.refresh_user = lambda user: (_ for _ in ()).throw(RadarError("weekly.refresh_too_soon", 429))
+        from pimedia.webapp.controllers.replies import error_reply
+        with self.assertRaises(RadarError) as raised:
+            self.controller.refresh(None, self.alice, {})
+        self.assertEqual(error_reply(raised.exception).status, 429)
+
+
+if __name__ == "__main__":
+    unittest.main()

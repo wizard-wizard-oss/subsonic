@@ -103,6 +103,13 @@ class RadarReleases:
                           (kind, identity))
         return row["synced_at"] if row else None
 
+    def last_synced(self, keys):
+        """Synchronisation réussie la plus récente parmi ces sources (None si aucune)."""
+        rows = self.db.query("SELECT source_kind, source_identity, synced_at FROM radar_sync "
+                             "WHERE synced_at IS NOT NULL")
+        found = [row["synced_at"] for row in rows if (row["source_kind"], row["source_identity"]) in keys]
+        return max(found) if found else None
+
     def oldest_first(self, union):
         """Les sources jamais synchronisées d'abord, puis de la plus ancienne synchronisation à la plus récente."""
         synced = {(row["source_kind"], row["source_identity"]): row["synced_at"] or 0

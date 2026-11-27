@@ -23,6 +23,7 @@ from ..subsonic import SubsonicError, SubsonicUnreachable
 from ..tags.audio import AudioTagError
 from ..tags.entities import TagError
 from ..uploads import UploadError
+from ..weekly_releases.entities import RadarError
 
 
 def error_reply(error):
@@ -46,7 +47,7 @@ def error_reply(error):
         return Reply.error(403, "auth.missing_right")
     if isinstance(error, Forbidden):
         return Reply.error(403, "auth.forbidden")
-    if isinstance(error, (ChatError, RecommendationError)):
+    if isinstance(error, (ChatError, RecommendationError, RadarError)):
         return Reply.error(error.status, error.code)
     if isinstance(error, FolderNotFound):
         return Reply.error(404, "subsonic.error")
