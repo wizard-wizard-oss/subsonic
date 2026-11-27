@@ -33,7 +33,7 @@ changement de semaine). Les requêtes externes s'ajoutent aux classes existantes
   marque-pages « À écouter ». **Pas** de `getAlbumList2 type=frequent` (commun au serveur). *Écart à la spec :*
   la table `album_ratings` n'est lue par aucun code (les notes passent par Subsonic dans `ratings.py`) ; elle
   n'est pas utilisée.
-- Version : entrée **1.22** en tête de `src/i18n/versions.yaml`.
+- Version : entrée **1.24** en tête de `src/i18n/versions.yaml`.
 - Tests : `python3 -m unittest tests.<module> -v` pendant le travail ; à la fin
   `docker compose --profile tests run --rm tests`, entièrement vert.
 
@@ -266,13 +266,13 @@ rechargement de la grille ; interrupteur Découvertes dans le panneau ; textes v
 ### Task 8 : version, documentation et suite complète
 
 **Files:**
-- Modify: `src/i18n/versions.yaml` (entrée `1.22`, date du jour de mise en ligne, titre « Sorties de la semaine
+- Modify: `src/i18n/versions.yaml` (entrée `1.24`, date du jour de mise en ligne, titre « Sorties de la semaine
   pour toi », changements écrits pour les utilisateurs), `docs/features/actualite.md` (section « Sorties de la
   semaine » réécrite : radar, sources, tâche de fond, routes, tests), guide Help « Suivre les sorties de la
   semaine » dans `src/i18n/fr.yaml`.
 
 - [ ] **Step 1 :** `docker compose --profile tests run --rm tests` → tout vert (sinon corriger avant d'aller
   plus loin).
-- [ ] **Step 2 :** commit `docs(radar): version 1.22 et documentation`.
+- [ ] **Step 2 :** commit `docs(radar): version 1.24 et documentation`.
 - [ ] **Step 3 (avec accord de l'utilisateur) :** mise en production par `deploy/pc/push.sh` ; vérifier dans
   les journaux du conteneur que la première synchronisation démarre, puis ouvrir `#/news/releases`.

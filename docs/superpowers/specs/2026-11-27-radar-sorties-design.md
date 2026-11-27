@@ -159,7 +159,7 @@ Disposition de page : trois maquettes montrées (pastilles en haut / colonne à 
 Nouvelles requêtes dans la classe `MusicBrainz` uniquement ; paquet `webapp/weekly_releases/` (entités, service,
 synchronisation dans des fichiers distincts) ; SQL dans `webapp/storage/` ; contrôleur mince ; limites définies une
 fois ; 40 lignes par fonction, 300 par fichier ; tests écrits avant le code (unitaires + parcours jsdom) ; entrée
-**1.22** dans `src/i18n/versions.yaml` ; documentation `docs/features/actualite.md` et guide Help mis à jour.
+**1.24** dans `src/i18n/versions.yaml` ; documentation `docs/features/actualite.md` et guide Help mis à jour.
 
 ## Laissé au constructeur
 

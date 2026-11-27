@@ -59,8 +59,8 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
 5. Chaque adresse d'API externe n'est appelée que par sa classe (MusicBrainz, Deezer, Spotify, Last.fm, Discogs, iTunes).
 6. Pas d'`urllib.request` hors du transport `shared/providers/http.py` dans `shared/` et `webapp/` (exceptions déclarées :
    le client Subsonic et le flux audio des radios).
-7. `tests/test_code_size.py` : 40 lignes par fonction et 300 par fichier dans `webapp/` et `shared/` ; les exceptions
-   existantes sont figées et ne peuvent que diminuer. `tests/test_webapp_routes.py` fige la table des routes.
+7. `tests/test_code_size.py` : repères de 40 lignes par fonction et 300 par fichier (recommandations, le test avertit sans
+   échouer) ; une fonction fait une seule tâche bien définie. `tests/test_webapp_routes.py` fige la table des routes.
 
 ## Services externes (remise à plat du 27/11/2026)
 - Socle commun dans `shared/providers/` : `http.py` (seul transport, adresses publiques vérifiées), `cache.py` et

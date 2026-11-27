@@ -54,7 +54,7 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
       });
       App.api.request = async (...args) => { window.helpWrites.push(args); throw new Error("Help ne doit pas appeler une API en parcourant les guides"); };
     `);
-    evaluate(source("whatsnew.js"));
+    for (const name of ["help-search.js", "help-home.js", "whatsnew.js"]) evaluate(source(name));
     await evaluate("Views.whatsnew.render(document.getElementById('main'))");
     const initialPlayer = evaluate("JSON.stringify(App.player)");
     const initialPreferences = evaluate("JSON.stringify(App.preferences)");
@@ -63,21 +63,89 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
     const chooseTheme = theme => $(`.help-theme[data-theme="${theme}"]`).click();
     const chooseGuide = guide => $(`.help-guide-button[data-guide="${guide}"]`).click();
 
-    check("Help : nom court conservé dans le titre et le menu", () => {
-      assert.equal($("#main h1").textContent, "Help");
+    check("Help : accueil « le sub », menu et lien des nouveautés conservés", () => {
+      assert.equal($("#main h1").textContent, "Bienvenue dans le sub");
       assert.equal(texts["nav.whatsnew"], "Help");
       assert.equal($('.topnav a[href="#/whatsnew"]').dataset.t, "nav.whatsnew");
       assert.equal($(".whatsnew-versions").getAttribute("href"), "#/versions");
+      assert.ok(!/whatsnew\./.test($(".help-page").textContent), "Traduction manquante sur l’accueil");
     });
-    check("Help : les trois mises en avant ouvrent leurs vrais guides", () => {
-      const featured = [["chat", "social", "g1"], ["lyrics", "listen", "g4"], ["press", "press", "g2"]];
-      assert.equal($$("button.help-feature").length, featured.length);
-      for (const [feature, theme, guide] of featured) {
-        $(`.help-feature[data-feature="${feature}"]`).click();
+    const covers = new Set(["/static/help/sky-valley.jpg"]);
+    check("Help : quatre piliers titrés par une chanson, chacun ouvre son vrai guide", () => {
+      const pillars = [["elsewhere", "Voyage, voyage", "elsewhere", "g1"], ["press", "Nouvelle Vague", "press", "g5"],
+                       ["discover", "One More Time", "explore", "g4"], ["share", "Wish You Were Here", "social", "g1"]];
+      assert.equal($$(".help-pillar").length, pillars.length);
+      for (const [pillar, song, theme, guide] of pillars) {
+        const card = $(`.help-pillar[data-pillar="${pillar}"]`);
+        assert.equal(card.querySelector("h3").textContent, song);
+        assert.ok(card.querySelector(".help-pillar-topic").textContent.trim());
+        assert.ok(card.querySelector("p").textContent.trim().length > 40);
+        const cover = card.querySelector("img");
+        assert.ok(cover.alt.trim(), "Chaque pochette est décrite");
+        assert.match(cover.getAttribute("src"), /^\/static\/help\/[a-z-]+\.jpg$/);
+        covers.add(cover.getAttribute("src"));
+        card.querySelector("button.help-pillar-go").click();
         assert.equal(selectedTheme().dataset.theme, theme);
         assert.equal(selectedGuide().dataset.guide, guide);
-        assert.equal($("#help-guide-title").textContent, texts[`whatsnew.themes.${theme}.guides.${guide}.title`]);
       }
+    });
+    check("Help : le parcours en 2 minutes ouvre les vraies fonctions", () => {
+      assert.equal($$(".help-journey li").length, 4);
+      assert.ok($('.help-journey a[href="#/albums/newest"]'));
+      assert.ok($('.help-journey a[href="#/listen-later"]'));
+      $('.help-journey button[data-action="chat"]').click();
+      assert.equal(actions.at(-1), "chat");
+      window.helpChat.open = false; window.helpChat.toggles = 0;   // ce test ne laisse pas le salon ouvert aux suivants
+      assert.ok($(".help-hero-journey"), "Le bouton d’accueil mène au parcours");
+      $(".help-hero-journey").click();
+      assert.equal(document.activeElement, $("#help-journey-title"));
+    });
+    check("Help : « C’est votre espace » mène aux gestes qui font vivre le sub", () => {
+      const items = [["press", "g2"], ["press", "g5"], ["social", "g5"], ["save", "g4"], ["save", "g5"], ["settings", "g3"]];
+      assert.equal($$(".help-space-item").length, items.length);
+      for (const [index, [theme, guide]] of items.entries()) {
+        $$(".help-space-item")[index].click();
+        assert.equal(selectedTheme().dataset.theme, theme);
+        assert.equal(selectedGuide().dataset.guide, guide);
+      }
+    });
+    check("Help : la recherche trouve un guide, sans accent ni casse, et le sélectionne", () => {
+      const input = $("#help-search");
+      assert.ok(input && input.type === "search");
+      assert.ok($('label[for="help-search"]'), "Le champ est étiqueté");
+      const search = value => { input.value = value; input.dispatchEvent(new window.Event("input", {bubbles: true})); };
+      assert.equal($$(".help-search-result").length, 0);
+      search("RSS");
+      const results = $$(".help-search-result");
+      assert.ok(results.length >= 1 && results.length <= 8);
+      assert.ok(results.some(result => result.dataset.theme === "press" && result.dataset.guide === "g2"));
+      search("etoiles");
+      assert.ok($$(".help-search-result").some(result => result.dataset.theme === "save" && result.dataset.guide === "g1"));
+      search("zzzzzzzz");
+      assert.equal($$(".help-search-result").length, 0);
+      assert.ok($(".help-search-empty").textContent.trim());
+      search("deezer");
+      const target = $$(".help-search-result").find(result => result.dataset.theme === "save" && result.dataset.guide === "g5");
+      assert.ok(target);
+      target.click();
+      assert.equal(selectedTheme().dataset.theme, "save");
+      assert.equal(selectedGuide().dataset.guide, "g5");
+      search("");
+      assert.equal($$(".help-search-result").length, 0);
+      assert.equal(writes.length, 0);
+    });
+    check("Help : le dépannage « Help! » répond aux cinq cas courants", () => {
+      const faqs = $$("details.help-faq");
+      assert.equal(faqs.length, 5);
+      for (const faq of faqs) {
+        assert.ok(faq.querySelector("summary").textContent.trim());
+        assert.ok(faq.querySelector("p").textContent.trim().length > 30);
+      }
+      assert.equal($(".help-trouble h2").textContent, "Help!");
+      assert.ok($(".help-trouble .help-section-heading.has-cover"), "Le dépannage a son bandeau de pochette");
+      covers.add($(".help-trouble .help-section-heading").dataset.cover);
+      assert.match($(".help-trouble").textContent, /administrateur/);
+      assert.match($(".help-trouble").textContent, /YouTube/);
     });
     check("Help : les sept thèmes donnent accès à tous les guides sans modifier l’écoute", () => {
       const themes = [["listen", 5, "g4"], ["social", 6, "g1"], ["explore", 7, "g7"],
@@ -102,6 +170,11 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
           assert.ok($$(".help-steps li").every(item => item.textContent.trim().length > 0));
           assert.ok(!/whatsnew\./.test($(".help-page").textContent), `Traduction manquante : ${theme}/${guide}`);
           assert.ok(!$(".help-page script"), "Le contenu des guides reste du texte");
+          for (const frame of $$(".help-illustration-frame")) {
+            assert.equal(frame.getAttribute("href"), frame.querySelector("img").getAttribute("src"), "Le clic ouvre la capture entière");
+            assert.equal(frame.target, "_blank");
+            assert.match(frame.rel, /noopener/);
+          }
           for (const image of $$(".help-illustration img")) {
             assert.ok(image.alt.trim(), "Chaque capture possède une alternative textuelle");
             assert.match(image.getAttribute("src"), /^\/static\/help\//);
@@ -126,12 +199,26 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
         assert.ok(asset.size > 0, asset.url);
       }
     });
+    const coverFiles = await Promise.all([...covers].map(async url => {
+      const response = await fetch(base + url);
+      return {url, status: response.status, type: response.headers.get("content-type"), size: (await response.arrayBuffer()).byteLength};
+    }));
+    check("Help : les six pochettes noir et blanc sont servies et le sous-marin est décoratif", () => {
+      assert.equal(coverFiles.length, 6, "hero + quatre piliers + dépannage : " + [...covers].join(", "));
+      for (const file of coverFiles) {
+        assert.equal(file.status, 200, file.url);
+        assert.match(file.type, /^image\//, file.url);
+        assert.ok(file.size > 10000, file.url);
+      }
+      assert.equal($(".help-sub").getAttribute("aria-hidden"), "true");
+      assert.equal($(".help-sub img").alt, "");
+    });
     check("Help : cibles accessibles, boutons natifs et focus du thème conservé", () => {
       const theme = $('.help-theme[data-theme="listen"]');
       theme.focus();
       theme.click();
       assert.equal(document.activeElement, theme);
-      for (const button of $$(".help-theme, .help-guide-button, .help-feature")) {
+      for (const button of $$(".help-theme, .help-guide-button, .help-pillar-go")) {
         assert.equal(button.tagName, "BUTTON");
         assert.equal(button.type, "button");
         assert.ok(button.textContent.trim());
@@ -224,6 +311,8 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
       evaluate("Views.whatsnew.render(document.getElementById('main'))");
       assert.equal($$(".help-page").length, 1);
       assert.equal($$(".help-theme").length, 7);
+      assert.equal($$(".help-pillar").length, 4);
+      assert.equal($$(".help-journey li").length, 4);
       assert.equal($$(".help-lesson").length, 1);
       assert.equal(writes.length, 0);
       assert.equal(errors.length, 0, errors.join("\n"));
