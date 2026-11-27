@@ -81,7 +81,7 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
     });
     check("Help : les sept thèmes donnent accès à tous les guides sans modifier l’écoute", () => {
       const themes = [["listen", 5, "g4"], ["social", 6, "g1"], ["explore", 7, "g7"],
-                      ["save", 6, "g3"], ["elsewhere", 5, "g1"], ["press", 4, "g2"], ["settings", 6, "g1"]];
+                      ["save", 6, "g3"], ["elsewhere", 5, "g1"], ["press", 5, "g2"], ["settings", 6, "g1"]];
       assert.equal($$(".help-theme").length, themes.length);
       let visited = 0;
       for (const [theme, count, defaultGuide] of themes) {
@@ -109,7 +109,7 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
           }
         }
       }
-      assert.equal(visited, 39);
+      assert.equal(visited, 40);
       assert.equal(evaluate("JSON.stringify(App.player)"), initialPlayer);
       assert.equal(evaluate("JSON.stringify(App.preferences)"), initialPreferences);
       assert.equal(writes.length, 0);
@@ -228,6 +228,6 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
       assert.equal(writes.length, 0);
       assert.equal(errors.length, 0, errors.join("\n"));
     });
-    console.log(checks + " groupes de contrôles Help réussis, 39 guides parcourus");
+    console.log(checks + " groupes de contrôles Help réussis, 40 guides parcourus");
   } finally { window.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

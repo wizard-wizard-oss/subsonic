@@ -185,6 +185,7 @@ class MusicApp {
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
     if (view === "listen-later") return {view: "listenLater"};
+    if (view === "whatsnew" && id) return {view, id};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
         view === "account" || view === "notifications") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)

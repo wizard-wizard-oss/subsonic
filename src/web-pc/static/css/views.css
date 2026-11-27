@@ -437,3 +437,22 @@ tr.song[draggable="true"], .album-card[draggable="true"] { cursor: grab; }
 
 .album-link .album-uploader { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upload-history tbody tr { border-top: 1px solid var(--line); }
+
+/* Actualités : albums et EP annoncés dans MusicBrainz. */
+.weekly-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; margin: 18px 0; }
+.weekly-heading h1 { margin: 0; }
+.weekly-week, .weekly-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.weekly-filters input { width: min(280px, 100%); }
+.weekly-followed > a { display: inline-block; margin-top: 14px; }
+.weekly-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); gap: 20px; margin-top: 18px; }
+.weekly-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: 14px; }
+.weekly-card, .weekly-followed { background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; overflow-wrap: anywhere; }
+.weekly-card h3 { margin: 8px 0 2px; }
+.weekly-card img.cover { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+.weekly-followed { align-self: start; }
+.weekly-followed h2 { margin-top: 0; }
+.weekly-actions { display: grid; gap: 6px; }
+@media (max-width: 720px) {
+  .weekly-layout { grid-template-columns: 1fr; }
+  .weekly-followed { grid-row: 1; }
+}

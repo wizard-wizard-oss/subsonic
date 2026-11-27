@@ -30,6 +30,10 @@ const News = (() => {
 
   const view = {
     async render(main, route) {
+      if (route.id === "releases") return WeeklyReleaseView.render(main, route);
+      const body = el("div.news-press");
+      App.append(App.clear(main), [tabs(false), body]);
+      main = body;
       App.clear(main).appendChild(el("div.loading", {text: "…"}));
       this.feedId = Number(route.id) || null;
       this.last = null;
@@ -125,7 +129,13 @@ const News = (() => {
     },
   };
 
-  return {view, pressSection};
+  function tabs(releases) {
+    return el("nav.chips", {"aria-label": t("news.title")},
+      el("a.chip" + (releases ? "" : ".on"), {href: "#/news", text: t("artist.press")}),
+      el("a.chip" + (releases ? ".on" : ""), {href: "#/news/releases", text: t("weekly.title")}));
+  }
+
+  return {view, pressSection, tabs};
 })();
 
 Views.news = News.view;

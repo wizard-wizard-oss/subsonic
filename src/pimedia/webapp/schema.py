@@ -440,4 +440,13 @@ MIGRATIONS = [
     CREATE INDEX notifications_by_recipient ON notifications (recipient_id, id DESC);
     CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
     """,
+    # 23: personally followed MusicBrainz genres.
+    """
+    CREATE TABLE release_subscriptions (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        genre_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        PRIMARY KEY (user_id, genre_id)
+    )
+    """,
 ]

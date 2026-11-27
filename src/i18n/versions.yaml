@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.19"
+  date: 2026-11-27
+  title: "Les sorties de la semaine par style"
+  changes:
+    - "Dans Actualités, consultez dès le lundi les albums et EP annoncés sur MusicBrainz pour la semaine et suivez vos styles préférés."
+    - "Retrouvez le mode d’emploi dans Help, rubrique Suivre l’actualité musicale."
+
 - version: "1.18"
   date: 2026-11-27
   title: "Un menu sous votre photo"

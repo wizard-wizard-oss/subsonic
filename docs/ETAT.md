@@ -1,5 +1,9 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Sorties de la semaine · 1.19
+
+La page Actualités propose les annonces MusicBrainz du lundi au dimanche, les styles suivis par compte et le guide Help associé. Voir [Actualités](features/actualite.md).
+
 **Menu du compte, 1.18 (27/11/2026, déployée et vérifiée)** : Mon compte, Notifications et Se déconnecter
 regroupés dans un menu sous la photo. Pastille rouge sur la photo visible menu fermé, également sur
 téléphone. Liens, notifications et action de déconnexion existants réutilisés ; fermeture extérieure,

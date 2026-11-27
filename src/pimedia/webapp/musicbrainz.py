@@ -5,12 +5,14 @@ import threading
 import time
 import urllib.error
 from dataclasses import dataclass
+from datetime import date
 from email.utils import parsedate_to_datetime
 from uuid import UUID
 
 from ..shared.external import JsonFetcher, query_url
 from .exploration_entities import CachedMetadata
 from .musicbrainz_entities import MusicBrainzEdition, MusicBrainzRelease, MusicBrainzTrack
+from .weekly_release_entities import ReleaseGenre, WeeklyRelease, WeeklyReleasePage
 
 BASE = "https://musicbrainz.org/ws/2/"
 TTL = 7 * 86400
@@ -18,6 +20,7 @@ STALE_TTL = 30 * 86400
 RETRY_DELAY = 2
 TRANSIENT_ERRORS = {429, 500, 502, 503, 504}
 SEARCH_LIMIT = 25
+GENRE_PAGE_SIZE = 100
 LOG = logging.getLogger(__name__)
 
 
@@ -105,15 +108,15 @@ class MusicBrainzMetadata:
             return MetadataResult(cached.data, stale=True)
         raise ExplorationUnavailable()
 
-    def get(self, path, **params):
+    def get(self, path, *, cache_seconds=TTL, **params):
         url = query_url(BASE + path, sorted(dict(params, fmt="json").items()))
         cached = self.repository.get(url)
-        if cached and self.clock() - cached.fetched_at < TTL:
+        if cached and self.clock() - cached.fetched_at < cache_seconds:
             return MetadataResult(cached.data)
         with self.lock:
             # Une autre requête a pu remplir le cache pendant l'attente. Les lectures déjà en cache ne patientent pas.
             cached = self.repository.get(url)
-            if cached and self.clock() - cached.fetched_at < TTL:
+            if cached and self.clock() - cached.fetched_at < cache_seconds:
                 return MetadataResult(cached.data)
             if self.clock() < self.retry_at.get(url, 0):
                 return self._fallback(cached)
@@ -136,6 +139,37 @@ class MusicBrainzMetadata:
     @property
     def enabled(self):
         return True
+
+    def release_genres(self) -> tuple[ReleaseGenre, ...]:
+        genres = []
+        offset = 0
+        while True:
+            result = self.get("genre/all", limit=GENRE_PAGE_SIZE, offset=offset).data
+            rows = result["genres"]
+            genres.extend(ReleaseGenre(mbid(row["id"]), row["name"]) for row in rows)
+            offset += len(rows)
+            if len(rows) < GENRE_PAGE_SIZE or offset >= result.get("genre-count", offset + 1):
+                return tuple(genres)
+
+    def weekly_groups(self, genre, monday, sunday, limit, offset) -> WeeklyReleasePage:
+        query = (f'tag:{search_phrase(genre)} AND (primarytype:album OR primarytype:ep) '
+                 f'AND firstreleasedate:[{monday} TO {sunday}]')
+        response = self.get("release-group", cache_seconds=3600, query=query, limit=limit, offset=offset)
+        rows = response.data["release-groups"]
+        albums = []
+        for row in rows:
+            value = row.get("first-release-date")
+            if not isinstance(value, str) or len(value) != 10:
+                continue
+            try:
+                released_on = date.fromisoformat(value)
+            except ValueError:
+                continue
+            albums.append(WeeklyRelease(mbid(row["id"]), row["title"], artist_name(row),
+                                        released_on, row.get("primary-type", "")))
+        end = offset + len(rows)
+        next_offset = end if rows and end < response.data["count"] else None
+        return WeeklyReleasePage(tuple(albums), next_offset, response.stale)
 
     def search_releases(self, artist, album):
         """Candidats classés par MusicBrainz, sans imposer une égalité des tags à réparer."""

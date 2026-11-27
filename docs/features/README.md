@@ -33,8 +33,8 @@ faux Subsonic, mpv et jsdom).
 | [envoi-fichiers](envoi-fichiers.md) | envoi dans Incoming (fichiers, zip décompressé) + scan | oui | non (pas mis en route) |
 | [pochettes](pochettes.md) | crayon sur la pochette d'un album : recherche Last.fm ou adresse, écrite en cover.jpg dans le dossier | oui | non (faux Last.fm et Subsonic) |
 | [telechargement](telechargement.md) | zip d'album, titre | oui | oui |
-| [actualite](actualite.md) | flux RSS des webzines, « Dans la presse » sur la page artiste | oui | non (flux lus une fois) |
-| [nouveautes](nouveautes.md) | Help : sept thèmes, 39 guides pas à pas, captures et accès aux fonctions existantes | oui | jsdom + navigateur local |
+| [actualite](actualite.md) | flux RSS, articles par artiste et sorties de la semaine par style MusicBrainz | oui | jsdom et tests ciblés |
+| [nouveautes](nouveautes.md) | Help : sept thèmes, 40 guides pas à pas, captures et accès aux fonctions existantes | oui | jsdom + navigateur local |
 | [versions](versions.md) | page « Versions » : historique daté, numéro et pastille près du titre | oui | jsdom + démo |
 | [serveur-sans-interface](serveur-sans-interface.md) | marque-pages, file partagée, radios Internet… | **non** | non |
 

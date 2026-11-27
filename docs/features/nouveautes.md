@@ -4,7 +4,7 @@
 
 Page **Help** (`#/whatsnew`, menu du haut et menu mobile). Le nom court demandé par l’utilisateur
 reste celui du menu et du titre. La refonte **1.16**, publiée le 26/11/2026, remplace les six parties
-et 34 cartes par trois mises en avant puis sept thèmes et 39 guides.
+et 34 cartes par trois mises en avant puis sept thèmes et 40 guides.
 
 Les mises en avant **salon**, **paroles synchronisées** et **presse musicale** ouvrent directement le guide
 correspondant. Le lien **Les dernières nouveautés** mène à `#/versions` ; il conserve l’historique et
@@ -66,7 +66,7 @@ Aucune modification de route, de base, de services musicaux, de lecture YouTube 
 
 ## Vérification
 
-- `tests/e2e_help.js` : vrais textes servis, parcours des 39 guides, sélection exclusive, focus, ARIA,
+- `tests/e2e_help.js` : vrais textes servis, parcours des 40 guides, sélection exclusive, focus, ARIA,
   liens/import/labels/RSS, absence d’effets sur lecture/préférences, actions réutilisées et captures HTTP.
 - `tests/e2e_webapp.js` : Help dans la page complète, menu actif, navigation et lien Versions.
 - `tests/e2e_mobile_page.js` : navigation et composants mobiles existants.

@@ -131,3 +131,9 @@ uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi r
   Assemblage dans `app.py`, migration web 22, diffusion ciblée par EventHub/LiveEvents existants. Composant
   `static/js/notifications.js` et styles propres, navigation mobile existante réutilisée. Aucune dépendance
   externe ni couplage avec les auteurs d’envois ou l’édition Pi.
+
+### Sorties de la semaine · édition web
+
+Actualités charge la vue `weekly-releases.js` pour `#/news/releases`. Help ouvre cette vue depuis le guide presse. Le navigateur envoie le lundi sélectionné et le genre au contrôleur `controllers/weekly_releases.py`. Le service `weekly_releases.py` valide le genre et calcule le dimanche. Le client `musicbrainz.py` interroge MusicBrainz, réutilise le cache public et convertit les réponses en entités de `weekly_release_entities.py`. Le service conserve les sorties datées dans la semaine. La recherche d’une semaine est rafraîchie après une heure.
+
+Pour suivre ou quitter un style, le contrôleur transmet l’utilisateur authentifié au même service. Seul `storage/weekly_releases.py` lit et écrit les abonnements dans `release_subscriptions` (migration 23). La vue interroge séparément le contrôleur d’exploration existant pour identifier les albums accessibles sur Subsonic. Les dépendances sont assemblées dans `app.py`.

@@ -128,7 +128,7 @@ class NotificationMigrationTest(unittest.TestCase):
             tables = [row["name"] for row in old.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
             before = {table: [tuple(row) for row in old.query('SELECT * FROM "' + table + '"')] for table in tables}
             old.close()
-            new = Database(path, MIGRATIONS)
+            new = Database(path, MIGRATIONS[:22])
             try:
                 self.assertEqual(new.version, 22)
                 self.assertEqual({table: [tuple(row) for row in new.query('SELECT * FROM "' + table + '"')] for table in tables}, before)

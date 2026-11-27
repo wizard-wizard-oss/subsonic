@@ -26,7 +26,7 @@ Views.whatsnew = (() => {
       g5: "#/albums/newest", g6: "#/albums/newest", g7: "#/albums/newest"},
     save: {g1: "#/favorites", g2: "#/listen-later", g5: "#/import", g6: "#/favorites"},
     elsewhere: {g1: "search", g2: "#/favorites", g3: "#/favorites", g4: "#/favorites", g5: "search"},
-    press: {g1: "#/news", g2: "#/news", g3: "#/news", g4: "#/albums/newest"},
+    press: {g1: "#/news", g2: "#/news", g3: "#/news", g4: "#/albums/newest", g5: "#/news/releases"},
     settings: {g1: "settings", g2: "#/account", g3: "#/upload", g4: "#/albums/newest", g5: "#/account", g6: "#/account"},
   };
   const CAPTURES = {
@@ -94,7 +94,7 @@ Views.whatsnew = (() => {
     return links;
   }
 
-  function render(main) {
+  function render(main, route = {}) {
     const page = el("div.help-page");
     const themes = el("nav.help-themes", {"aria-label": t("whatsnew.themes_label")});
     const title = el("h3", {id: "help-theme-title", tabIndex: -1});
@@ -178,7 +178,9 @@ Views.whatsnew = (() => {
       el("p.help-footer", {text: t("whatsnew.footer")}),
     ]);
     App.clear(main).appendChild(page);
-    selectTheme(THEMES[0]);
+    const [themeId, guideId] = (route.id || "").split("/");
+    const theme = THEMES.find(item => item.id === themeId) || THEMES[0];
+    selectTheme(theme, guides(theme.id).includes(guideId) ? guideId : undefined);
   }
 
   return {render};

@@ -39,6 +39,9 @@ from .controllers.listen_later import ListenLaterController
 from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
 from .controllers.news import NewsController
+from .controllers.weekly_releases import WeeklyReleasesController
+from .weekly_releases import WeeklyReleases
+from .storage.weekly_releases import ReleaseSubscriptions
 from .controllers.playlists import PlaylistController
 from .controllers.uploads import UploadController
 from .controllers.profile import AVATAR_BODY_LIMIT, ProfileController
@@ -105,7 +108,7 @@ SECURITY_HEADERS = {
                                "img-src 'self' data: https://i.ytimg.com https://*.jamendo.com https://*.sndcdn.com "
                                "https://upload.wikimedia.org https://thumb.wikimedia.org https://lastfm-img.freetls.fastly.net "
                                "https://lastfm.freetls.fastly.net "
-                               "https://i.discogs.com; "
+                               "https://i.discogs.com https://coverartarchive.org https://archive.org https://*.archive.org; "
                                "media-src 'self' https://*.jamendo.com; style-src 'self'; "
                                "script-src 'self' https://www.youtube.com https://w.soundcloud.com; "
                                "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://w.soundcloud.com; "
@@ -272,6 +275,7 @@ class WebApplication:
         extmusic = ExtMusicController(self.extmusic, self.ext_favorites)
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
+        releases = WeeklyReleasesController(WeeklyReleases(self.musicbrainz, ReleaseSubscriptions(self.db)))
         covers = CoverController(self.covers)
         tags = TagController(self.album_tags)
         notifications = NotificationController(self.notifications)
@@ -355,6 +359,7 @@ class WebApplication:
                               ("/api/artist/bio", facts.artist_bio),
                               ("/api/ext/status", extmusic.status), ("/api/ext/search", extmusic.search),
                               ("/api/ext/known", extmusic.known), ("/api/ext/favorites", extmusic.favorite_list),
+                              ("/api/news/releases", releases.week), ("/api/news/releases/genres", releases.genres),
                               ("/api/news", news.latest), ("/api/news/feeds", news.feeds),
                               ("/api/news/artist", news.about)):
             router.add("GET", path, read(handler))
@@ -365,6 +370,7 @@ class WebApplication:
                               ("/api/ext/alternative", extmusic.alternative), ("/api/ext/unplayable", extmusic.unplayable),
                               ("/api/ext/played", extmusic.played), ("/api/ext/favorite", extmusic.favorite),
                               ("/api/ext/link", extmusic.add_link),
+                              ("/api/news/releases/follow", releases.follow),
                               ("/api/news/feed/add", news.add), ("/api/news/feed/remove", news.remove),
                               ("/api/news/feed/show", news.show)):
             router.add("POST", path, write(handler))

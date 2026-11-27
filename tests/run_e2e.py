@@ -44,9 +44,10 @@ def run_journey(script, harness, jsdom):
 def main():
     jsdom = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("JSDOM_PATH", "jsdom")
     failed = []
-    mobile = subprocess.run(["node", os.path.join("tests", "e2e_mobile.js"), jsdom], cwd=ROOT, timeout=TIMEOUT)
-    if mobile.returncode:
-        failed.append("e2e_mobile.js")
+    for script in ("e2e_mobile.js", "e2e_weekly_releases.js"):
+        result = subprocess.run(["node", os.path.join("tests", script), jsdom], cwd=ROOT, timeout=TIMEOUT)
+        if result.returncode:
+            failed.append(script)
     for script, harness in JOURNEYS:
         print("== " + script, flush=True)
         if not run_journey(script, harness, jsdom):
