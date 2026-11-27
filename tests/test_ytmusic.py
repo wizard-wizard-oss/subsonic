@@ -104,7 +104,8 @@ RED_BOX = {"resultType": "album", "title": "Red Box", "browseId": "MPRE-redbox",
            "artists": [{"name": "Red Axes", "id": "UCredaxes"}]}
 OTHER = {"resultType": "album", "title": "Red Box", "browseId": "MPRE-other", "artists": [{"name": "Simply Red", "id": "UCs"}]}
 ALBUM = {"title": "Red Box", "tracks": [
-    {"videoId": "redbox0001", "title": "Sabaya", "duration_seconds": 412, "artists": [{"name": "Red Axes", "id": "UCredaxes"}]},
+    {"videoId": "redbox0001", "title": "Sabaya", "duration_seconds": 412, "album": "Red Box",
+     "artists": [{"name": "Red Axes", "id": "UCredaxes"}]},
     {"videoId": None, "title": "Indisponible", "artists": [{"name": "Red Axes", "id": "UCredaxes"}]},
     {"videoId": "redbox0002", "title": "Zion", "duration_seconds": 380, "artists": [{"name": "Red Axes", "id": "UCredaxes"}]}]}
 

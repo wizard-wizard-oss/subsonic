@@ -26,10 +26,17 @@ def music_track(item):
     # Les compteurs (« 1,9 Md lectures ») arrivent comme de faux artistes, sans identifiant.
     artists = [a["name"] for a in item.get("artists") or [] if a.get("id") and a.get("name")]
     return {"id": "yt-" + video, "youtubeId": video, "title": item.get("title") or "Sans titre",
-            "artist": ", ".join(artists), "album": (item.get("album") or {}).get("name") or "",
+            "artist": ", ".join(artists), "album": _album_name(item.get("album")),
             "duration": int(item.get("duration_seconds") or 0),
             # Les pochettes des « titres » sont sur googleusercontent.com, refusé par la page : vignette de la vidéo.
             "imageUrl": "https://i.ytimg.com/vi/%s/mqdefault.jpg" % video, "ext": "youtube"}
+
+
+def _album_name(album):
+    """Nom de l'album : un objet {name, id} dans les recherches, un simple texte dans les morceaux d'un album."""
+    if isinstance(album, dict):
+        return album.get("name") or ""
+    return album if isinstance(album, str) else ""
 
 
 def mix(songs, videos, limit):
