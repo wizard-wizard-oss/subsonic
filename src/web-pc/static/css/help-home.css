@@ -99,9 +99,7 @@
 .help-pillar-shot img {
   display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform .4s ease;
   filter: grayscale(1) contrast(1.08);   /* pochettes en noir et blanc : la couleur reste aux cartes */
-}
-.help-pillar-shot.is-plain { display: grid; place-items: center; color: #fff; background: #14161a; }
-.help-pillar:hover .help-pillar-shot img { transform: scale(1.05); }
+}.help-pillar:hover .help-pillar-shot img { transform: scale(1.05); }
 .help-pillar-topic {
   display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; padding: 3px 11px; color: #fff;
   background: var(--tone); border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em;

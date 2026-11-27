@@ -81,12 +81,9 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
         assert.ok(card.querySelector(".help-pillar-topic").textContent.trim());
         assert.ok(card.querySelector("p").textContent.trim().length > 40);
         const cover = card.querySelector("img");
-        if (pillar === "elsewhere") assert.ok(!cover && card.querySelector(".help-pillar-shot.is-plain"), "Pochette pas encore choisie : fond uni");
-        else {
-          assert.ok(cover.alt.trim(), "Chaque pochette est décrite");
-          assert.match(cover.getAttribute("src"), /^\/static\/help\/[a-z-]+\.jpg$/);
-          covers.add(cover.getAttribute("src"));
-        }
+        assert.ok(cover.alt.trim(), "Chaque pochette est décrite");
+        assert.match(cover.getAttribute("src"), /^\/static\/help\/[a-z-]+\.jpg$/);
+        covers.add(cover.getAttribute("src"));
         card.querySelector("button.help-pillar-go").click();
         assert.equal(selectedTheme().dataset.theme, theme);
         assert.equal(selectedGuide().dataset.guide, guide);
@@ -206,8 +203,8 @@ const check = (name, run) => { run(); checks++; console.log("OK   " + name); };
       const response = await fetch(base + url);
       return {url, status: response.status, type: response.headers.get("content-type"), size: (await response.arrayBuffer()).byteLength};
     }));
-    check("Help : les cinq pochettes noir et blanc sont servies et le sous-marin est décoratif", () => {
-      assert.equal(coverFiles.length, 5, "hero + trois piliers + dépannage : " + [...covers].join(", "));
+    check("Help : les six pochettes noir et blanc sont servies et le sous-marin est décoratif", () => {
+      assert.equal(coverFiles.length, 6, "hero + quatre piliers + dépannage : " + [...covers].join(", "));
       for (const file of coverFiles) {
         assert.equal(file.status, 200, file.url);
         assert.match(file.type, /^image\//, file.url);

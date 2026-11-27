@@ -12,8 +12,8 @@ et 34 cartes par trois mises en avant puis sept thèmes et 40 guides.
 2. **Quatre piliers** titrés par une chanson : *Voyage, voyage* (musique d’ailleurs → guide `elsewhere/g1`),
    *Nouvelle Vague* (rester au courant → `press/g5`), *One More Time* (découvrir → `explore/g4`),
    *Wish You Were Here* (échanger → `social/g1`). Chacun a sa couleur et sa **pochette en noir et blanc**
-   (`static/help/`, 600 px, filtre CSS `grayscale`) : Unknown Pleasures, Discovery, Abbey Road ; « d’ailleurs »
-   n’a pas encore de pochette (fond uni avec icône). Le hero montre la photo de *Welcome to the Sky Valley*
+   (`static/help/`, 600 px, filtre CSS `grayscale`) : The Dark Side of the Moon (d’ailleurs), Unknown Pleasures,
+   Discovery, Abbey Road. Le hero montre la photo de *Welcome to the Sky Valley*
    (Kyuss, 447 px) et le bandeau « Help! » la pochette de *Licensed to Ill*. Pochettes ajoutées à la main :
    à remplacer par d’autres fichiers du même nom si besoin.
 3. **Start Me Up** : parcours en 2 minutes (lancer un album, cœur/note, salon, marque-page), avec liens ou boutons.

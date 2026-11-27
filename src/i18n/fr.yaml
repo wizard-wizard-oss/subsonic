@@ -951,6 +951,7 @@ webapp:
         song: "Voyage, voyage"
         topic: "La musique d’ailleurs"
         text: "Le sub n’a pas tout, et c’est pas grave. Cherche sur YouTube, Jamendo ou SoundCloud, colle un lien, importe tes playlists Deezer, Spotify ou Apple Music, et mélange le tout avec ce qu’il y a ici."
+        image_alt: "Pochette de l’album The Dark Side of the Moon de Pink Floyd, en noir et blanc"
       press:
         song: "Nouvelle Vague"
         topic: "Rester au courant"

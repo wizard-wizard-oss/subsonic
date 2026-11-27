@@ -4,10 +4,9 @@
 
 const HelpHome = (() => {
   const el = App.el, t = App.t;
-  // Chaque pilier ouvre le guide qui explique le geste. Sa pochette (static/help/, affichée en noir et blanc) n'est
-  // pas encore choisie pour « d'ailleurs » : fond uni avec l'icône, en attendant.
+  // Chaque pilier ouvre le guide qui explique le geste ; sa pochette (static/help/) s'affiche en noir et blanc.
   const PILLARS = [
-    {id: "elsewhere", theme: "elsewhere", guide: "g1", icon: "play"},
+    {id: "elsewhere", theme: "elsewhere", guide: "g1", cover: "dark-side-of-the-moon", icon: "play"},
     {id: "press", theme: "press", guide: "g5", cover: "unknown-pleasures", icon: "radio"},
     {id: "discover", theme: "explore", guide: "g4", cover: "discovery", icon: "disc"},
     {id: "share", theme: "social", guide: "g1", cover: "abbey-road", icon: "chat"},
@@ -42,9 +41,8 @@ const HelpHome = (() => {
     return box;
   }
 
-  /** La pochette du pilier, ou un fond uni portant son icône quand elle n'est pas encore choisie. */
+  /** La pochette du pilier. */
   function shot(item, key) {
-    if (!item.cover) return el("div.help-pillar-shot.is-plain", {"aria-hidden": "true"}, App.icon(item.icon, 44));
     return el("div.help-pillar-shot", {}, el("img", {src: "/static/help/" + item.cover + ".jpg", alt: t(key + ".image_alt"),
       loading: "lazy", decoding: "async"}));
   }
