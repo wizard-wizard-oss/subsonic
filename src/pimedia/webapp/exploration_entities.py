@@ -3,14 +3,6 @@ from dataclasses import asdict, dataclass, field
 
 
 @dataclass(frozen=True)
-class CachedMetadata:
-    """Réponse publique conservée en cache, avec sa date de récupération d’origine."""
-    key: str
-    data: dict
-    fetched_at: int
-
-
-@dataclass(frozen=True)
 class MusicLink:
     """Lien vers une identité MusicBrainz, avec son rôle et la période de la relation."""
     id: str

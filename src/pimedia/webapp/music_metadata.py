@@ -7,7 +7,7 @@ import urllib.request
 from email.utils import parsedate_to_datetime
 
 from ..shared.external import USER_AGENT
-from .exploration_entities import CachedMetadata
+from ..shared.providers.cache import CachedMetadata
 
 CACHE_SECONDS = 86400
 

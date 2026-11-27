@@ -1,7 +1,7 @@
 """Cache persistant des réponses musicales publiques, indépendant des comptes Subsonic."""
 import json
 
-from ..exploration_entities import CachedMetadata
+from ...shared.providers.cache import CachedMetadata
 
 
 class ExplorationRepository:

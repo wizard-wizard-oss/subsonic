@@ -10,7 +10,7 @@ from email.utils import parsedate_to_datetime
 from uuid import UUID
 
 from ..shared.external import JsonFetcher, query_url
-from .exploration_entities import CachedMetadata
+from ..shared.providers.cache import CachedMetadata
 from .musicbrainz_entities import MusicBrainzEdition, MusicBrainzRelease, MusicBrainzTrack
 from .weekly_release_entities import ReleaseGenre, WeeklyRelease, WeeklyReleasePage
 

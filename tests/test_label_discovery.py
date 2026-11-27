@@ -16,7 +16,7 @@ from pimedia.webapp.discogs import Discogs, discogs_id
 from pimedia.webapp.discogs_catalogs import CatalogError, DiscogsCatalogs, group_editions
 from pimedia.webapp.discogs_entities import DiscogsEdition, DiscogsTrack
 from pimedia.webapp.discogs_exploration import DiscogsExploration
-from pimedia.webapp.exploration_entities import CachedMetadata
+from pimedia.shared.providers.cache import CachedMetadata
 from pimedia.webapp.label_discovery import LabelDiscovery, playable_tracks, varied_albums
 from pimedia.webapp.lastfm import LastFm
 from pimedia.webapp.music_metadata import CACHE_SECONDS, MusicSourceError
