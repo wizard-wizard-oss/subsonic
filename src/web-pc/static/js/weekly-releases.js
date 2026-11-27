@@ -1,6 +1,7 @@
 "use strict";
 
-/* Une instance par visite. Les réponses d'une semaine précédente ne remplacent jamais la sélection. */
+/* Consultation « un style à la fois » : semaines hors de la période synchronisée du radar (weekly-radar.js).
+   Une instance par visite. Les réponses d'une semaine précédente ne remplacent jamais la sélection. */
 const WeeklyReleaseView = (() => {
   const el = App.el;
   const t = key => App.t("weekly." + key);
@@ -17,10 +18,11 @@ const WeeklyReleaseView = (() => {
 
   /* Une page « sorties de la semaine » : style choisi, semaine affichée et pages déjà chargées. */
   class WeekPage {
-    constructor(main, route) {
+    constructor(main, route, options = {}) {
       this.main = main;
       this.route = route;
-      this.monday = mondayFor(new Date());
+      this.back = options.back;
+      this.monday = options.monday || mondayFor(new Date());
       this.genres = []; this.followed = new Set(); this.selected = null; this.generation = 0; this.saving = false;
       this.input = el("input", {type: "search", list: "weekly-genres", placeholder: t("style"), "aria-label": t("style")});
       this.options = el("datalist", {id: "weekly-genres"});
@@ -38,7 +40,8 @@ const WeeklyReleaseView = (() => {
     layout() {
       const week = el("div.chips.weekly-week", {}, this.button("previous", () => this.move(-7)), this.range,
         this.button("next", () => this.move(7)),
-        this.button("today", () => { this.monday = mondayFor(new Date()); this.reload(); }));
+        this.button("today", () => { this.monday = mondayFor(new Date()); this.reload(); }),
+        this.back ? this.button("back_to_radar", this.back) : null);
       const sidebar = el("aside.weekly-followed", {}, el("h2", {text: t("followed")}), this.follows,
         el("a", {href: "#/whatsnew/press/g5", text: t("guide")}));
       App.append(App.clear(this.main), [News.tabs(true),
@@ -65,7 +68,7 @@ const WeeklyReleaseView = (() => {
         if (initial) this.choose(initial);
         else { this.updateControls(); this.reload(); }
       } catch (error) {
-        if (!this.route.stale) this.errorState(this.results, error, () => render(this.main, this.route));
+        if (!this.route.stale) this.errorState(this.results, error, () => this.start());
       }
     }
 
@@ -144,7 +147,11 @@ const WeeklyReleaseView = (() => {
   }
 
   function render(main, route) {
-    return new WeekPage(main, route).start();
+    return WeeklyRadar.render(main, route);
+  }
+
+  function browse(main, route, options) {
+    return new WeekPage(main, route, options).start();
   }
 
   function card(album, grid) {
@@ -180,5 +187,5 @@ const WeeklyReleaseView = (() => {
     }
   }
 
-  return {render, mondayFor};
+  return {render, browse, mondayFor, shift, display, iso};
 })();

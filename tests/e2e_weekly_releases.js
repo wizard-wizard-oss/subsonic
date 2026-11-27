@@ -28,7 +28,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   `);
   assert.equal(win.weekly.mondayFor(new win.Date(2026, 10, 23)).toISOString().slice(0, 10), "2026-11-23");
   assert.equal(win.weekly.mondayFor(new win.Date(2027, 0, 3)).toISOString().slice(0, 10), "2026-12-28");
-  await win.news.view.render(doc.querySelector("main"), {id: "releases"});
+  await win.weekly.browse(doc.querySelector("main"), {id: "releases"});
   await tick();
   assert.equal(doc.querySelector("h3").textContent, "Album vendredi");
   assert.ok(doc.querySelector('a[href="#/whatsnew/press/g5"]'));
