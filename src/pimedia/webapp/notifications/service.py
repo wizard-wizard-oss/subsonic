@@ -2,8 +2,8 @@
 import re
 import time
 
-from .errors import MissingRight
-from .notification_entities import (BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH, NotificationError, NotificationPage,
+from ..errors import MissingRight
+from .entities import (BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH, NotificationError, NotificationPage,
                                     NotificationStatus)
 
 

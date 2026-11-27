@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .tag_sources import SourceRelease
+    from .sources import SourceRelease
 
 TAG_FIELDS = ("title", "artist", "albumArtist", "album", "year", "genre", "track", "disc")
 TAG_EDIT_RIGHT = "coverArt"
@@ -46,6 +46,27 @@ def tag_value(name, value):
         value = str(int(value))
     return value
 
+
+
+class AudioTagError(ValueError):
+    """Erreur publique exprimée par une clé i18n, sans chemin du serveur."""
+
+
+@dataclass(frozen=True)
+class AudioFileSnapshot:
+    relative_path: str
+    revision: str
+    format: str
+    editable: bool
+    reason: str
+    tags: dict
+
+
+@dataclass(frozen=True)
+class AudioFileEdit:
+    relative_path: str
+    expected_revision: str
+    changes: dict
 
 @dataclass(frozen=True)
 class TagEditorStatus:

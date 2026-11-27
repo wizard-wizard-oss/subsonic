@@ -12,12 +12,12 @@ from ..shared.providers.lyrics import LyricsFinder
 from ..shared.providers.wikipedia import Wikipedia
 from ..storage.database import Database
 from .accounts import Accounts
-from .album_tags import AlbumTags
-from .notification_entities import NotificationError
-from .notifications import Notifications
+from .tags.service import AlbumTags
+from .notifications.entities import NotificationError
+from .notifications.service import Notifications
 from .storage.notifications import NotificationRepository
 from .controllers.notifications import NotificationController
-from .audio_tags import AudioTagError, AudioTags
+from .tags.audio import AudioTagError, AudioTags
 from .library.artists import ArtistIndexes
 from .artist_discogs import ArtistDiscogsLinks
 from .artist_portraits import ArtistPortraits
@@ -43,7 +43,7 @@ from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
 from .controllers.news import NewsController
 from .controllers.weekly_releases import WeeklyReleasesController
-from .weekly_releases import WeeklyReleases
+from .weekly_releases.service import WeeklyReleases
 from .storage.weekly_releases import ReleaseSubscriptions
 from .controllers.playlists import PlaylistController
 from .controllers.uploads import UploadController
@@ -63,18 +63,18 @@ from .providers.lastfm import LastFm
 from .label_discovery import LabelDiscovery
 from .youtube_versions import YouTubeVersions
 from ..shared.providers.metadata import ProviderUnavailable
-from .tag_entities import TAG_BODY_LIMIT, TAG_EDIT_RIGHT, TagError
-from .tag_sources import TagSources
+from .tags.entities import TAG_BODY_LIMIT, TAG_EDIT_RIGHT, TagError
+from .tags.sources import TagSources
 from .library_scan import LibraryScan
 from .storage.exploration import ExplorationRepository
 from .library.folders import FolderNotFound, Folders
 from .library.catalog import Library
 from .library.statistics import SubsonicStatistics
 from .listening import Listening
-from .listen_later import ListenLater
-from .recommendations import Recommendations
-from .recommendation_entities import RecommendationError
-from .listening_targets import ListeningTargets, ListenLaterError
+from .listen_later.service import ListenLater
+from .recommendations.service import Recommendations
+from .recommendations.entities import RecommendationError
+from .listen_later.targets import ListeningTargets, ListenLaterError
 from .storage.listen_later import ListenLaterRepository
 from .storage.recommendations import RecommendationRepository
 from .storage.recommendation_comments import RecommendationCommentRepository

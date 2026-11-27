@@ -7,7 +7,7 @@ from pimedia.webapp.providers.discogs import Discogs
 from pimedia.webapp.providers.discogs_entities import DiscogsEdition
 from pimedia.shared.providers.metadata import Pacer
 from pimedia.shared.providers.musicbrainz import MusicBrainz
-from pimedia.webapp.tag_sources import SourceCandidate, TagSources
+from pimedia.webapp.tags.sources import SourceCandidate, TagSources
 from tests.fake_discogs import FakeDiscogs, edition
 from tests.test_tag_sources import EditionMusicBrainz, MemoryCache
 

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from pimedia.webapp.providers.discogs import Discogs
 from pimedia.shared.providers.metadata import Pacer
 from pimedia.shared.providers.musicbrainz import MusicBrainz
-from pimedia.webapp.tag_sources import TagSources
+from pimedia.webapp.tags.sources import TagSources
 from tests.fake_discogs import FakeDiscogs
 from tests.fake_musicbrainz import ARTIST_CREDIT, EDITION, RELEASE
 

@@ -1,5 +1,5 @@
 """SQL for private recommendation comments; also used by atomic initial delivery."""
-from ..recommendation_entities import RecommendationComment, RecommendationCommentPage
+from ..recommendations.entities import RecommendationComment, RecommendationCommentPage
 
 
 SELECT = ("SELECT c.*, u.username AS author_name FROM recommendation_comments c "

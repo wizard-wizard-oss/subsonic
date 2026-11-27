@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 from mutagen.flac import FLAC
 
-from pimedia.webapp.audio_tags import AudioTagError
-from pimedia.webapp.tag_entities import AlbumTagPatch, TagError
-from pimedia.webapp.tag_sources import SourceMatches, SourceRelease, SourceTrack
+from pimedia.webapp.tags.audio import AudioTagError
+from pimedia.webapp.tags.entities import AlbumTagPatch, TagError
+from pimedia.webapp.tags.sources import SourceMatches, SourceRelease, SourceTrack
 from tests.fake_subsonic import ID3_ARTISTS
 from tests.test_audio_tags import make_flac
 from tests.webapp_support import WebAppTestCase

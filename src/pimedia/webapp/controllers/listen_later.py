@@ -1,7 +1,7 @@
 """HTTP endpoints for listening bookmarks and recommendations."""
 from .base import int_param, ok
-from ..recommendations import READ_BATCH_SIZE
-from ..recommendation_entities import COMMENT_MAX_LENGTH
+from ..recommendations.service import READ_BATCH_SIZE
+from ..recommendations.entities import COMMENT_MAX_LENGTH
 
 
 class ListenLaterController:

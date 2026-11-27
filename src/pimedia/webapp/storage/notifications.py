@@ -1,5 +1,5 @@
 """Stockage des notifications et de leur lecture, limité au destinataire."""
-from ..notification_entities import Notification, NotificationDelivery
+from ..notifications.entities import Notification, NotificationDelivery
 
 
 class NotificationRepository:

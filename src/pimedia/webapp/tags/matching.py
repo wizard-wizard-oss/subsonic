@@ -1,7 +1,7 @@
 """Correspondances certaines entre pistes locales et édition choisie, sans dépendance réseau ou disque."""
 from collections import Counter
 
-from ..shared.text import normalize
+from ...shared.text import normalize
 
 DURATION_TOLERANCE = 3
 

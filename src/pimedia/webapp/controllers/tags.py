@@ -1,6 +1,6 @@
 """Entrées HTTP de l'édition de tags ; les règles résident dans AlbumTags."""
 from .base import ok
-from ..tag_entities import AlbumTagPatch, reference
+from ..tags.entities import AlbumTagPatch, reference
 
 
 class TagController:

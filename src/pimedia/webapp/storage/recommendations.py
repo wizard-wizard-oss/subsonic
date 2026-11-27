@@ -1,7 +1,7 @@
 """Recommendations, durable private threads and delivery acknowledgements."""
 import secrets
 
-from ..recommendation_entities import Recommendation, RecommendationDelivery, RecommendationPage
+from ..recommendations.entities import Recommendation, RecommendationDelivery, RecommendationPage
 from .listening_targets import BY_KEY, COLUMNS, IN_LIBRARY, save_target
 from .recommendation_comments import insert_comment
 

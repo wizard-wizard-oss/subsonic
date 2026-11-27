@@ -19,7 +19,7 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.wave import WAVE
 
-from pimedia.webapp.audio_tags import (AudioFileEdit, AudioTagError, AudioTags, FIELDS,
+from pimedia.webapp.tags.audio import (AudioFileEdit, AudioTagError, AudioTags, FIELDS,
                                        MAX_BACKUP_OPERATIONS, validate_changes)
 
 PAYLOAD = b"\xff\xfb\x90\x00" + bytes(413)
@@ -310,7 +310,7 @@ class AudioTagsTest(unittest.TestCase):
                 failed = True
                 raise OSError("replace failed")
             replace(source, destination)
-        with patch("pimedia.webapp.audio_tags.os.replace", side_effect=fail_second):
+        with patch("pimedia.webapp.tags.audio.os.replace", side_effect=fail_second):
             with self.assertRaisesRegex(AudioTagError, "tags.write_failed"):
                 self.writer.apply(edits)
         self.assertEqual((first.read_bytes(), second.read_bytes()), before)
@@ -390,7 +390,7 @@ class AudioTagsTest(unittest.TestCase):
         path = self.file()
         before = path.read_bytes()
         free = shutil._ntuple_diskusage(100, 99, 1)
-        with patch("pimedia.webapp.audio_tags.shutil.disk_usage", return_value=free):
+        with patch("pimedia.webapp.tags.files.shutil.disk_usage", return_value=free):
             with self.assertRaisesRegex(AudioTagError, "tags.no_space"):
                 self.writer.apply((self.edit(title="Corrected"),))
         self.assertEqual(path.read_bytes(), before)

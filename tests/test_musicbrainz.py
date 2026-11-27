@@ -13,7 +13,7 @@ from pimedia.shared.providers.metadata import Pacer
 from pimedia.shared.providers.musicbrainz import MusicBrainz
 from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.tag_sources import TagSources
+from pimedia.webapp.tags.sources import TagSources
 from tests.fake_musicbrainz import EDITION, RELEASE, identity
 from tests.test_tag_sources import MemoryCache
 

@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from pimedia.storage.database import Database
-from pimedia.webapp.notification_entities import BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH
+from pimedia.webapp.notifications.entities import BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.notifications import NotificationRepository
 from tests.webapp_support import WebAppTestCase

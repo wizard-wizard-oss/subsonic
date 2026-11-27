@@ -2,7 +2,7 @@
 from dataclasses import replace
 from datetime import date, timedelta
 
-from ..shared.providers.musicbrainz.entities import ReleaseGenre
+from ...shared.providers.musicbrainz.entities import ReleaseGenre
 
 
 class WeeklyReleases:

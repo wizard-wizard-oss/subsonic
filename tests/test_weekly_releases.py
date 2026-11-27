@@ -18,7 +18,7 @@ from pimedia.shared.providers.musicbrainz.client import GENRE_CATALOG_TTL, Music
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
-from pimedia.webapp.weekly_releases import WeeklyReleases
+from pimedia.webapp.weekly_releases.service import WeeklyReleases
 
 GENRE = "noise rock"   # un style est identifié par son nom exact dans le catalogue MusicBrainz
 GROUP = "aaaaaaaa-1111-4222-8333-444444444444"

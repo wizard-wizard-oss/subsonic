@@ -10,13 +10,13 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
-from .audio_tags import AudioFileEdit, AudioTagError, SUPPORTED_FORMATS
-from .errors import MissingRight
-from .subsonic import Credentials
-from .tag_entities import (AlbumTagSnapshot, TagEditorStatus, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
+from .audio import AudioFileEdit, AudioTagError, SUPPORTED_FORMATS
+from ..errors import MissingRight
+from ..subsonic import Credentials
+from .entities import (AlbumTagSnapshot, TagEditorStatus, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
                            TagReleaseProposal, TagTrack, TagValues, reference, tag_limits)
-from .tag_matching import propose_mapping, rank_candidates
-from .tag_sources import SourceMatches
+from .matching import propose_mapping, rank_candidates
+from .sources import SourceMatches
 
 LOG = logging.getLogger(__name__)
 OPERATION_SECONDS = 3600

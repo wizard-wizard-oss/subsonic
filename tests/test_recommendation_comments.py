@@ -6,8 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from pimedia.storage.database import Database
-from pimedia.webapp.listen_later_entities import ListeningTarget
-from pimedia.webapp.recommendation_entities import COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, RecommendationComment
+from pimedia.webapp.listen_later.entities import ListeningTarget
+from pimedia.webapp.recommendations.entities import COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, RecommendationComment
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.recommendation_comments import RecommendationCommentRepository
 from pimedia.webapp.storage.recommendations import RecommendationRepository

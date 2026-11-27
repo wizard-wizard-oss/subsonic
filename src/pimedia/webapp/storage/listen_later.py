@@ -1,5 +1,5 @@
 """SQLite persistence for each user's listening bookmarks."""
-from ..listen_later_entities import ListenLaterEntry
+from ..listen_later.entities import ListenLaterEntry
 from .listening_targets import COLUMNS, IN_LIBRARY, save_target
 
 SELECT = ("SELECT l.id, l.user_id, l.created_at, " + COLUMNS + " FROM listen_later l "

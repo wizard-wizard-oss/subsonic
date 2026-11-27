@@ -1,7 +1,7 @@
 """Personal musical bookmarks; playback stays in its existing services."""
 import time
 
-from .listening_targets import entry_id
+from .targets import entry_id
 
 
 class ListenLater:

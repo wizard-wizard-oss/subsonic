@@ -1,9 +1,9 @@
 """Appariement conservateur : preuves musicales, désordre, disques et ambiguïtés globales."""
 import unittest
 
-from pimedia.webapp.tag_entities import TagTrack, TagValues
-from pimedia.webapp.tag_matching import propose_mapping, rank_candidates
-from pimedia.webapp.tag_sources import SourceCandidate, SourceTrack
+from pimedia.webapp.tags.entities import TagTrack, TagValues
+from pimedia.webapp.tags.matching import propose_mapping, rank_candidates
+from pimedia.webapp.tags.sources import SourceCandidate, SourceTrack
 
 
 def local(title="", track="", disc="", duration=0):

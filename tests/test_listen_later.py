@@ -8,10 +8,10 @@ from unittest.mock import patch
 
 from pimedia.storage.database import Database
 from pimedia.webapp.library.folders import FolderNotFound
-from pimedia.webapp.listen_later_entities import ListeningTarget
+from pimedia.webapp.listen_later.entities import ListeningTarget
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.recommendations import READ_BATCH_SIZE
-from pimedia.webapp.recommendation_entities import COMMENT_MAX_LENGTH
+from pimedia.webapp.recommendations.service import READ_BATCH_SIZE
+from pimedia.webapp.recommendations.entities import COMMENT_MAX_LENGTH
 from pimedia.webapp.storage.listen_later import ListenLaterRepository
 from pimedia.webapp.storage.recommendations import RecommendationRepository
 from pimedia.webapp.storage.users import UserRepository

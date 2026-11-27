@@ -1,7 +1,7 @@
 """Private recommendations and their chronological comments."""
 from dataclasses import dataclass
 
-from .listen_later_entities import ListeningTarget
+from ..listen_later.entities import ListeningTarget
 
 
 COMMENT_MAX_LENGTH = 1000

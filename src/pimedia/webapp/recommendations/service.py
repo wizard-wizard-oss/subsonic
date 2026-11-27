@@ -3,10 +3,10 @@ import re
 import secrets
 import time
 
-from .recommendation_entities import (COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, ReceivedRecommendations,
+from .entities import (COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, ReceivedRecommendations,
                                       RecommendationDiscussion, RecommendationError, RecommendationGroup,
                                       RecommendationStatus)
-from .listening_targets import ListenLaterError, entry_id
+from ..listen_later.targets import ListenLaterError, entry_id
 
 
 READ_BATCH_SIZE = 200
