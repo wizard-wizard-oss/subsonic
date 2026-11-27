@@ -81,6 +81,24 @@ const NotificationsUI = (() => {
     }
   }
 
+  function card(entry, alive, status) {
+    const read = el("button.notification-read", {text: t("mark_read"), hidden: entry.readAt !== null});
+    const node = el("article.notification-card" + (entry.readAt === null ? ".unread" : ""), {dataset: {id: entry.id}},
+      el("h2", {text: entry.title}), el("p.notification-meta", {text: t("from_admin") + " · " + App.fullDate(entry.createdAt)}),
+      el("p.notification-body", {text: entry.body}), read);
+    read.addEventListener("click", async () => {
+      if (read.disabled) return;
+      read.disabled = true;
+      try {
+        await App.api.post("/api/notifications/read", {id: entry.id});
+        if (!alive()) return;
+        read.hidden = true; node.classList.remove("unread"); refresh();
+      } catch (error) { if (alive()) status.textContent = App.errorText(error); }
+      finally { if (alive()) read.disabled = false; }
+    });
+    return node;
+  }
+
   async function render(main, route) {
     const owner = App.user.id;
     App.clear(main).appendChild(el("h1", {text: t("title")}));
@@ -92,31 +110,13 @@ const NotificationsUI = (() => {
     let before = null, loading = false;
     const alive = () => !route.stale && App.user && App.user.id === owner && list.isConnected;
 
-    function card(entry) {
-      const read = el("button.notification-read", {text: t("mark_read"), hidden: entry.readAt !== null});
-      const node = el("article.notification-card" + (entry.readAt === null ? ".unread" : ""), {dataset: {id: entry.id}},
-        el("h2", {text: entry.title}), el("p.notification-meta", {text: t("from_admin") + " · " + App.fullDate(entry.createdAt)}),
-        el("p.notification-body", {text: entry.body}), read);
-      read.addEventListener("click", async () => {
-        if (read.disabled) return;
-        read.disabled = true;
-        try {
-          await App.api.post("/api/notifications/read", {id: entry.id});
-          if (!alive()) return;
-          read.hidden = true; node.classList.remove("unread"); refresh();
-        } catch (error) { if (alive()) status.textContent = App.errorText(error); }
-        finally { if (alive()) read.disabled = false; }
-      });
-      return node;
-    }
-
     async function load() {
       if (loading) return;
       loading = true; more.disabled = true; status.textContent = "";
       try {
         const data = await App.api.get("/api/notifications", before ? {before} : {});
         if (!alive()) return;
-        data.entries.forEach(entry => list.appendChild(card(entry)));
+        data.entries.forEach(entry => list.appendChild(card(entry, alive, status)));
         if (!list.children.length) status.textContent = t("empty");
         before = data.before; more.hidden = !before; more.textContent = t("more");
         // Le compteur passe par une lecture dédiée pour écarter toute réponse arrivée en retard.

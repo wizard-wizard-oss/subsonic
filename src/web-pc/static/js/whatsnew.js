@@ -94,93 +94,108 @@ Views.whatsnew = (() => {
     return links;
   }
 
-  function render(main, route = {}) {
-    const page = el("div.help-page");
-    const themes = el("nav.help-themes", {"aria-label": t("whatsnew.themes_label")});
-    const title = el("h3", {id: "help-theme-title", tabIndex: -1});
-    const description = el("p");
-    const choices = el("div.help-guide-list", {role: "group", "aria-label": t("whatsnew.guides_label")});
-    const lesson = el("article.help-lesson", {id: "help-lesson", "aria-labelledby": "help-guide-title"});
-    const panel = el("section.help-panel", {id: "help-panel", "aria-labelledby": "help-theme-title"},
-      el("div.help-panel-heading", {}, title, description), choices, lesson);
-    const themeButtons = new Map();
+  const reveal = target => {
+    target.focus({preventScroll: true});
+    if (target.scrollIntoView) target.scrollIntoView({block: "nearest"});
+  };
 
-    function reveal(target) {
-      target.focus({preventScroll: true});
-      if (target.scrollIntoView) target.scrollIntoView({block: "nearest"});
+  /* La page Help : thèmes, guides du thème choisi et leçon du guide choisi. */
+  class HelpPage {
+    constructor(main) {
+      this.main = main;
+      this.themes = el("nav.help-themes", {"aria-label": t("whatsnew.themes_label")});
+      this.title = el("h3", {id: "help-theme-title", tabIndex: -1});
+      this.description = el("p");
+      this.choices = el("div.help-guide-list", {role: "group", "aria-label": t("whatsnew.guides_label")});
+      this.lesson = el("article.help-lesson", {id: "help-lesson", "aria-labelledby": "help-guide-title"});
+      this.panel = el("section.help-panel", {id: "help-panel", "aria-labelledby": "help-theme-title"},
+        el("div.help-panel-heading", {}, this.title, this.description), this.choices, this.lesson);
+      this.themeButtons = new Map();
     }
 
-    function selectGuide(theme, guide) {
-      for (const button of choices.children) button.setAttribute("aria-pressed", String(button.dataset.guide === guide));
-      const key = guideKey(theme, guide);
-      const steps = App.texts[key + ".steps"] || [];
+    lessonBody(theme, guide, key) {
       const capture = CAPTURES[theme + "." + guide];
       const body = el("div.help-lesson-body" + (capture ? ".has-illustration" : ""), {},
-        el("ol.help-steps", {"aria-label": t("whatsnew.steps_label")}, steps.map(text => el("li", {text}))));
+        el("ol.help-steps", {"aria-label": t("whatsnew.steps_label")}, (App.texts[key + ".steps"] || []).map(text => el("li", {text}))));
       if (capture) {
         body.appendChild(el("figure.help-illustration", {},
           el("img", {src: "/static/help/" + capture + ".png", alt: t(key + ".title"), loading: "lazy", decoding: "async"}),
           el("figcaption", {text: t("whatsnew.illustration_label")})));
       }
-      const note = App.texts[key + ".note"] !== undefined ? t(key + ".note") : "";   // App.t rend la clé si le texte manque
-      App.append(App.clear(lesson), [el("p.kicker", {text: t("whatsnew.steps_label")}),
-        el("h4", {id: "help-guide-title", tabIndex: -1, "aria-live": "polite", text: t(key + ".title")}),
-        body, el("p.help-note", {text: note, hidden: !note}), actions(theme, guide)]);
+      return body;
     }
 
-    function selectTheme(theme, guide) {
-      for (const [id, button] of themeButtons) button.setAttribute("aria-pressed", String(id === theme.id));
-      title.textContent = t(themeKey(theme.id) + ".title");
-      description.textContent = t(themeKey(theme.id) + ".description");
-      App.clear(choices);
+    selectGuide(theme, guide) {
+      for (const button of this.choices.children) button.setAttribute("aria-pressed", String(button.dataset.guide === guide));
+      const key = guideKey(theme, guide);
+      const note = App.texts[key + ".note"] !== undefined ? t(key + ".note") : "";   // App.t rend la clé si le texte manque
+      App.append(App.clear(this.lesson), [el("p.kicker", {text: t("whatsnew.steps_label")}),
+        el("h4", {id: "help-guide-title", tabIndex: -1, "aria-live": "polite", text: t(key + ".title")}),
+        this.lessonBody(theme, guide, key), el("p.help-note", {text: note, hidden: !note}), actions(theme, guide)]);
+    }
+
+    selectTheme(theme, guide) {
+      for (const [id, button] of this.themeButtons) button.setAttribute("aria-pressed", String(id === theme.id));
+      this.title.textContent = t(themeKey(theme.id) + ".title");
+      this.description.textContent = t(themeKey(theme.id) + ".description");
+      App.clear(this.choices);
       for (const id of guides(theme.id)) {
-        choices.appendChild(el("button.help-guide-button", {type: "button", dataset: {guide: id},
+        this.choices.appendChild(el("button.help-guide-button", {type: "button", dataset: {guide: id},
           "aria-controls": "help-lesson", onclick: () => {
-            selectGuide(theme.id, id);
-            const bounds = lesson.getBoundingClientRect(), visible = main.getBoundingClientRect();
-            if (bounds.top > visible.bottom) reveal(lesson.querySelector("h4"));
+            this.selectGuide(theme.id, id);
+            const bounds = this.lesson.getBoundingClientRect(), visible = this.main.getBoundingClientRect();
+            if (bounds.top > visible.bottom) reveal(this.lesson.querySelector("h4"));
           }},
           App.icon("next", 12), el("span", {text: t(guideKey(theme.id, id) + ".title")})));
       }
-      selectGuide(theme.id, guide || theme.first);
+      this.selectGuide(theme.id, guide || theme.first);
     }
 
-    for (const theme of THEMES) {
+    themeButton(theme) {
       const key = themeKey(theme.id);
       const button = el("button.help-theme", {type: "button", dataset: {theme: theme.id},
         "aria-controls": "help-panel", onclick: () => {
-          selectTheme(theme);
-          const navigation = themes.getBoundingClientRect();
-          if (navigation.width && panel.getBoundingClientRect().top >= navigation.bottom) reveal(title);
+          this.selectTheme(theme);
+          const navigation = this.themes.getBoundingClientRect();
+          if (navigation.width && this.panel.getBoundingClientRect().top >= navigation.bottom) reveal(this.title);
         }}, App.icon(theme.icon, 20),
         el("span.help-theme-copy", {}, el("span.help-theme-title", {text: t(key + ".title")}),
           el("span.help-theme-summary", {text: t(key + ".summary")})), App.icon("next", 12));
-      themes.appendChild(button);
-      themeButtons.set(theme.id, button);
+      this.themeButtons.set(theme.id, button);
+      return button;
     }
 
-    const features = FEATURES.map(feature => el("button.help-feature", {type: "button", dataset: {feature: feature.id},
-      "aria-controls": "help-panel", onclick: () => {
-        selectTheme(THEMES.find(theme => theme.id === feature.theme), feature.guide);
-        reveal(lesson.querySelector("h4"));
-      }}, el("span.help-feature-label", {}, App.icon(feature.icon, 18), el("span", {text: t(feature.label)})),
-      preview(feature.id), el("h3", {text: t("whatsnew.featured." + feature.id + ".title")}),
-      el("p.help-feature-text", {text: t("whatsnew.featured." + feature.id + ".text")})));
+    featureCard(feature) {
+      return el("button.help-feature", {type: "button", dataset: {feature: feature.id},
+        "aria-controls": "help-panel", onclick: () => {
+          this.selectTheme(THEMES.find(theme => theme.id === feature.theme), feature.guide);
+          reveal(this.lesson.querySelector("h4"));
+        }}, el("span.help-feature-label", {}, App.icon(feature.icon, 18), el("span", {text: t(feature.label)})),
+        preview(feature.id), el("h3", {text: t("whatsnew.featured." + feature.id + ".title")}),
+        el("p.help-feature-text", {text: t("whatsnew.featured." + feature.id + ".text")}));
+    }
 
-    App.append(page, [
-      el("header.help-header", {}, el("div.help-heading", {}, el("p.kicker", {text: t("whatsnew.eyebrow")}),
-        el("h1", {text: t("whatsnew.title")}), el("p.help-intro", {text: t("whatsnew.intro")})),
+    show(route) {
+      App.append(this.themes, THEMES.map(theme => this.themeButton(theme)));
+      const page = el("div.help-page", {}, el("header.help-header", {}, el("div.help-heading", {},
+          el("p.kicker", {text: t("whatsnew.eyebrow")}), el("h1", {text: t("whatsnew.title")}),
+          el("p.help-intro", {text: t("whatsnew.intro")})),
         el("a.whatsnew-versions.help-versions", {href: "#/versions", text: t("whatsnew.versions") + " →"})),
-      el("section.help-featured", {"aria-labelledby": "help-featured-title"}, el("h2", {id: "help-featured-title", text: t("whatsnew.featured_title")}),
-        el("div.help-feature-grid", {}, features)),
-      el("section.help-guides", {"aria-labelledby": "help-guides-title"}, el("h2", {id: "help-guides-title", text: t("whatsnew.themes_title")}),
-        el("div.help-browser", {}, themes, panel)),
-      el("p.help-footer", {text: t("whatsnew.footer")}),
-    ]);
-    App.clear(main).appendChild(page);
-    const [themeId, guideId] = (route.id || "").split("/");
-    const theme = THEMES.find(item => item.id === themeId) || THEMES[0];
-    selectTheme(theme, guides(theme.id).includes(guideId) ? guideId : undefined);
+        el("section.help-featured", {"aria-labelledby": "help-featured-title"},
+          el("h2", {id: "help-featured-title", text: t("whatsnew.featured_title")}),
+          el("div.help-feature-grid", {}, FEATURES.map(feature => this.featureCard(feature)))),
+        el("section.help-guides", {"aria-labelledby": "help-guides-title"},
+          el("h2", {id: "help-guides-title", text: t("whatsnew.themes_title")}), el("div.help-browser", {}, this.themes, this.panel)),
+        el("p.help-footer", {text: t("whatsnew.footer")}));
+      App.clear(this.main).appendChild(page);
+      const [themeId, guideId] = (route.id || "").split("/");
+      const theme = THEMES.find(item => item.id === themeId) || THEMES[0];
+      this.selectTheme(theme, guides(theme.id).includes(guideId) ? guideId : undefined);
+    }
+  }
+
+  function render(main, route = {}) {
+    new HelpPage(main).show(route);
   }
 
   return {render};
