@@ -64,6 +64,12 @@ class MusicBrainzRadarTest(unittest.TestCase):
         album = self.client.groups_by_artists((mbid(1),), START, END).albums[0]
         self.assertEqual(album.tags, ("techno", "electronic"))
 
+    def test_credited_artist_ids_are_kept(self):
+        self.responses[("release-group", "arid:")] = {"count": 1, "release-groups": [
+            group(1, "Nouveau", "Moderat", "2026-11-27")]}
+        album = self.client.groups_by_artists((mbid(901),), START, END).albums[0]
+        self.assertEqual(album.artist_ids, (mbid(901),))
+
     def test_label_keeps_only_new_groups(self):
         new, reissue, single = mbid(1), mbid(2), mbid(3)
         self.responses[("release", "laid:")] = {"count": 3, "releases": [

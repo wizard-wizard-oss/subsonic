@@ -5,6 +5,14 @@ from datetime import date
 from typing import Optional
 
 
+class RadarError(Exception):
+    """Refus expliqué à la page : code (clé de texte i18n) et statut HTTP."""
+
+    def __init__(self, code, status=400):
+        super().__init__(code)
+        self.code, self.status = code, status
+
+
 @dataclass(frozen=True)
 class RadarSource:
     """Ce qu'un compte suit : un style (nom exact du catalogue), un label ou un artiste (MBID), un proche."""

@@ -108,7 +108,18 @@ def weekly_group(row):
     except ValueError:
         return None
     return WeeklyRelease(mbid(row["id"]), row["title"], artist_name(row), released_on, row.get("primary-type", ""),
-                         tags(row))
+                         tags(row), artist_ids(row))
+
+
+def artist_ids(raw):
+    """MBID des artistes crédités, dans l'ordre du crédit."""
+    found = []
+    for credit in raw.get("artist-credit") or []:
+        try:
+            found.append(mbid((credit.get("artist") or {}).get("id")))
+        except (ValueError, AttributeError):
+            continue
+    return tuple(dict.fromkeys(found))
 
 
 def tags(raw):

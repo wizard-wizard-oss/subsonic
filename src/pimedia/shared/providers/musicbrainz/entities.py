@@ -159,6 +159,7 @@ class WeeklyRelease:
     released_on: date
     kind: str
     tags: tuple = ()
+    artist_ids: tuple = ()
 
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,
