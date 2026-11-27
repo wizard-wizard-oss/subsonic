@@ -1224,10 +1224,10 @@ webapp:
           g5:
             title: "Suivre les sorties de la semaine"
             steps:
-              - "Dans Actualités, ouvrez Sorties de la semaine et choisissez un style MusicBrainz."
-              - "Dès le lundi, consultez les albums et EP annoncés jusqu’au dimanche, vendredi compris."
-              - "Cliquez sur Suivre ce style pour le retrouver sur votre compte."
-            note: "Une sortie apparaît dès que MusicBrainz connaît sa date et son style. Les flèches permettent aussi de consulter les semaines à venir."
+              - "Dans Actualités, ouvrez Sorties de la semaine : votre radar réunit les sorties de ce que vous suivez."
+              - "Filtrez d’un clic avec les pastilles (un style, Labels, Mes artistes, Découvertes) et changez de semaine avec les flèches."
+              - "Dans ⚙ Mes sources, ajoutez un style, un label ou un artiste, ou retirez ce qui ne vous intéresse pas."
+            note: "Le radar se remplit tout seul d’après vos favoris (artistes, labels de vos albums, styles) et propose des artistes proches absents de la bibliothèque. Les sorties sont cherchées dans MusicBrainz chaque nuit ; ↻ relance la recherche pour vous. Au-delà de deux semaines passées et deux mois à venir, on parcourt un style à la fois."
       settings:
         title: "Personnaliser et gérer"
         summary: "Affichage et bibliothèque"
