@@ -5,12 +5,10 @@ Un seul dossier par artiste : un artiste déjà présent est retrouvé sans teni
 espaces ni de la ponctuation (« Dalek » rejoint « Dälek », « A.A.Williams » rejoint « A.A. Williams »), et son nom de
 dossier est gardé. Rien n'est jamais écrasé : un album déjà présent (même nom, aux mêmes détails près) n'est pas rangé."""
 import os
-import re
 
-from .naming import LibraryNaming
+from .naming import LibraryNaming, is_disc
 
 EXTENSIONS = ("mp3", "flac", "m4a", "aac", "ogg", "oga", "opus", "wav", "aiff", "aif")
-DISC = re.compile(r"(cd|dis[ck]|disque)\s*\d+", re.IGNORECASE)
 
 
 class AmbiguousFolder(LookupError):
@@ -19,11 +17,6 @@ class AmbiguousFolder(LookupError):
 
 def extension_of(name):
     return name.rsplit(".", 1)[-1].lower() if "." in name else ""
-
-
-def is_disc(name):
-    """Sous-dossier d'un album en plusieurs disques : « CD1 », « CD 2 », « Disc 1 », « Disque 2 »."""
-    return bool(DISC.fullmatch(name.strip()))
 
 
 def tracks_fit(album):

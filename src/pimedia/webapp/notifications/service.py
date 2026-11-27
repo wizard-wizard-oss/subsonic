@@ -1,8 +1,9 @@
 """Envoi administratif et consultation privée des notifications de service."""
-import re
 import time
 
+from ...shared.limits import is_request_id, is_username
 from ..errors import MissingRight
+from ..listen_later.targets import entry_id
 from .entities import (BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH, NotificationError, NotificationPage,
                                     NotificationStatus)
 
@@ -26,13 +27,20 @@ class Notifications:
             raise NotificationError("notifications.invalid_message")
         return value.strip()
 
+    @staticmethod
+    def _identity(value):
+        try:
+            return entry_id(value)
+        except ValueError:
+            raise NotificationError("notifications.invalid_request") from None
+
     def send(self, sender, recipient_name, title, body, request_id):
         self.check_admin(sender)
         title = self._text(title, TITLE_MAX_LENGTH)
         body = self._text(body, BODY_MAX_LENGTH)
-        if not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", request_id):
+        if not is_request_id(request_id):
             raise NotificationError("notifications.invalid_request")
-        if not isinstance(recipient_name, str) or not 1 <= len(recipient_name) <= 200:
+        if not is_username(recipient_name):
             raise NotificationError("notifications.unknown_recipient")
         recipient = self.users.by_name(recipient_name)
         if recipient is None:
@@ -45,8 +53,7 @@ class Notifications:
         return delivery.notification
 
     def page(self, user, before=None):
-        if before is not None and (type(before) is not int or not 0 < before < 2 ** 63):
-            raise NotificationError("notifications.invalid_request")
+        before = self._identity(before) if before is not None else None
         entries = self.repository.page(user.id, before, PAGE_SIZE + 1)
         return NotificationPage(tuple(entries[:PAGE_SIZE]), entries[PAGE_SIZE - 1].id if len(entries) > PAGE_SIZE else None,
                                 self.repository.unread(user.id))
@@ -55,8 +62,7 @@ class Notifications:
         return NotificationStatus(self.repository.unread(user.id))
 
     def mark_read(self, user, identity):
-        if type(identity) is not int or not 0 < identity < 2 ** 63:
-            raise NotificationError("notifications.invalid_request")
+        identity = self._identity(identity)
         self.repository.mark_read(user.id, identity, int(self.clock()))
         self.hub.publish("notifications", {}, to_user_id=user.id)
         return self.status(user)

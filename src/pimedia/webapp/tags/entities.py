@@ -7,6 +7,9 @@ if TYPE_CHECKING:
     from .sources import SourceRelease
 
 TAG_FIELDS = ("title", "artist", "albumArtist", "album", "year", "genre", "track", "disc")
+# Champ de tag -> nom du champ dans les réponses Subsonic (getSong) ; une seule correspondance pour lire et vérifier.
+SUBSONIC_FIELDS = {"title": "title", "artist": "artist", "albumArtist": "albumArtist", "album": "album", "year": "year",
+                   "genre": "genre", "track": "track", "disc": "discNumber"}
 TAG_EDIT_RIGHT = "coverArt"
 MAX_TAG_TEXT = 500
 MAX_ALBUM_TRACKS = 500
@@ -79,7 +82,7 @@ class TagEditorStatus:
 
     def to_api(self):
         return dict(writable=self.writable, reason=self.reason, providers=self.providers, formats=list(self.formats),
-                    limits=self.limits)
+                    limits=self.limits, fields=list(TAG_FIELDS))
 
 @dataclass(frozen=True)
 class TagValues:

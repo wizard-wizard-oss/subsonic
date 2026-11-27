@@ -12,7 +12,7 @@ const names = ["noise rock", "techno"];   // un style est identifié par son nom
 let pending;
 win.getWeekly = async (url, params) => {
   calls.push({url, params});
-  if (url.endsWith("/genres")) return {genres: names.map(name => ({name})), followed: []};
+  if (url.endsWith("/genres")) return {genres: names.map(name => ({name})), followed: [], default: "noise rock"};
   if (url.endsWith("/local")) return {albums: []};
   if (params.genre === "techno") return new Promise(resolve => { pending = resolve; });
   const date = new Date(params.monday + "T12:00:00Z");

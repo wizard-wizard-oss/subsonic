@@ -2,7 +2,7 @@
 import unittest
 
 from pimedia.shared.text import normalize
-from pimedia.webapp.library.naming import LibraryNaming
+from pimedia.webapp.library.naming import LibraryNaming, album_folder
 
 
 class LibraryNamingTest(unittest.TestCase):
@@ -50,3 +50,12 @@ class LibraryNamingTest(unittest.TestCase):
         self.assertEqual(LibraryNaming.comparison_key(None), "")
         self.assertEqual(LibraryNaming.comparison_key("  "), "")
         self.assertEqual(LibraryNaming.comparison_key(1989), "1989")
+
+
+class AlbumFolderTest(unittest.TestCase):
+    def test_one_rule_for_songs_disc_folders_and_disc_songs(self):
+        self.assertEqual(album_folder(["ABBA/Arrival/01.mp3"]), "ABBA/Arrival")
+        self.assertEqual(album_folder(["ABBA/Arrival/CD1"]), "ABBA/Arrival")
+        self.assertEqual(album_folder(["", "ABBA/Arrival/CD2/03.flac"]), "ABBA/Arrival")
+        self.assertEqual(album_folder(["\\ABBA\\Arrival\\01.mp3"]), "ABBA/Arrival")
+        self.assertEqual(album_folder(["single.mp3", ""]), "")

@@ -63,7 +63,7 @@ const NotificationsUI = (() => {
         if (submit.disabled || !form.reportValidity()) return;
         submit.disabled = true;
         const payload = {recipient: recipient.value, title: title.value, body: body.value,
-          requestId: requestId || (requestId = crypto.randomUUID())};
+          requestId: requestId || (requestId = App.requestId())};
         status.textContent = t("sending");
         try {
           await App.api.post("/api/notifications/send", payload);

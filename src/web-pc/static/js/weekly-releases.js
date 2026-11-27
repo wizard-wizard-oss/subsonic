@@ -125,7 +125,7 @@ const WeeklyReleaseView = (() => {
       genres = data.genres;
       followed = new Set(data.followed);
       App.append(options, genres.map(genre => el("option", {value: genre.name})));
-      const initial = genres.find(g => followed.has(g.name)) || genres.find(g => g.name === "noise rock");
+      const initial = genres.find(g => followed.has(g.name)) || genres.find(g => g.name === data.default);
       if (initial) choose(initial);
       else { updateControls(); reload(); }
     } catch (error) {

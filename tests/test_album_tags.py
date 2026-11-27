@@ -9,6 +9,7 @@ from unittest.mock import patch
 from mutagen.flac import FLAC
 
 from pimedia.webapp.tags.audio import AudioTagError
+from pimedia.webapp.tags.entities import TAG_FIELDS
 from pimedia.webapp.tags.entities import AlbumTagPatch, TagError
 from pimedia.webapp.tags.sources import SourceMatches, SourceRelease, SourceTrack
 from tests.fake_subsonic import ID3_ARTISTS
@@ -82,7 +83,8 @@ class AlbumTagsHttpTest(WebAppTestCase):
     def test_status_is_an_entity(self):
         status = self.app.album_tags.status(self.app.users.by_name("alice"))
         self.assertEqual(type(status).__name__, "TagEditorStatus")
-        self.assertEqual(set(status.to_api()), {"writable", "reason", "providers", "formats", "limits"})
+        self.assertEqual(set(status.to_api()), {"writable", "reason", "providers", "formats", "limits", "fields"})
+        self.assertEqual(status.to_api()["fields"], list(TAG_FIELDS))
 
     def test_reads_api_keeps_folder_headers_and_completes_missing_album_artist(self):
         snapshot = self.snapshot()

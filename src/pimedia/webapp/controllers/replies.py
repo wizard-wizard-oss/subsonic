@@ -1,4 +1,6 @@
 """Traduction des erreurs en réponses JSON {"error": clé de texte} : la seule correspondance erreur -> statut HTTP."""
+import sqlite3
+
 from ...server.transport import Reply
 from ...shared.providers.metadata import ProviderUnavailable
 from ..avatars import InvalidAvatar
@@ -25,6 +27,8 @@ from ..uploads import UploadError
 
 def error_reply(error):
     """Toute erreur devient une réponse JSON {"error": clé de texte}."""
+    if isinstance(error, sqlite3.IntegrityError):
+        return Reply.error(400, "request.invalid")          # une contrainte de la base : jamais une erreur serveur
     if isinstance(error, NotificationError):
         return Reply.error(400, str(error))
     if isinstance(error, TagError):

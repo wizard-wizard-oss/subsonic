@@ -1,11 +1,11 @@
 """Send, group and dismiss recommendations without creating personal bookmarks."""
-import re
 import secrets
 import time
 
 from .entities import (COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, ReceivedRecommendations,
                                       RecommendationDiscussion, RecommendationError, RecommendationGroup,
                                       RecommendationStatus)
+from ...shared.limits import is_request_id, is_username
 from ..listen_later.targets import ListenLaterError, entry_id
 
 
@@ -28,7 +28,7 @@ class Recommendations:
 
     def send(self, sender, recipient_name, kind, source, source_id, comment=""):
         comment = self._comment_body(comment, optional=True)
-        if not isinstance(recipient_name, str) or not 1 <= len(recipient_name) <= 200:
+        if not is_username(recipient_name):
             raise ValueError("recipient")
         recipient = self.users.by_name(recipient_name)
         if recipient is None:
@@ -103,7 +103,7 @@ class Recommendations:
         body = self._comment_body(body)
         if client_token is None:
             client_token = secrets.token_hex(16)
-        if not isinstance(client_token, str) or not re.fullmatch(r"[0-9a-f]{32}", client_token):
+        if not is_request_id(client_token):
             raise ValueError("comment request token")
         comment = self.comments.add(recommendation.id, user.id, body, int(self.clock()), client_token)
         if comment is None:

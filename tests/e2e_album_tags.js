@@ -38,7 +38,7 @@ const client = (url, options = {}) => new Promise((resolve, reject) => {
 function metadata(url, options) {
   const parsed = new URL(url, base), path = parsed.pathname;
   requests.push({path, query: parsed.searchParams, options});
-  if (path === "/api/tags/status") return response({writable: true, providers: {musicbrainz: true, discogs: true},
+  if (path === "/api/tags/status") return response({fields: ["title", "artist", "albumArtist", "album", "year", "genre", "track", "disc"], writable: true, providers: {musicbrainz: true, discogs: true},
     formats: ["mp3", "flac"], limits: {text: 500, tracks: 500, number: 999, yearMin: 1000, yearMax: 9999}});
   if (path === "/api/tags/album") return response(snapshot());
   if (path === "/api/tags/search") return response({source: parsed.searchParams.get("source"), candidates: [

@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from .audio import AudioFileEdit, AudioTagError, SUPPORTED_FORMATS
 from ..errors import MissingRight
 from ..subsonic import Credentials
-from .entities import (AlbumTagSnapshot, TagEditorStatus, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
+from .entities import (SUBSONIC_FIELDS, AlbumTagSnapshot, TagEditorStatus, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
                            TagReleaseProposal, TagTrack, TagValues, reference, tag_limits)
 from .matching import propose_mapping, rank_candidates
 from .sources import SourceMatches
@@ -70,9 +70,7 @@ class AlbumTags:
         if str(raw.get("id", "")) != identity:
             raise TagError("tags.not_found", 404)
         # L'API fournit l'inventaire et les champs disponibles ; l'éditeur vérifie leur fraîcheur avant toute écriture.
-        values = {"title": raw.get("title"), "artist": raw.get("artist"), "album": raw.get("album"),
-                  "year": raw.get("year"), "genre": raw.get("genre"), "track": raw.get("track"),
-                  "disc": raw.get("discNumber"), "albumArtist": raw.get("albumArtist")}
+        values = {field: raw.get(name) for field, name in SUBSONIC_FIELDS.items()}
         relative = raw.get("path")
         if not isinstance(relative, str) or not relative:
             track = TagTrack(identity, str(raw.get("suffix") or ""), False, "tags.no_path", TagValues.of(values),
@@ -252,8 +250,7 @@ class AlbumTags:
     def _verify_index(self, user, preview, resolved, operation):
         old_albums = {item.track.id: item.album_id for item in resolved.files}
         raw_by_id = {}
-        fields = {"title": "title", "artist": "artist", "albumArtist": "albumArtist", "album": "album", "year": "year", "genre": "genre",
-                  "track": "track", "disc": "discNumber"}
+        fields = SUBSONIC_FIELDS
         for identity in {change.id for change in preview.changes}:
             raw = self.subsonic.call(Credentials.of(user), "getSong", [("id", identity)]).get("song") or {}
             if str(raw.get("id") or "") != identity:

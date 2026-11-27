@@ -57,6 +57,10 @@ App.errorText = function (error) {
   return App.t(special[error.code] || error.code);
 };
 
+/* Jeton d'une requête rejouable (32 caractères hexadécimaux, format attendu par le serveur) : fonctionne aussi en HTTP
+   sur le réseau local, contrairement à crypto.randomUUID. */
+App.requestId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+
 App.api = {
   async request(method, path, body, extra = {}) {
     const options = {...extra, method, credentials: "same-origin", headers: {}};

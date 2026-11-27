@@ -102,7 +102,7 @@ const RecommendationComments = (() => {
       event.preventDefault();
       if (!current(view) || submit.disabled || !comment.input.value.trim()) return;
       const body = comment.input.value.trim();
-      if (!request || request.body !== body) request = {body, requestId: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("")};
+      if (!request || request.body !== body) request = {body, requestId: App.requestId()};
       submit.disabled = comment.input.disabled = true;
       view.error.textContent = "";
       try {

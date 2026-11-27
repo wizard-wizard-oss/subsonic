@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from ..subsonic import Credentials, SubsonicError, SubsonicUnreachable
 from .cache import TtlCache
 from .catalog import song_row, text, visible
+from .naming import album_folder
 
 PREFIX = "f"
 NOT_FOUND = 70
@@ -95,8 +96,7 @@ class Folders:
         """Chemin du dossier de l'album dans la musique de Subsonic (« Artiste/Album »), lu sur le chemin de ses titres ou de
         ses dossiers de disques ; vide si Subsonic n'en donne aucun."""
         children = visible(self._directory(user, self._album_folder(user, album_id)).get("child"))
-        paths = [text(c.get("path")).replace("\\", "/") for c in children]
-        return next((path.rsplit("/", 1)[0] for path in paths if "/" in path), "")
+        return album_folder(text(c.get("path")) for c in children)
 
     def album(self, user, album_id):
         folder = self._album_folder(user, album_id)

@@ -7,6 +7,7 @@ from ...shared.providers.musicbrainz.entities import ReleaseGenre
 
 class WeeklyReleases:
     PAGE_SIZE = 24
+    DEFAULT_GENRE = "noise rock"          # style proposé à qui n'en suit encore aucun
     MAX_OFFSET = 10 * PAGE_SIZE
     WINDOW = timedelta(days=366)        # semaines consultables autour d'aujourd'hui
 

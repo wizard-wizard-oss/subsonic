@@ -20,7 +20,7 @@ class NotificationsHttpTest(WebAppTestCase):
 
     def payload(self, **changes):
         return dict(dict(recipient="bob", title="Envoi retiré", body="Les MP3 seuls ne sont pas autorisés.",
-                         requestId="notification-test-0001"), **changes)
+                         requestId="0123456789abcdef0123456789abcdef"), **changes)
 
     def send(self, **changes):
         response = self.alice.post_json("/api/notifications/send", self.payload(**changes))
@@ -34,6 +34,18 @@ class NotificationsHttpTest(WebAppTestCase):
         self.assertEqual(type(page).__name__, "NotificationPage")
         self.assertEqual(status.to_api(), {"unread": 1})
         self.assertEqual(set(page.to_api()), {"entries", "before", "unread", "limits"})
+
+    def test_request_ids_share_one_format(self):
+        for bad in ("notification-test-0001", "A" * 32, "0" * 31):
+            with self.subTest(request_id=bad):
+                response = self.alice.post_json("/api/notifications/send", self.payload(requestId=bad))
+                self.assertEqual(response.status, 400)
+
+    def test_integrity_error_is_a_bad_request_not_a_crash(self):
+        import sqlite3
+        from pimedia.webapp.controllers.replies import error_reply
+        reply = error_reply(sqlite3.IntegrityError("CHECK constraint failed"))
+        self.assertEqual(reply.status, 400)
 
     def test_admin_can_send_and_only_recipient_can_read(self):
         entry = self.send()
@@ -116,10 +128,10 @@ class NotificationsHttpTest(WebAppTestCase):
 
     def test_pagination_does_not_lose_messages_when_new_ones_arrive(self):
         for i in range(PAGE_SIZE + 1):
-            self.send(requestId=f"notification-test-{i:04d}")
+            self.send(requestId=f"{i:032x}")
         first = self.bob.get("/api/notifications").json()
         self.assertEqual(len(first["entries"]), PAGE_SIZE)
-        self.send(requestId="notification-test-latest")
+        self.send(requestId="f" * 32)
         second = self.bob.get("/api/notifications?before=" + str(first["before"])).json()
         self.assertEqual(len(second["entries"]), 1)
         self.assertIsNone(second["before"])

@@ -1,9 +1,8 @@
 """Attribution des albums : le chemin Subsonic confirme toujours le dossier reçu, jamais les tags seuls."""
 from concurrent.futures import ThreadPoolExecutor
-import posixpath
 import unicodedata
 
-from .library.files import is_disc
+from .library.naming import album_folder
 from .library.cache import TtlCache
 from .library.catalog import as_list, text
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
@@ -14,16 +13,7 @@ def path_key(path):
 
 
 def album_path(raw):
-    for song in as_list(raw.get("song")):
-        path = text(song.get("path"))
-        if not path:
-            continue
-        folder = posixpath.dirname(path_key(path))
-        if is_disc(posixpath.basename(folder)):
-            folder = posixpath.dirname(folder)
-        if folder:
-            return folder
-    return ""
+    return album_folder(path_key(text(song.get("path"))) for song in as_list(raw.get("song")))
 
 
 class UploadAttribution:

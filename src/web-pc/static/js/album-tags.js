@@ -2,10 +2,9 @@
 /* Édition des tags : brouillon local, comparaison validée par le serveur, puis écriture et suivi séparé du scan. */
 const AlbumTagsEditor = (() => {
   const el = App.el, t = (key, params) => App.t("tags." + key, params);
-  const FIELDS = ["title", "artist", "albumArtist", "album", "year", "genre", "track", "disc"];
+  let FIELDS = [];   // liste des champs envoyée par le serveur (/api/tags/status), jamais recopiée ici
   const COMMON = ["albumArtist", "artist", "album", "year"];
   const TRACK_FIELDS = ["disc", "track", "title", "artist", "genre"];
-  const IMPORT_FIELDS = ["title", "artist", "albumArtist", "album", "year", "genre", "track", "disc"];
   const SOURCE_TRACK_FIELDS = new Set(["title", "artist", "track", "disc"]);
   const POLL_INTERVAL = 1000;
   let current = null;
@@ -77,6 +76,7 @@ const AlbumTagsEditor = (() => {
         if (!this.alive()) return;
         this.snapshot = snapshot;
         this.capabilities = capabilities;
+        FIELDS = capabilities.fields;
         this.textLimit = capabilities.limits && capabilities.limits.text || 500;
         this.tracks = snapshot.tracks.map(track => ({...track, tags: copyTags(track.tags)}));
         this.original = new Map(this.tracks.map(track => [track.id, copyTags(track.tags)]));
@@ -543,7 +543,7 @@ const AlbumTagsEditor = (() => {
           el("small.tags-caption", {text: [track.tags.disc, track.tags.track, track.duration ? App.duration(track.duration) : ""].filter(Boolean).join(" · ")})),
           el("td", {}, select));
       });
-      const choices = IMPORT_FIELDS.map(key => {
+      const choices = FIELDS.map(key => {
         const input = el("input", {type: "checkbox", checked: ["title", "track", "disc", "year"].includes(key),
           disabled: key === "genre" && !styles.selected(), dataset: {importField: key}, onchange: updateMapping});
         checks.set(key, input);

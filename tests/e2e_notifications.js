@@ -111,7 +111,7 @@ function makeEventSource(jar) {
     check("compte : Échap ferme et rend le focus à la photo", !$("#account-menu").open && w.document.activeElement.id === "account-toggle");
 
     check("notifications : aucune pastille au départ", $("#notifications-badge").hidden);
-    const message={recipient:"bob",title:"Envoi retiré",body:'Les MP3 seuls ne sont pas autorisés. <img src=x onerror="alert(1)">',requestId:"e2e-notification-0001"};
+    const message={recipient:"bob",title:"Envoi retiré",body:'Les MP3 seuls ne sont pas autorisés. <img src=x onerror="alert(1)">',requestId:"e2e0".repeat(8)};
     const delivery=await admin.post("/api/notifications/send",message);
     check("notifications : envoi administratif accepté", delivery.status===200);
     check("notifications : pastille reçue par SSE", await until(()=>!$("#notifications-badge").hidden && $("#notifications-badge").textContent==="1"));

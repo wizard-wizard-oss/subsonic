@@ -133,6 +133,9 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.week("2026-11-23", str(WeeklyReleases.PAGE_SIZE * 10))
 
+    def test_default_style_comes_from_the_server(self):
+        self.assertEqual(json.loads(self.controller.genres(None, self.alice).body)["default"], "noise rock")
+
     def test_follow_and_unfollow_by_name_without_duplicates(self):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
