@@ -2,7 +2,7 @@
 from dataclasses import replace
 from datetime import date, timedelta
 
-from .musicbrainz import mbid
+from .weekly_release_entities import ReleaseGenre
 
 
 class WeeklyReleases:
@@ -16,22 +16,25 @@ class WeeklyReleases:
         return self.musicbrainz.release_genres()
 
     def genre(self, identity):
-        identity = mbid(identity)
         match = next((genre for genre in self.genres() if genre.id == identity), None)
         if match is None:
             raise ValueError("genre")
         return match
 
     def followed(self, user):
-        return self.repository.for_user(user.id)
+        names = dict.fromkeys(genre.name for genre in self.repository.for_user(user.id))
+        return tuple(ReleaseGenre.from_name(name) for name in names)
 
     def follow(self, user, identity, enabled):
-        if not isinstance(enabled, bool):
+        if not isinstance(enabled, bool) or not isinstance(identity, str) or not identity:
             raise ValueError("follow")
         if enabled:
             self.repository.follow(user.id, self.genre(identity))
         else:
-            self.repository.unfollow(user.id, mbid(identity))
+            subscription = next((genre for genre in self.repository.for_user(user.id)
+                                 if identity in (genre.id, ReleaseGenre.from_name(genre.name).id)), None)
+            if subscription is not None:
+                self.repository.unfollow(user.id, subscription.name)
 
     def week(self, identity, start, offset):
         monday = date.fromisoformat(start or "")

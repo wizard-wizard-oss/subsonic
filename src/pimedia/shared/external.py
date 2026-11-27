@@ -100,12 +100,21 @@ def filter_lyrics_candidates(candidates, attempts):
 
 # ---------- accès HTTP ----------
 class JsonFetcher:
-    def get(self, url, timeout=8):
+    def _open(self, url, timeout, accept):
         if urllib.parse.urlsplit(url).hostname == "musicbrainz.org":
             MUSICBRAINZ_PACER.wait()
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
+        return urllib.request.urlopen(request, timeout=timeout)
+
+    def get(self, url, timeout=8):
+        with self._open(url, timeout, "application/json") as response:
             return json.loads(response.read().decode("utf-8", "replace"))
+
+    def get_text(self, url, timeout=8):
+        with self._open(url, timeout, "text/plain") as response:
+            if response.headers.get_content_type() != "text/plain":
+                raise ValueError("Expected plain text")
+            return response.read().decode("utf-8")
 
     def try_get(self, url, timeout=8):
         """Comme get, mais retourne None au lieu de lever une erreur."""

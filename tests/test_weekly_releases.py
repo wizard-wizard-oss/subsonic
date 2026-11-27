@@ -5,19 +5,21 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from urllib.parse import parse_qs, urlsplit
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from pimedia.server.transport import Request
 from pimedia.storage.database import Database
 from pimedia.webapp.app import WebApplication
 from pimedia.webapp.controllers.weekly_releases import WeeklyReleasesController
-from pimedia.webapp.musicbrainz import MusicBrainzMetadata
+from pimedia.webapp.musicbrainz import GENRE_CATALOG_TTL, MusicBrainzMetadata
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
 from pimedia.webapp.weekly_releases import WeeklyReleases
 
-GENRE = "8e5474b7-f445-49a7-866d-0f8e34b0a519"
+GENRE = "genre:noise rock"
+LEGACY_GENRE = "8e5474b7-f445-49a7-866d-0f8e34b0a519"
 GROUP = "aaaaaaaa-1111-4222-8333-444444444444"
 
 
@@ -32,16 +34,44 @@ class WeeklyTest(unittest.TestCase):
         self.alice, self.bob = SimpleNamespace(id=1), SimpleNamespace(id=2)
         self.calls = []
         self.now = 100000
+        self.catalog = "noise rock\ntechno\n"
+        self.catalog_failure = None
         self.result = {"count": 1, "release-groups": [{"id": GROUP, "first-release-date": "2026-11-27",
                        "primary-type": "Album", "title": "A", "artist-credit": [{"name": "B"}]}]}
-        client = MusicBrainzMetadata(ExplorationRepository(db), self, clock=lambda: self.now)
-        self.controller = WeeklyReleasesController(WeeklyReleases(client, ReleaseSubscriptions(db)))
+        self.cache = ExplorationRepository(db)
+        self.repository = ReleaseSubscriptions(db)
+        client = MusicBrainzMetadata(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None)
+        self.controller = WeeklyReleasesController(WeeklyReleases(client, self.repository))
 
     def get(self, url):
         self.calls.append(url)
-        if "genre/all" in url:
-            return {"genre-count": 1, "genres": [{"id": GENRE, "name": "noise rock"}]}
+        self.assertEqual(urlsplit(url).path, "/ws/2/release-group")
         return self.result
+
+    def get_text(self, url):
+        self.calls.append(url)
+        parsed = urlsplit(url)
+        self.assertEqual(parsed.path, "/ws/2/genre/all")
+        self.assertEqual(parse_qs(parsed.query), {"fmt": ["txt"]})
+        if self.catalog_failure:
+            raise self.catalog_failure
+        return self.catalog
+
+    def test_full_catalog_uses_one_request_and_survives_a_failed_refresh(self):
+        self.catalog += "".join(f"style {number}\n" for number in range(2225))
+        initial = json.loads(self.controller.genres(None, self.alice).body)
+        self.assertEqual(len(initial["genres"]), 2227)
+        self.assertEqual(len(self.calls), 1)
+        another = MusicBrainzMetadata(self.cache, self, clock=lambda: self.now, sleep=lambda delay: None)
+        self.assertEqual(len(another.release_genres()), 2227)
+        self.assertEqual(len(self.calls), 1)
+        self.now += GENRE_CATALOG_TTL - 1
+        self.assertEqual(len(another.release_genres()), 2227)
+        self.assertEqual(len(self.calls), 1)
+        self.now += 1
+        self.catalog_failure = HTTPError(self.calls[0], 503, "Unavailable", {"Retry-After": "60"}, None)
+        self.assertEqual(json.loads(self.controller.genres(None, self.alice).body), initial)
+        self.assertEqual(len(self.calls), 2)
 
     def test_announced_friday_and_cache(self):
         request = SimpleNamespace(param={"genre": GENRE, "monday": "2026-11-23"}.get)
@@ -82,6 +112,16 @@ class WeeklyTest(unittest.TestCase):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": False})
         self.assertEqual(followed(self.alice), [])
 
+    def test_legacy_subscription_survives_and_can_be_removed_without_duplicates(self):
+        self.repository.db.execute("INSERT INTO release_subscriptions (user_id, genre_id, name) VALUES (?, ?, ?)",
+                                   (self.alice.id, LEGACY_GENRE, "noise rock"))
+        initial = json.loads(self.controller.genres(None, self.alice).body)
+        self.assertEqual(initial["followed"], [GENRE])
+        self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
+        self.assertEqual([genre.id for genre in self.repository.for_user(self.alice.id)], [LEGACY_GENRE])
+        self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": False})
+        self.assertEqual(self.repository.for_user(self.alice.id), [])
+
     def test_http_routes_require_session_and_csrf(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
@@ -106,7 +146,8 @@ class WeeklyTest(unittest.TestCase):
         self.assertEqual(request("POST", path + "/follow", cookie, body).status, 403)
         self.assertEqual(request("POST", path + "/follow", headers, body).status, 200)
         self.assertEqual(json.loads(request("GET", path + "/genres", cookie).body)["followed"], [GENRE])
-        reply = request("GET", path + f"?genre={GENRE}&monday=2026-11-23", cookie)
+        params = urlencode({"genre": GENRE, "monday": "2026-11-23"})
+        reply = request("GET", path + "?" + params, cookie)
         self.assertEqual(reply.status, 200)
         self.assertEqual(json.loads(reply.body)["albums"][0]["id"], GROUP)
 

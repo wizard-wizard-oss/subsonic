@@ -16,11 +16,11 @@ from .weekly_release_entities import ReleaseGenre, WeeklyRelease, WeeklyReleaseP
 
 BASE = "https://musicbrainz.org/ws/2/"
 TTL = 7 * 86400
+GENRE_CATALOG_TTL = 86400
 STALE_TTL = 30 * 86400
 RETRY_DELAY = 2
 TRANSIENT_ERRORS = {429, 500, 502, 503, 504}
 SEARCH_LIMIT = 25
-GENRE_PAGE_SIZE = 100
 LOG = logging.getLogger(__name__)
 
 
@@ -89,10 +89,10 @@ class MusicBrainzMetadata:
                     pass
         return 60 if error.code == 429 else RETRY_DELAY
 
-    def _fetch(self, url):
+    def _fetch(self, url, read):
         for attempt in range(2):
             try:
-                data = self.fetcher.get(url)
+                data = read(url)
                 if not isinstance(data, dict):
                     raise ValueError("MusicBrainz response")
                 return data
@@ -108,8 +108,8 @@ class MusicBrainzMetadata:
             return MetadataResult(cached.data, stale=True)
         raise ExplorationUnavailable()
 
-    def get(self, path, *, cache_seconds=TTL, **params):
-        url = query_url(BASE + path, sorted(dict(params, fmt="json").items()))
+    def get(self, path, *, cache_seconds=TTL, fmt="json", read=None, **params):
+        url = query_url(BASE + path, sorted(dict(params, fmt=fmt).items()))
         cached = self.repository.get(url)
         if cached and self.clock() - cached.fetched_at < cache_seconds:
             return MetadataResult(cached.data)
@@ -121,7 +121,7 @@ class MusicBrainzMetadata:
             if self.clock() < self.retry_at.get(url, 0):
                 return self._fallback(cached)
             try:
-                data = self._fetch(url)
+                data = self._fetch(url, read or self.fetcher.get)
             except (OSError, ValueError) as error:
                 LOG.warning("MusicBrainz %s : %s", path.split("/")[0],
                             "HTTP %d" % error.code if isinstance(error, urllib.error.HTTPError) else type(error).__name__)
@@ -141,15 +141,15 @@ class MusicBrainzMetadata:
         return True
 
     def release_genres(self) -> tuple[ReleaseGenre, ...]:
-        genres = []
-        offset = 0
-        while True:
-            result = self.get("genre/all", limit=GENRE_PAGE_SIZE, offset=offset).data
-            rows = result["genres"]
-            genres.extend(ReleaseGenre(mbid(row["id"]), row["name"]) for row in rows)
-            offset += len(rows)
-            if len(rows) < GENRE_PAGE_SIZE or offset >= result.get("genre-count", offset + 1):
-                return tuple(genres)
+        result = self.get("genre/all", cache_seconds=GENRE_CATALOG_TTL, fmt="txt", read=self._read_genre_catalog)
+        return tuple(ReleaseGenre.from_name(name) for name in result.data["names"])
+
+    def _read_genre_catalog(self, url):
+        names = dict.fromkeys(name.strip() for name in self.fetcher.get_text(url).splitlines())
+        names.pop("", None)
+        if not names:
+            raise ValueError("Empty MusicBrainz genre catalog")
+        return {"names": list(names)}
 
     def weekly_groups(self, genre, monday, sunday, limit, offset) -> WeeklyReleasePage:
         query = (f'tag:{search_phrase(genre)} AND (primarytype:album OR primarytype:ep) '

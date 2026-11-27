@@ -9,6 +9,10 @@ class ReleaseGenre:
     id: str
     name: str
 
+    @classmethod
+    def from_name(cls, name):
+        return cls("genre:" + name, name)
+
     def to_api(self):
         return {"id": self.id, "name": self.name}
 
