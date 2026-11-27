@@ -74,7 +74,10 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
 - **Page** : pastilles Tout · chaque style · Labels · Mes artistes, avec leur nombre ; chaque carte dit pourquoi elle est
   là ; cartes par date puis titre ; « Ouvrir l’album » quand l’album est déjà dans la bibliothèque (rapprochement
   serveur, gardé 5 min). 48 cartes par page. Pochette Cover Art Archive : miniature 250 px, sinon l’image d’origine
-  (archive.org ne fabrique pas tout de suite les miniatures des sorties récentes), sinon pochette vide.
+  (archive.org ne fabrique pas tout de suite les miniatures des sorties récentes), sinon pochette vide. Avant cela, la
+  pochette connue du serveur : l'image exacte de l'édition qui en a une (ListenBrainz `caa_release_mbid`/`caa_id`), sinon
+  celle de Last.fm (`album.getinfo`, artiste et titre exacts), cherchée une fois par sortie pendant la synchronisation
+  (300 au plus par passage, colonnes `radar_releases.cover` et `cover_checked_at`, migration 31).
 - **« Écouter l’album »** (sortie absente de la bibliothèque) : `#/listen/<artiste>/<titre>` cherche l’album lui-même
   dans YouTube Music (même recherche sans clé que le reste du site, `YouTubeMusicSearch.album` : titre et artiste
   égaux après normalisation, puis ses morceaux lisibles ici), route `GET /api/ext/album?artist=&title=` ; introuvable :
@@ -85,7 +88,7 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
 
 ### Synchronisation de fond
 - Fil lancé par `app.run()` (`ReleaseSync.run`) : au démarrage si la dernière synchronisation complète date de plus
-  de 24 h, puis chaque nuit à 4 h ; vérification toutes les 15 min.
+  de 24 h, puis chaque nuit à 4 h (heure du conteneur, UTC) ; vérification toutes les 5 min.
 - Ordre : sources déjà suivies (styles, labels), puis **ListenBrainz** (`explore/fresh-releases`, deux requêtes pour
   tout le site : 14 jours avant, 60 après, albums et EP, gardés avec leurs artistes crédités dans
   `radar_release_artists`), puis tendances de chaque compte, puis sources nouvelles. Un style = une requête
@@ -93,7 +96,7 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   ne garder que les nouveautés.
 - **Pas de cache de 7 jours pour le radar** : ListenBrainz est lu en direct ; ce que le radar garde est dans ses tables.
 - Une panne garde les sorties déjà en base, note l’échec (`radar_sync.failed_at`) et sa raison dans le journal ; la
-  source est réessayée 30 min plus tard. Une panne pendant les tendances n’en retire aucune. Sorties de plus de 30 jours
+  source est réessayée 10 min plus tard (vérification toutes les 5 min). Une panne pendant les tendances n’en retire aucune. Sorties de plus de 30 jours
   purgées.
 - Ajouter une source la synchronise tout de suite ; « ↻ » relance ListenBrainz, les tendances et les sources du
   compte, une fois toutes les 10 min (refus : 429 `weekly.refresh_too_soon`). Une seule file de travail, sans doublon.

@@ -48,16 +48,18 @@ class RadarRelease:
     kind: str
     tags: tuple = ()
     artist_ids: tuple = ()                 # MBID des artistes crédités
+    cover: str = ""                        # pochette connue (ListenBrainz ou Last.fm) ; vide : Cover Art Archive
 
     @classmethod
     def from_row(cls, row):
         artists = row["artist_ids"] if "artist_ids" in row.keys() else None
         return cls(row["id"], row["title"], row["artist"], date.fromisoformat(row["released_on"]), row["kind"],
-                   tuple(json.loads(row["tags"])), tuple(sorted(artists.split(","))) if artists else ())
+                   tuple(json.loads(row["tags"])), tuple(sorted(artists.split(","))) if artists else (),
+                   row["cover"] or "")
 
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,
-                "date": self.released_on.isoformat(), "type": self.kind}
+                "date": self.released_on.isoformat(), "type": self.kind, "cover": self.cover}
 
 
 @dataclass(frozen=True)

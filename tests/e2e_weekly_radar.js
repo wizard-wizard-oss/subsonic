@@ -13,8 +13,8 @@ const state = {albumFound: true, empty: null, outOfWindow: false, refreshAfter: 
                sources: [{id: 1, kind: "label", identity: WARP, name: "Warp", origin: "manual", via: null},
                          {id: 2, kind: "style", identity: "techno", name: "techno", origin: "trends", via: null},
                          {id: 3, kind: "artist", identity: "m1", name: "Moderat", origin: "trends", via: null}]};
-const card = (id, title, reasons, local = null) => ({id, title, artist: "Artiste", date: "2026-11-27", type: "Album",
-                                                      reasons, score: 0.5, local});
+const card = (id, title, reasons, local = null, cover = "") => ({id, title, artist: "Artiste", date: "2026-11-27",
+                                                                  type: "Album", reasons, local, cover});
 win.fakeGet = async (url, params) => {
   calls.push({url, params: JSON.parse(JSON.stringify(params || {}))});
   if (url.endsWith("/radar")) {
@@ -26,7 +26,7 @@ win.fakeGet = async (url, params) => {
             filters: [{key: "all", count: 3}, {key: "style:techno", count: 2, name: "techno"}, {key: "labels", count: 1},
                       {key: "artists", count: 1}],
             cards: [card("a", "Album label", [warp, techno], {id: "al1", coverId: "c1", folderId: "f1"}),
-                    card("b", "Album style", [techno]), card("c", "Album de Moderat", [moderat])]};
+                    card("b", "Album style", [techno]), card("c", "Album de Moderat", [moderat], null, "https://lastfm.freetls.fastly.net/i/u/c.jpg")]};
   }
   if (url.endsWith("/around")) return {monday: params.monday, filters: [], next: null, around: params.name,
                                        cards: [card("d", "Album proche", [{kind: "artist", name: "Apparat", via: params.name}])]};
@@ -91,6 +91,10 @@ const button = text => [...doc.querySelectorAll("button")].find(node => node.tex
   cover.dispatchEvent(new win.Event("error"));
   assert.equal(cover.getAttribute("src"), null);
   assert.ok(cover.classList.contains("empty"));
+  const known = doc.querySelectorAll(".weekly-card")[2].querySelector("img");
+  assert.equal(known.getAttribute("src"), "https://lastfm.freetls.fastly.net/i/u/c.jpg");    // pochette trouvée par le serveur
+  known.dispatchEvent(new win.Event("error"));
+  assert.equal(known.getAttribute("src"), "https://coverartarchive.org/release-group/c/front-250");
 
   // pastille : la grille change, l'en-tête et les pastilles restent les mêmes éléments
   const heading = doc.querySelector(".weekly-heading");

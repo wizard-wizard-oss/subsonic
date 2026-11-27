@@ -82,6 +82,17 @@ class RadarStorageTest(unittest.TestCase):
         self.assertEqual(found, {"a": ("m1", "m2"), "b": ()})
         self.assertEqual(self.releases.window(date(2026, 12, 7), date(2026, 12, 13)), [])
 
+    def test_covers_are_kept_and_looked_up_once(self):
+        with_cover = RadarRelease("a", "A", "X", date(2026, 11, 27), "Album", (), (), "https://img/a.jpg")
+        self.releases.save("fresh", "listenbrainz", [with_cover, release("b", date(2026, 11, 28))], *WEEK_WINDOW)
+        self.releases.save("label", "warp", [release("a", date(2026, 11, 27))], *WEEK_WINDOW)     # sans pochette
+        self.assertEqual({r.id: r.cover for r in self.releases.window(*WEEK_WINDOW)}, {"a": "https://img/a.jpg", "b": ""})
+        self.assertEqual([r.id for r in self.releases.without_cover(*WEEK_WINDOW, 10)], ["b"])
+        self.releases.set_cover("b", "", 5)                                   # cherchée, rien trouvé
+        self.assertEqual(self.releases.without_cover(*WEEK_WINDOW, 10), [])
+        self.releases.set_cover("b", "https://img/b.jpg", 6)
+        self.assertEqual({r.id: r.cover for r in self.releases.window(*WEEK_WINDOW)}["b"], "https://img/b.jpg")
+
     def test_artist_resolutions_remember_found_and_not_found(self):
         names = ArtistResolutions(self.db)
         self.assertIsNone(names.get("air"))

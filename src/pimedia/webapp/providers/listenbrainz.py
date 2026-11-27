@@ -9,6 +9,7 @@ from ...shared.providers.musicbrainz.entities import WeeklyRelease
 from ...shared.providers.musicbrainz.parsing import mbid
 
 FRESH_RELEASES = "https://api.listenbrainz.org/1/explore/fresh-releases/"
+COVER_ART_ARCHIVE = "https://coverartarchive.org"
 KINDS = {"album": "Album", "ep": "EP"}          # les singles et compilations sans type ne sont pas gardés
 
 
@@ -59,4 +60,13 @@ def _release(raw):
     tags = tuple(tag for tag in raw.get("release_tags") or [] if isinstance(tag, str) and tag)
     return WeeklyRelease(identity, str(raw.get("release_name") or "")[:1000],
                          str(raw.get("artist_credit_name") or "")[:1000], released_on, kind, tags,
-                         tuple(dict.fromkeys(artists)))
+                         tuple(dict.fromkeys(artists)), _cover(raw))
+
+
+def _cover(raw):
+    """Image exacte de l'édition qui a une pochette chez Cover Art Archive (connue de ListenBrainz), ou ""."""
+    try:
+        release, image = mbid(raw.get("caa_release_mbid")), int(raw.get("caa_id"))
+    except (ValueError, TypeError):
+        return ""
+    return "%s/release/%s/%d-250.jpg" % (COVER_ART_ARCHIVE, release, image)

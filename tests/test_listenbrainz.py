@@ -22,7 +22,8 @@ def mbid(number):
 def fresh(number, day, kind="Album", artists=(1,), name="Artiste"):
     return {"release_group_mbid": mbid(number), "release_name": "Disque %d" % number, "artist_credit_name": name,
             "artist_mbids": [mbid(900 + a) for a in artists], "release_date": day,
-            "release_group_primary_type": kind, "release_tags": ["techno"]}
+            "release_group_primary_type": kind, "release_tags": ["techno"],
+            "caa_id": 46577080822 if number == 1 else None, "caa_release_mbid": mbid(500 + number)}
 
 
 class ListenBrainzTest(unittest.TestCase):
@@ -57,6 +58,8 @@ class ListenBrainzTest(unittest.TestCase):
         self.assertEqual(found[mbid(3)].released_on, date(2026, 11, 22))
         self.assertEqual(found[mbid(3)].artist_ids, (mbid(901), mbid(902)))
         self.assertEqual(found[mbid(3)].tags, ("techno",))
+        self.assertEqual(found[mbid(1)].cover, "https://coverartarchive.org/release/%s/46577080822-250.jpg" % mbid(501))
+        self.assertEqual(found[mbid(3)].cover, "")
 
     def test_nothing_is_kept_in_the_metadata_cache(self):
         self.client.fresh_releases(TODAY, date(2026, 11, 13), date(2027, 1, 26))

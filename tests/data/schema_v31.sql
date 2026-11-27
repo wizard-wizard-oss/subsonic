@@ -208,7 +208,7 @@ table | radar_releases | CREATE TABLE radar_releases (
         released_on TEXT NOT NULL,
         kind TEXT NOT NULL,
         tags TEXT NOT NULL DEFAULT '[]'
-    )
+    , cover TEXT NOT NULL DEFAULT '', cover_checked_at INTEGER)
 table | radar_runs | CREATE TABLE radar_runs (
         name TEXT PRIMARY KEY,
         finished_at INTEGER NOT NULL

@@ -178,7 +178,7 @@ const WeeklyRadar = (() => {
 
   function card(item) {
     const local = item.local;
-    const image = local ? App.cover(local.coverId, 180, item.title) : W.releaseCover(item.id, item.title);
+    const image = local ? App.cover(local.coverId, 180, item.title) : W.releaseCover(item.id, item.title, item.cover);
     const cover = local ? el("a", {href: "#/album/" + encodeURIComponent(local.id)}, image)
       : el("a", {href: "https://musicbrainz.org/release-group/" + item.id, target: "_blank", rel: "noopener"}, image);
     const date = new Date(item.date + "T00:00:00Z");

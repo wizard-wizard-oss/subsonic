@@ -9,14 +9,14 @@ from datetime import date, datetime, time as day_time, timedelta
 
 from ...shared.providers.musicbrainz.client import MAX_LIMIT
 from .entities import RadarError, RadarRelease
-from .limits import (ARTIST, FRESH, FRESH_IDENTITY, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN,
-                     RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
+from .limits import (ARTIST, COVER_LOOKUPS, FRESH, FRESH_IDENTITY, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER,
+                     REFRESH_COOLDOWN, RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
 from .trends import SERVICE_ERRORS
 
 
 def radar_release(album):
     return RadarRelease(album.id, album.title, album.artist, album.released_on, album.kind, album.tags,
-                        album.artist_ids)
+                        album.artist_ids, album.cover)
 
 
 def _spawn(work):
@@ -28,9 +28,10 @@ def _log(text):
 
 
 class ReleaseSync:
-    def __init__(self, musicbrainz, listenbrainz, trends, sources, releases, profiles, users, today=date.today,
-                 clock=time.time, sleep=time.sleep, spawn=_spawn, log=_log):
+    def __init__(self, musicbrainz, listenbrainz, trends, sources, releases, profiles, users, lastfm=None,
+                 today=date.today, clock=time.time, sleep=time.sleep, spawn=_spawn, log=_log):
         self.musicbrainz, self.listenbrainz, self.trends, self.sources = musicbrainz, listenbrainz, trends, sources
+        self.lastfm = lastfm
         self.releases, self.profiles, self.users = releases, profiles, users
         self.today, self.clock, self.sleep, self.spawn, self.log = today, clock, sleep, spawn, log
         self._running = threading.Lock()
@@ -88,10 +89,12 @@ class ReleaseSync:
             existing = self.releases.oldest_first(self.sources.active_union())
             self.sync_sources(existing)
             self.sync_fresh()
+            self.fill_covers()                        # les pochettes arrivent tôt ; le reste est complété à la fin
             for user in self.users():
                 self._refresh_trends(user)
             known = {source[:2] for source in existing}
             self.sync_sources([source for source in self.sources.active_union() if source[:2] not in known])
+            self.fill_covers()
             self.releases.purge(self.today() - PURGE_AFTER)
             self.releases.mark_full_sync(self.clock())
             return True
@@ -160,6 +163,20 @@ class ReleaseSync:
         start, end = self.window()
         artists = [(kind, identity) for kind, identity, _ in self.sources.active_union() if kind == ARTIST]
         self._guarded([(FRESH, FRESH_IDENTITY)] + artists, "ListenBrainz", lambda: self._fresh(start, end))
+
+    def fill_covers(self):
+        """Pochettes absentes de Cover Art Archive (selon ListenBrainz) ou inconnues : une recherche Last.fm par
+        sortie, une seule fois (le résultat, même vide, est gardé)."""
+        if self.lastfm is None or not self.lastfm.enabled:
+            return
+        start, end = self.window()
+        for release in self.releases.without_cover(start, end, COVER_LOOKUPS):
+            try:
+                cover = self.lastfm.album_cover(release.artist, release.title)
+            except SERVICE_ERRORS as error:
+                self.log("Radar des sorties : pochette de %s introuvable pour l'instant (%r)" % (release.title, error))
+                continue
+            self.releases.set_cover(release.id, cover, self.clock())
 
     def _guarded(self, keys, names, work):
         """Une panne n'efface rien : la source garde ses sorties, l'échec et sa raison sont notés, et la source est

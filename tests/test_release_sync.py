@@ -52,6 +52,17 @@ class FakeMusicBrainz:
         return self.by_artist
 
 
+class FakeLastFm:
+    enabled = True
+
+    def __init__(self):
+        self.asked = []
+
+    def album_cover(self, artist, title):
+        self.asked.append(title)
+        return "https://img/" + title + ".jpg" if title == "Album 2" else ""
+
+
 class FakeTrends:
     def __init__(self, log=None):
         self.refreshed, self.log, self.failure, self.adds = [], log, None, []
@@ -80,8 +91,9 @@ class ReleaseSyncTest(unittest.TestCase):
         self.musicbrainz, self.trends = FakeMusicBrainz(), FakeTrends()
         self.sources, self.releases = ReleaseSources(self.db), RadarReleases(self.db)
         self.profiles = RadarProfiles(self.db)
+        self.lastfm = FakeLastFm()
         self.sync = ReleaseSync(self.musicbrainz, self.musicbrainz, self.trends, self.sources, self.releases,
-                                self.profiles,
+                                self.profiles, lastfm=self.lastfm,
                                 users=lambda: [self.alice, self.bob], today=lambda: TODAY, clock=lambda: self.now,
                                 spawn=lambda work: work())
 
@@ -130,6 +142,15 @@ class ReleaseSyncTest(unittest.TestCase):
         found = {r.id: r.artist_ids for r in self.releases.window(START, END)}
         self.assertEqual(found, {mbid(2): (mbid(800),), mbid(3): (mbid(801),)})
         self.assertIsNotNone(self.releases.synced_at("artist", mbid(800)))
+
+    def test_missing_covers_are_looked_up_on_lastfm_once(self):
+        self.sync.sync_all()
+        self.assertEqual(sorted(self.lastfm.asked), ["Album 2", "Album 3"])
+        self.assertEqual({r.title: r.cover for r in self.releases.window(START, END)},
+                         {"Album 2": "https://img/Album 2.jpg", "Album 3": ""})
+        self.releases.mark_full_sync(0)
+        self.sync.sync_all()
+        self.assertEqual(sorted(self.lastfm.asked), ["Album 2", "Album 3"])            # pas deux fois
 
     def test_failure_keeps_previous_releases(self):
         self.sources.add(1, "label", mbid(700), "Warp", "manual")

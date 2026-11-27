@@ -73,11 +73,12 @@ class RadarReleases:
                 (kind, identity, start.isoformat(), end.isoformat()))
             for release in releases:
                 connection.execute(
-                    "INSERT INTO radar_releases (id, title, artist, released_on, kind, tags) VALUES (?, ?, ?, ?, ?, ?) "
-                    "ON CONFLICT (id) DO UPDATE SET title = excluded.title, artist = excluded.artist, "
-                    "released_on = excluded.released_on, kind = excluded.kind, tags = excluded.tags",
+                    "INSERT INTO radar_releases (id, title, artist, released_on, kind, tags, cover) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET title = excluded.title, "
+                    "artist = excluded.artist, released_on = excluded.released_on, kind = excluded.kind, "
+                    "tags = excluded.tags, cover = CASE WHEN excluded.cover != '' THEN excluded.cover ELSE cover END",
                     (release.id, release.title, release.artist, release.released_on.isoformat(), release.kind,
-                     json.dumps(sorted(release.tags))))
+                     json.dumps(sorted(release.tags)), release.cover))
                 connection.execute("INSERT OR IGNORE INTO radar_release_sources VALUES (?, ?, ?)",
                                    (release.id, kind, identity))
                 for artist_id in release.artist_ids:
@@ -101,6 +102,17 @@ class RadarReleases:
             "LEFT JOIN radar_release_artists a ON a.release_id = r.id WHERE r.released_on BETWEEN ? AND ? "
             "GROUP BY r.id ORDER BY r.released_on, r.id", (start.isoformat(), end.isoformat()))
         return [RadarRelease.from_row(row) for row in rows]
+
+    def without_cover(self, start, end, limit):
+        """Sorties de la période sans pochette connue et jamais cherchées ailleurs, les plus proches d'abord."""
+        rows = self.db.query("SELECT * FROM radar_releases WHERE released_on BETWEEN ? AND ? AND cover = '' "
+                             "AND cover_checked_at IS NULL ORDER BY released_on DESC, id LIMIT ?",
+                             (start.isoformat(), end.isoformat(), limit))
+        return [RadarRelease.from_row(row) for row in rows]
+
+    def set_cover(self, release_id, cover, at):
+        self.db.execute("UPDATE radar_releases SET cover = CASE WHEN ? != '' THEN ? ELSE cover END, "
+                        "cover_checked_at = ? WHERE id = ?", (cover, cover, int(at), release_id))
 
     def purge(self, before):
         self.db.execute("DELETE FROM radar_releases WHERE released_on < ?", (before.isoformat(),))

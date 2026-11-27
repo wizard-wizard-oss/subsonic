@@ -147,13 +147,15 @@ const WeeklyReleaseView = (() => {
   }
 
   /* Pochette Cover Art Archive d'un groupe de sorties. Pour une sortie toute récente, archive.org n'a souvent pas encore
-     fabriqué les miniatures : on charge alors l'image d'origine, et la pochette vide seulement si elle manque aussi. */
-  function releaseCover(id, title) {
+     fabriqué les miniatures : on charge alors l'image d'origine, et la pochette vide seulement si elle manque aussi.
+     known : pochette déjà trouvée par le serveur, essayée en premier. */
+  function releaseCover(id, title, known) {
     const original = "https://coverartarchive.org/release-group/" + id + "/front";
-    const image = el("img.cover", {alt: title, loading: "lazy", width: 180, height: 180, src: original + "-250"});
-    let triedOriginal = false;
+    const tries = [original + "-250", original];
+    if (known) tries.unshift(known);                    // pochette exacte connue du serveur (ListenBrainz ou Last.fm)
+    const image = el("img.cover", {alt: title, loading: "lazy", width: 180, height: 180, src: tries.shift()});
     image.addEventListener("error", () => {
-      if (!triedOriginal) { triedOriginal = true; image.src = original; return; }
+      if (tries.length) { image.src = tries.shift(); return; }
       image.removeAttribute("src");
       image.alt = "";
       image.classList.add("empty");

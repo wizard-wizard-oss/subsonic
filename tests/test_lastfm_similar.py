@@ -53,5 +53,23 @@ class LastFmSimilarTest(unittest.TestCase):
         self.assertEqual(self.urls, [])
 
 
+class LastFmCoverTest(LastFmSimilarTest):
+    def album(self, artist, name, url):
+        return {"album": {"name": name, "artist": artist, "image": [
+            {"size": "medium", "#text": url + "-64.jpg"}, {"size": "extralarge", "#text": url + "-300.jpg"}]}}
+
+    def test_cover_of_this_exact_album(self):
+        self.response = self.album("Red Axes", "Red Box", "https://lastfm.freetls.fastly.net/i/u/x")
+        self.assertEqual(self.lastfm().album_cover("Red Axes", "Red Box"), "https://lastfm.freetls.fastly.net/i/u/x-300.jpg")
+        self.assertEqual(parse_qs(urlsplit(self.urls[0]).query)["method"], ["album.getinfo"])
+
+    def test_no_cover_for_another_album_a_blank_image_or_without_key(self):
+        self.response = self.album("Simply Red", "Red Box", "https://lastfm.freetls.fastly.net/i/u/x")
+        self.assertEqual(self.lastfm().album_cover("Red Axes", "Red Box"), "")
+        self.response = self.album("Red Axes", "Red Box", "https://x/2a96cbd8b46e442fc41c2b86b821562f")
+        self.assertEqual(self.lastfm().album_cover("Red Axes", "Red Box (bis)"), "")
+        self.assertEqual(self.lastfm(key="").album_cover("Red Axes", "Red Box"), "")
+
+
 if __name__ == "__main__":
     unittest.main()

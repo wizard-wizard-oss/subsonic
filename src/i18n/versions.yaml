@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.25"
+  date: 2026-11-27
+  title: "Sorties de la semaine : plus de pochettes"
+  changes:
+    - "Les sorties récentes ont bien plus souvent leur pochette : celle de l'édition qui en a une, sinon celle de Last.fm."
+    - "Quand MusicBrainz ne répond pas, la recherche d'un style ou d'un label est relancée 10 minutes plus tard (au lieu de 30)."
+
 - version: "1.24.1"
   date: 2026-11-27
   title: "Écouter l'album : correction"

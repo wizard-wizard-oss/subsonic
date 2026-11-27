@@ -653,4 +653,9 @@ MIGRATIONS = [
     );
     ALTER TABLE radar_profiles ADD COLUMN basis TEXT
     """,
+    # 31 : pochette d'une sortie du radar, connue de ListenBrainz ou trouvée sur Last.fm (une recherche par sortie).
+    """
+    ALTER TABLE radar_releases ADD COLUMN cover TEXT NOT NULL DEFAULT '';
+    ALTER TABLE radar_releases ADD COLUMN cover_checked_at INTEGER
+    """,
 ]
