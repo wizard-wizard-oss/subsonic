@@ -30,6 +30,7 @@ class MusicApp {
     if (App.queuePanel) App.queuePanel.close();
     App.live.stop();
     NotificationsUI.reset();
+    AccountMenu.close();
     document.getElementById("app").hidden = true;
     document.getElementById("login").hidden = false;
     document.getElementById("login-error").textContent = message || "";
@@ -61,6 +62,7 @@ class MusicApp {
       App.live.stop();
       if (this.queueMemory) this.queueMemory.suspend();
     }
+    AccountMenu.close();
     App.user = me.user;
     NotificationsUI.start();
     ListenLaterUI.reset();
@@ -125,6 +127,7 @@ class MusicApp {
   }
 
   bindTopbar() {
+    AccountMenu.start();
     const search = document.getElementById("search");
     let timer = null;
     search.addEventListener("input", () => {

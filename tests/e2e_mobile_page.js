@@ -90,7 +90,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.ok(!requests.some(request => request.url === "/api/preferences" && /"(sidebar|chat_panel)":/.test(request.body || "")));
     screen.matches = false; changeScreen();
     assert.ok($(".topbar > .topnav"));
-    assert.ok($(".topbar-right > #me"));
+    assert.ok($(".topbar-right > #account-menu #me"));
     assert.equal($(".mobile-menu-tools"), null);
     assert.equal(errors.length, 0, errors.join("\n"));
     console.log("OK mobile connecté : réglages PC préservés, retour au bureau et aucune erreur JavaScript");

@@ -18,7 +18,7 @@ class MobileNavigation {
     this.tools = App.el("div.mobile-menu-tools");
     const navigation = document.querySelector(".topnav");
     this.move(navigation, this.sidebar, this.sidebar.firstChild);
-    for (const id of ["open-shortcuts", "open-settings", "me", "logout"]) this.move(document.getElementById(id), this.tools);
+    for (const id of ["open-shortcuts", "open-settings"]) this.move(document.getElementById(id), this.tools);
     this.sidebar.appendChild(this.tools);
     this.closeButton = App.el("button.icon-button", {type: "button", "data-t-title": "settings.close",
       title: App.t("settings.close"), "aria-label": App.t("settings.close"), onclick: () => this.close()}, App.icon("close", 20));
@@ -48,6 +48,7 @@ class MobileNavigation {
     document.addEventListener("keydown", this.key, true);
     document.addEventListener("keydown", this.escape);
     this.unsubscribe = App.bus.on("route", () => this.close(false));
+    this.offAccountMenu = App.bus.on("account-menu-opened", () => this.close(false));
     this.dialogs = new MutationObserver(() => {
       if (document.querySelector('#dialog-root [role="dialog"]')) this.close(false);
     });
@@ -106,6 +107,7 @@ class MobileNavigation {
   }
 
   open(name) {
+    document.getElementById("account-menu").open = false;
     this.close(false);
     if (name === "chat" && App.lyrics && App.lyrics.isOpen()) App.lyrics.close();
     this.opened = name;
@@ -149,6 +151,7 @@ class MobileNavigation {
     document.removeEventListener("keydown", this.key, true);
     document.removeEventListener("keydown", this.escape);
     this.unsubscribe();
+    this.offAccountMenu();
     this.dialogs.disconnect();
     if (this.thread) this.thread.isVisible = this.chatVisibility;
     this.heading.remove();

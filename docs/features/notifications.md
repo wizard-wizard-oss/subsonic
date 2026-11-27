@@ -63,3 +63,21 @@ Version 1.17 publiée et vérifiée le 27/11/2026 sur https://music2.foos.fr. La
 à Mnu le retrait de son MP3 seul de Baston 3000 et la règle des albums ZIP. Message déposé via l’API
 réelle avec la clé `upload-18-standalone-audio-removed`, non lu au moment du contrôle. Le compte
 administrateur a été vérifié auprès de Subsonic ; la session technique temporaire a été supprimée.
+
+## Menu sous la photo (1.18)
+
+Un clic sur la photo ouvre Mon compte, Notifications et Se déconnecter. Le compteur détaillé reste dans
+la ligne Notifications ; le point rouge sur la photo disparaît uniquement quand il n’y a plus de message
+non lu. Le menu se ferme après un choix, un clic extérieur, une navigation ou Échap, qui rend le focus
+à la photo. La photo reste visible dans l’en-tête mobile. Ouvrir le menu du compte ferme le volet artistes
+ou salon mobile, et ouvrir un de ces volets ferme le menu du compte. Aucun changement des messages,
+des droits ou des marqueurs de lecture. Composant `account-menu.js`, styles `account-menu.css`,
+réutilisation des liens, de la déconnexion et du compteur existants.
+
+Validation : 58 contrôles du composant mobile, parcours Notifications/PC/mobile et cinq tests de versions.
+Chrome vérifie les menus fermés/ouverts, la pastille sur la photo, le clavier, les liens et une déconnexion
+réelle sur données de test à 1440, 390, 320 px et 667×375 en paysage, clair/sombre, sans débordement
+ni erreur JavaScript.
+
+Version 1.18 publiée et vérifiée sur le site : menu sous la photo et ressources publiques conformes,
+conteneur sain, base inchangée au schéma 22 et notification précédente à Mnu conservée.

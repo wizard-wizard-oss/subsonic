@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/static/css/library-statistics.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/listen-later.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/notifications.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/account-menu.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/chat.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/player.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/mobile/layout.css?v={{V}}" media="(max-width: 820px), (max-width: 1100px) and (hover: none) and (pointer: coarse)">
@@ -49,7 +50,6 @@
       <a href="#/mix" data-t="nav.mix"></a>
       <a href="#/news" data-t="nav.news"></a>
       <a href="#/whatsnew" data-t="nav.whatsnew"></a>
-      <a href="#/notifications" id="nav-notifications"><span data-t="notifications.title"></span><b class="badge" id="notifications-badge" hidden></b></a>
       <a href="#/upload" id="nav-upload" data-t="nav.upload" hidden></a>
     </nav>
     <input id="search" class="search" type="search" data-t-placeholder="nav.search" autocomplete="off">
@@ -57,8 +57,17 @@
       <button class="icon-button" id="open-shortcuts" data-t-title="nav.shortcuts" data-icon="help"></button>
       <button class="icon-button" id="open-settings" data-t-title="nav.settings" data-icon="settings"></button>
       <button class="chat-toggle" id="toggle-chat"><span data-t="nav.chat"></span><b class="badge" id="chat-badge" hidden></b></button>
-      <a class="me" id="me" href="#/account" data-t-title="nav.account"></a>
-      <button class="link-button" id="logout" data-t="auth.logout"></button>
+      <details class="account-menu" id="account-menu">
+        <summary id="account-toggle" data-t-title="nav.account_menu">
+          <span class="me" id="me"></span>
+          <b class="account-notification-dot" id="account-notifications-badge" hidden aria-hidden="true"></b>
+        </summary>
+        <nav class="account-menu-panel" data-t-title="nav.account_menu">
+          <a href="#/account" id="nav-account" data-t="nav.account"></a>
+          <a href="#/notifications" id="nav-notifications"><span data-t="notifications.title"></span><b class="badge" id="notifications-badge" hidden></b></a>
+          <button class="link-button" id="logout" data-t="auth.logout"></button>
+        </nav>
+      </details>
     </div>
   </header>
 
@@ -143,6 +152,7 @@
 <script src="/static/js/dialogs.js?v={{V}}"></script>
 <script src="/static/js/cover.js?v={{V}}"></script>
 <script src="/static/js/album-tags.js?v={{V}}"></script>
+<script src="/static/js/account-menu.js?v={{V}}"></script>
 <script src="/static/js/app.js?v={{V}}"></script>
 <script src="/static/js/mobile/navigation.js?v={{V}}"></script>
 <script src="/static/js/mobile/bootstrap.js?v={{V}}"></script>

@@ -1,5 +1,18 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Menu du compte, 1.18 (27/11/2026, déployée et vérifiée)** : Mon compte, Notifications et Se déconnecter
+regroupés dans un menu sous la photo. Pastille rouge sur la photo visible menu fermé, également sur
+téléphone. Liens, notifications et action de déconnexion existants réutilisés ; fermeture extérieure,
+Échap, navigation et coordination avec les volets mobiles. Aucun changement de schéma ou de données.
+Validation : 58 contrôles mobiles, parcours Notifications/PC/mobile, cinq tests de versions et Chrome
+à 1440/390/320 px et en paysage 667×375, clair/sombre. Détails : [Notifications](features/notifications.md).
+
+Publication 1.18 vérifiée le 27/11/2026 sur https://music2.foos.fr : conteneur sain, version publique,
+253 fichiers exécutés et 62 ressources HTTPS conformes à la livraison isolée de la 1.17. Menu et pastille
+confirmés dans le HTML publié. Aucune migration : schéma 22, intégrité et clés étrangères valides,
+notification n° 1 à Mnu conservée. Aucun message supplémentaire envoyé. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.18-20261127T005355Z/` ; image précédente `pimedia-web:pre-1.18-20261127t005355z`.
+
 **Notifications privées et albums ZIP, 1.17 (27/11/2026, déployée et vérifiée)** : les administrateurs peuvent
 envoyer un message à un membre depuis Notifications. Messages persistants, lecture explicite, pagination,
 pastille privée et rattrapage SSE ; les réponses tardives sont écartées lors des changements de compte.

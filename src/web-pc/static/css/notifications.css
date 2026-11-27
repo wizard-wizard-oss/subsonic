@@ -13,6 +13,3 @@
 .notification-compose textarea { min-height: 130px; resize: vertical; }
 .notification-compose button, .notification-read, .notifications-more { justify-self: start; min-height: 36px; }
 .notifications-status { overflow-wrap: anywhere; }
-
-#toggle-sidebar.has-notifications { position: relative; }
-#toggle-sidebar.has-notifications::after { content: ""; position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }

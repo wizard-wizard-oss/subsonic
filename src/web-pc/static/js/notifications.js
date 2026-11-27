@@ -8,7 +8,11 @@ const NotificationsUI = (() => {
     const badge = document.getElementById("notifications-badge");
     if (!badge) return;
     badge.hidden = !count;
-    document.getElementById("toggle-sidebar").classList.toggle("has-notifications", count > 0);
+    document.getElementById("account-notifications-badge").hidden = !count;
+    const toggle = document.getElementById("account-toggle");
+    const label = count ? App.t("nav.account_notifications", {count}) : App.t("nav.account_menu");
+    toggle.setAttribute("aria-label", label);
+    toggle.title = label;
     badge.textContent = count > 99 ? "99+" : String(count || "");
     document.getElementById("nav-notifications").setAttribute("aria-label", t("nav_count", {count}));
   }

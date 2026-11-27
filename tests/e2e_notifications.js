@@ -101,17 +101,28 @@ function makeEventSource(jar) {
   try {
     check("notifications : connexion et page vide", await login("bob","pw2") && await until(()=>$(".notifications-status").textContent.includes("aucune notification")));
     check("notifications : aucun formulaire administratif pour un membre", !$(".notification-compose"));
+    check("compte : notifications et déconnexion regroupées sous la photo", !!$("#account-menu #nav-notifications") && !!$("#account-menu #logout") && !$(".topnav #nav-notifications"));
+    $("#account-toggle").click();
+    check("compte : clic sur la photo ouvre le menu", $("#account-menu").open);
+    $("#main h1").click();
+    check("compte : clic extérieur ferme le menu", !$("#account-menu").open);
+    $("#account-toggle").click();
+    $("#account-toggle").dispatchEvent(new w.KeyboardEvent("keydown", {key:"Escape", bubbles:true, cancelable:true}));
+    check("compte : Échap ferme et rend le focus à la photo", !$("#account-menu").open && w.document.activeElement.id === "account-toggle");
+
     check("notifications : aucune pastille au départ", $("#notifications-badge").hidden);
     const message={recipient:"bob",title:"Envoi retiré",body:'Les MP3 seuls ne sont pas autorisés. <img src=x onerror="alert(1)">',requestId:"e2e-notification-0001"};
     const delivery=await admin.post("/api/notifications/send",message);
     check("notifications : envoi administratif accepté", delivery.status===200);
     check("notifications : pastille reçue par SSE", await until(()=>!$("#notifications-badge").hidden && $("#notifications-badge").textContent==="1"));
-    check("notifications : pastille visible sur le menu mobile", $("#toggle-sidebar").classList.contains("has-notifications"));
+    check("notifications : pastille rouge sur la photo, menu fermé", !$("#account-notifications-badge").hidden && !$("#account-menu").open);
+    $("#account-toggle").click(); $("#nav-notifications").click();
+    check("compte : choisir Notifications ferme le menu sans effacer la pastille", !$("#account-menu").open && !$("#account-notifications-badge").hidden);
     $(".notifications-refresh").click();
     check("notifications : message privé affiché comme texte", await until(()=>$(".notification-body")) && $(".notification-body").textContent===message.body && !$(".notification-body img"));
     check("notifications : afficher le message ne le marque pas lu automatiquement", !$("#notifications-badge").hidden && $(".notification-card").classList.contains("unread"));
     $(".notification-read").click();
-    check("notifications : lecture et pastille synchronisées", await until(()=>$("#notifications-badge").hidden && !$(".notification-card").classList.contains("unread")));
+    check("notifications : lecture et pastille synchronisées", await until(()=>$("#notifications-badge").hidden && !$(".notification-card").classList.contains("unread") && $("#account-notifications-badge").hidden));
     $(".notifications-refresh").click();
     check("notifications : message conservé après lecture", await until(()=>$(".notification-body")) && $(".notification-read").hidden);
     failList=true;$(".notifications-refresh").click();

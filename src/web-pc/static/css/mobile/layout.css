@@ -40,7 +40,6 @@
     padding: 10px; border-top: 1px solid var(--line); }
   .mobile-menu-tools .me { display: inline-flex; min-width: 0; max-width: 100%; }
   .mobile-menu-tools .me-name { overflow: hidden; text-overflow: ellipsis; }
-  .mobile-menu-tools #logout { margin-left: auto; }
 
   body[data-mobile-panel="chat"] .chat-panel {
     display: flex; position: fixed; right: 0; top: var(--topbar); bottom: 0;

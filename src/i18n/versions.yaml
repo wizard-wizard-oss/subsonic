@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.18"
+  date: 2026-11-27
+  title: "Un menu sous votre photo"
+  changes:
+    - "Cliquez sur votre photo pour retrouver Mon compte, Notifications et Se déconnecter dans un seul menu."
+    - "Une pastille rouge sur la photo signale vos notifications non lues, même lorsque le menu est fermé. La photo reste accessible sur téléphone."
+
 - version: "1.17"
   date: 2026-11-27
   title: "Messages privés de l’administration et envois d’albums"

@@ -1348,8 +1348,8 @@ function makeEventSource(jar) {
 
   // --- Mon compte : photo (Subsonic, Gravatar), affichage, droits, Last.fm, import d'un lien ---
   const meImage = () => $("#me .avatar img") && $("#me .avatar img").getAttribute("src");
-  check("en haut : ma photo Subsonic à côté de mon nom, lien vers Mon compte", await until(() => meImage()) &&
-        meImage().startsWith("/api/avatar?user=bob&v=s") && $("#me").getAttribute("href") === "#/account");
+  check("en haut : ma photo Subsonic à côté de mon nom, menu vers Mon compte", await until(() => meImage()) &&
+        meImage().startsWith("/api/avatar?user=bob&v=s") && $("#nav-account").getAttribute("href") === "#/account");
   check("salon : photo pour qui en a une, initiale sinon", $$("#chat-panel .avatar[data-user=bob] img").length > 0 &&
         $$("#chat-panel .avatar[data-user=alice]").length > 0 && !$("#chat-panel .avatar[data-user=alice] img") &&
         $("#chat-panel .avatar[data-user=alice]").textContent === "A");

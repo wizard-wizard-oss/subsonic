@@ -21,6 +21,7 @@ function page(mobile, mode = "pinned", chat = "closed") {
   evaluate(source("core.js"));
   evaluate(source("icons.js"));
   evaluate(source("sidebar.js"));
+  evaluate(source("account-menu.js"));
   evaluate(source("app.js").split("App.music = new MusicApp();")[0]);
   window.writes = writes;
   evaluate(`
@@ -90,7 +91,7 @@ function page(mobile, mode = "pinned", chat = "closed") {
     const p = page(true, mode), preferences = p.eval("JSON.stringify(App.preferences)");
     check("mobile : liens existants déplacés dans le menu (" + mode + ")", () => {
       assert.equal(p.$("#sidebar > .topnav").querySelectorAll("a").length, 8);
-      assert.equal(p.$(".mobile-menu-tools #me").id, "me");
+      assert.equal(p.$(".topbar-right #account-menu #me").id, "me");
       assert.equal(p.$("#toggle-sidebar").getAttribute("aria-expanded"), "false");
       assert.equal(p.eval("App.chatPanel.thread.isVisible()"), false);
     });
@@ -117,11 +118,11 @@ function page(mobile, mode = "pinned", chat = "closed") {
     p.key("Escape");
     check("mobile : Échap ferme le volet", () => assert.equal(p.document.body.dataset.mobilePanel, undefined));
     p.$("#toggle-sidebar").click();
-    p.$("#logout").focus();
+    p.$("#open-settings").focus();
     p.key("Tab");
     check("mobile : le focus reste dans le volet", () => assert.equal(p.document.activeElement, p.$(".mobile-panel-head button")));
     p.key("Tab", {shiftKey:true});
-    check("mobile : le retour clavier reste dans le volet", () => assert.equal(p.document.activeElement.id, "logout"));
+    check("mobile : le retour clavier reste dans le volet", () => assert.equal(p.document.activeElement.id, "open-settings"));
     p.$(".mobile-backdrop").click();
     check("mobile : le fond ferme le volet", () => assert.equal(p.document.body.dataset.mobilePanel, undefined));
     p.$("#toggle-sidebar").click();

@@ -1,5 +1,18 @@
 # Déployer le projet
 
+Publication 1.18 vérifiée le 27/11/2026 sur https://music2.foos.fr : conteneur sain, version publique,
+253 fichiers exécutés et 62 ressources HTTPS conformes à la livraison isolée de la 1.17. Menu et pastille
+confirmés dans le HTML publié. Aucune migration : schéma 22, intégrité et clés étrangères valides,
+notification n° 1 à Mnu conservée. Aucun message supplémentaire envoyé. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.18-20261127T005355Z/` ; image précédente `pimedia-web:pre-1.18-20261127t005355z`.
+Les dix fichiers applicatifs modifiés ou ajoutés se limitent au menu de compte et à son signal de notification.
+Photo visible sur mobile ; notifications et déconnexion retirées de la navigation principale. Copie ciblée de
+`src/`, reconstruction du seul service web. Code de production 1.17 comparé à l’instantané avant publication ;
+configuration et volume de données conservés. Validation : cinq tests de versions, 58 contrôles du composant
+mobile, parcours Notifications/PC/mobile et Chrome à 1440/390/320 px, ainsi que 667×375 en paysage,
+clair/sombre ; liens et vraie déconnexion vérifiés sur des comptes de test. Aucun changement backend.
+Le retour de code peut conserver la base actuelle et les messages reçus.
+
 Publication 1.17 le 27/11/2026 : notifications administratives privées et refus des fichiers audio seuls.
 Livraison isolée issue du code de production 1.16, avec les correctifs de cache d’attribution et de rangement
 précédemment préparés en 1.16.1. Copie ciblée de `src/`, puis `docker compose up -d --build web` : configuration,
