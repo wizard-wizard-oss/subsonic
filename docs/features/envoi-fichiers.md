@@ -1,10 +1,40 @@
 # Envoi de musique et rangement dans la bibliothèque (site web)
 
 ## En bref
-Une personne qui a le droit Subsonic `upload` envoie un zip d'albums (ou des titres seuls) depuis la page « Envoyer ».
+Une personne qui a le droit Subsonic `upload` envoie uniquement un ZIP d’albums depuis la page « Envoyer ».
 Le site décompresse le zip, puis **range aussitôt** chaque album qui respecte la nomenclature à sa place dans la
 bibliothèque, chez son artiste. Ce qu'il ne sait pas placer attend dans `Incoming`, pour être rangé à la main. Subsonic
 scanne ensuite pour faire apparaître les nouveaux titres.
+
+## Albums uniquement et notifications (1.17)
+
+Les fichiers audio envoyés directement sont refusés côté navigateur et serveur, sans écriture de musique ni
+entrée d’historique. Un ZIP contenant des titres à sa racine ou sans dossier artiste est refusé intégralement
+avant de placer le moindre album. Les archives valides respectent Artiste/Album/titres, avec les dossiers
+de disques existants. Les limites de taille sont fournies au navigateur par le statut du serveur.
+
+Le MP3 de Baston 3000 (envoi 18 de Mnu) a été retiré de la bibliothèque le 27/11/2026 à la demande de
+l’utilisateur. Copie de récupération hors musique dans `/data/removed-uploads/upload-18/`, empreinte
+SHA-256 vérifiée et scan Subsonic demandé. L’historique d’origine est conservé. Le destinataire est
+celui de cet envoi ; le message utilise les [notifications privées](notifications.md).
+
+## Fiabilité du rangement et de l’attribution (1.17)
+
+Le rattrapage isole les erreurs de lecture, de déplacement ou de nettoyage par album et par artiste.
+Un refus de droits est journalisé avec le dossier concerné ; les autres albums continuent à être traités.
+Les déplacements réussis déclenchent le scan même si le nettoyage d’un dossier vidé échoue.
+`IncomingSorterTest` couvre ces trois cas. Aucun droit du disque n’est modifié automatiquement.
+
+Après une correction de tags, le cache des chemins utilisé pour afficher l’auteur est également invalidé :
+voir [Tags d’albums](tags-albums.md). L’historique d’envoi reste inchangé.
+
+Diagnostic de production du 27/11/2026 : Baston 3000 est un MP3 seul envoyé par Mnu, à la racine d’Incoming,
+avec un artiste et un titre mais sans tag album. Ses droits sont corrects (664, propriétaire du site) ;
+le téléchargement individuel via Subsonic répond 200 avec les comptes thomas et Mnu. Subsonic annonce
+un album générique « Incoming » avec un titre, mais `getAlbum` n’en renvoie aucune piste et `getSong`
+n’expose pas d’`albumId`. La fiche album ne peut donc pas fournir son téléchargement. Il faut compléter
+le nom d’album et ranger le fichier sous Artiste/Album pour constituer un véritable album. Aucun déplacement
+ni modification de tags de ce titre n’a été effectué pendant ce diagnostic.
 
 ## Historique des envois (1.10)
 La page « Envoyer » affiche un tableau partagé entre tous les comptes connectés : date, compte connecté,
@@ -78,8 +108,9 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 ## Ce qui se passe, de A à Z
 1. Le lien **« Envoyer »** (ou **« Envois »** sans droit `upload`) est accessible à tous les comptes connectés.
    L'historique est commun ; le formulaire reste réservé aux comptes qui peuvent envoyer et à une racine accessible.
-2. Page `#/upload` : on glisse des fichiers (ou clic pour choisir). Formats : **zip** (2 Go au plus), mp3, flac, m4a, aac,
-   ogg, oga, opus, wav, aiff, aif (300 Mo au plus). Un format ou une taille refusés sont expliqués tout de suite.
+2. Page `#/upload` : on glisse des albums **ZIP** (2 Go au plus), ou clic pour choisir. Les formats audio
+   mp3, flac, m4a, aac, ogg, oga, opus, wav, aiff et aif restent acceptés à l’intérieur (300 Mo par titre).
+   Les fichiers audio seuls, formats inconnus et tailles refusées sont expliqués tout de suite.
 3. **Barres de progression** : une par fichier (l'envoi, puis une barre animée « Décompression et rangement… » pendant que
    le serveur travaille : il ne dit pas où il en est), et une pour le lot entier (« Fichier 2 sur 5 — 40 % », puis
    « Terminé »). Un fichier à la fois.
@@ -94,10 +125,10 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
    disque) ; le dossier qui contient l'album est l'artiste. L'artiste existant est recherché avec la comparaison commune.
    Les initiales des mots du nouvel album et, si nécessaire, du nouvel artiste sont mises en majuscules, puis l'album
    est déplacé d'un coup dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié).
-7. **Ce qui reste** rejoint Incoming tel qu'il était organisé dans le zip (fusionné avec les dossiers déjà là, jamais
-   d'écrasement : « titre (2).flac »). Des titres à la racine du zip sont réunis dans un dossier au nom du zip. Le zip est
-   effacé.
-8. **Titre seul** (pas de zip) : il n'a ni artiste ni album, il attend à la racine d'Incoming.
+7. **Ce qui reste** rejoint Incoming tel qu’il était organisé dans le ZIP (fusionné avec les dossiers déjà là,
+   sans écrasement : « titre (2).flac »). Si un titre est à la racine du ZIP ou dans un album sans artiste,
+   toute l’archive est refusée avant placement. Le ZIP temporaire est effacé.
+8. **Titre seul** (pas de ZIP) : refusé avant réception avec le message expliquant la règle des albums.
 9. La page affiche le résultat de chaque fichier : « Décompressé : 12 fichiers — rangé dans Converge/Jane Doe — à ranger à
    la main dans Incoming : … ».
 10. En fin de lot (`POST /api/upload/finish`), le site lance `startScan` : avec le compte de la personne, sinon avec un
@@ -122,9 +153,9 @@ Bibliothèque de départ : `Dälek/Absence/`, `Converge/Axe to Fall/`.
 | `converge/jane doe/01.flac` | `<racine>/Converge/Jane Doe/` | artiste existant conservé, initiales de l'album mises en majuscules |
 | `jean-michel jarre/nouvel album/01.flac` | `<racine>/Jean-Michel Jarre/Nouvel Album/` | nouvel artiste et album : majuscule à chaque mot |
 | `Converge/Live/Face A/01.flac` | `Incoming/Converge/Live/Face A/` | « Face A » n'est pas un disque, et « Converge » est un artiste connu : doute |
-| `Jane Doe/01.flac` | `Incoming/Jane Doe/` | album sans artiste |
+| `Jane Doe/01.flac` | ZIP refusé | album sans dossier artiste |
 | `01.flac` à la racine de `Jane Doe.zip` | `Incoming/Jane Doe/01.flac` | idem |
-| un mp3 envoyé seul | `Incoming/titre.mp3` | idem |
+| un MP3 envoyé seul | refusé | seuls les albums en ZIP sont autorisés |
 
 **Dossiers en trop** : un dossier au-dessus de l'artiste est ignoré seulement s'il ne contient rien d'autre que le suivant
 et ne porte pas le nom d'un artiste de la bibliothèque. Sans cette règle, `Converge/Live/Face A` passerait pour l'artiste

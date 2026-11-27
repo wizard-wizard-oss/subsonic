@@ -37,13 +37,20 @@ class IncomingSorter:
             return []
         placed = []
         for artist in self._folders(self.incoming):
-            for album in self._folders(os.path.join(self.incoming, artist)):
-                folder = os.path.join(self.incoming, artist, album)
-                if self.clock() - self._last_change(folder) >= self.wait_hours * HOUR:
-                    where = self.library.place(folder, artist, album)
-                    if where:
-                        placed.append(where)
-            self._remove_if_empty(os.path.join(self.incoming, artist))
+            artist_folder = os.path.join(self.incoming, artist)
+            try:
+                for album in self._folders(artist_folder):
+                    folder = os.path.join(artist_folder, album)
+                    try:
+                        if self.clock() - self._last_change(folder) >= self.wait_hours * HOUR:
+                            where = self.library.place(folder, artist, album)
+                            if where:
+                                placed.append(where)
+                    except OSError as error:
+                        self.log("Incoming : rangement impossible pour %s/%s (%s)" % (artist, album, error))
+                self._remove_if_empty(artist_folder)
+            except OSError as error:
+                self.log("Incoming : rangement impossible pour %s (%s)" % (artist, error))
         if placed:
             self.log("Incoming : rangé dans la bibliothèque : " + ", ".join(placed))
             self.scanner()

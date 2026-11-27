@@ -106,6 +106,43 @@ class AlbumTagsHttpTest(WebAppTestCase):
         self.assertEqual(self.app.db.query("SELECT name FROM sqlite_master WHERE type='table'"), tables)
         self.assertTrue(self.paths["s1"].exists())
 
+    def test_editing_styles_keeps_the_original_sender(self):
+        self.client("bob", "pw2")
+        sender = self.app.users.by_name("bob")
+        self.app.uploads.library.music_dir = str(self.music)
+        self.app.uploads.history.add(sender, "Arrival.zip", 100,
+            dict(files=2, skipped=0, placed=["ABBA/Arrival"], waiting=[]), 123, self.app.uploads.library_key)
+        before = self.alice.get("/api/album?id=fdir-al1").json()["uploadedBy"]
+        self.assertEqual(before, dict(username="bob", uploadedAt=123))
+        result = self.operation(self.alice.post_json("/api/tags/save", self.body()))
+        self.assertEqual((result["state"], result["scan"]), ("saved", "updated"))
+        after = self.alice.get("/api/album?id=fdir-al1").json()["uploadedBy"]
+        self.assertEqual(after, before)
+        self.assertEqual(self.app.uploads.history.page(None, 50)[0].username, "bob")
+
+    def test_style_scan_discards_an_old_attribution_for_a_reused_album_id(self):
+        self.client("bob", "pw2")
+        self.app.uploads.library.music_dir = str(self.music)
+        for username, path in (("bob", "ABBA/Arrival"), ("alice", "Other/Album")):
+            self.app.uploads.history.add(self.app.users.by_name(username), "album.zip", 100,
+                dict(files=2, skipped=0, placed=[path], waiting=[]), 123, self.app.uploads.library_key)
+        call = self.app.subsonic.call
+
+        def previous_album(user, endpoint, params=(), **kwargs):
+            if endpoint == "getAlbum":
+                return {"album": {"song": [{"path": "Other/Album/01.mp3"}]}}
+            return call(user, endpoint, params, **kwargs)
+
+        user = self.app.users.by_name("alice")
+        previous = {"id": "al1"}
+        with patch.object(self.app.subsonic, "call", side_effect=previous_album):
+            self.app.upload_attribution.annotate(user, [previous])
+        self.assertEqual(previous["uploadedBy"]["username"], "alice")
+        result = self.operation(self.alice.post_json("/api/tags/save", self.body()))
+        self.assertEqual(result["scan"], "updated")
+        album = self.alice.get("/api/album?id=fdir-al1").json()
+        self.assertEqual(album["uploadedBy"]["username"], "bob")
+
     def test_preview_describes_the_actual_value_when_subsonic_index_is_outdated(self):
         response = self.alice.post_json("/api/tags/preview", self.body({"title": "Dancing Queen"}))
         self.assertEqual(response.status, 200, response.body)

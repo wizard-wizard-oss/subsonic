@@ -1,4 +1,4 @@
-"""Envoi de fichiers audio : déposés dans le dossier « Incoming » de la musique de Subsonic, puis Subsonic est invité à
+"""Envoi d’albums en ZIP : extraits dans le dossier « Incoming » de la musique de Subsonic, puis Subsonic est invité à
 scanner. L'API Subsonic n'a pas d'envoi de fichiers : le site écrit donc directement dans le dossier de musique (MUSIC_DIR
 dans le .env), monté en écriture dans le conteneur. Un zip est décompressé, puis chaque album trouvé dedans prend
 aussitôt sa place dans la bibliothèque (<racine>/Artiste/Album, voir library/files.py), même entouré de dossiers en trop ; ce qui
@@ -80,7 +80,8 @@ class Uploads:
             return {"enabled": False, "reason": "not_writable", "folder": folder}
         if not os.access(self.directory, os.W_OK | os.X_OK):
             return {"enabled": False, "reason": "not_writable", "folder": folder}
-        return {"enabled": True, "reason": "", "folder": folder, "maxBytes": MAX_FILE_BYTES, "maxZipBytes": MAX_ZIP_BYTES}
+        return {"enabled": True, "reason": "", "folder": folder, "maxBytes": MAX_FILE_BYTES, "maxZipBytes": MAX_ZIP_BYTES,
+                "audioExtensions": list(EXTENSIONS)}
 
     @property
     def library_key(self):
@@ -94,7 +95,7 @@ class Uploads:
                 "before": entries[HISTORY_PAGE_SIZE - 1].id if len(entries) > HISTORY_PAGE_SIZE else None}
 
     def save(self, user, stream, length, filename):
-        """Copie le corps de la requête (length octets) dans Incoming ; un zip y est décompressé et ses albums rangés.
+        """Reçoit uniquement un ZIP d’albums organisés ; refuse les fichiers seuls avant réception.
         Renvoie {"files": titres et images gardés, "skipped": fichiers ignorés du zip, "placed": albums rangés dans la
         bibliothèque (« Artiste/Album »), "waiting": ce qui reste dans Incoming, à ranger à la main}."""
         reason = self.status(user)["reason"]
@@ -102,38 +103,29 @@ class Uploads:
             raise UploadError("upload." + reason)
         name = safe_name(filename, "")
         extension = extension_of(name)
-        if extension not in EXTENSIONS + (ZIP,):
+        if extension in EXTENSIONS:
+            raise UploadError("upload.album_required")
+        if extension != ZIP:
             raise UploadError("upload.bad_type")
-        if not 0 < length <= (MAX_ZIP_BYTES if extension == ZIP else MAX_FILE_BYTES):
+        if not 0 < length <= MAX_ZIP_BYTES:
             raise UploadError("upload.bad_size")
-        if extension == ZIP:
-            saved = self._save_zip(name, stream, length)
-        else:
-            part = self._part(self.directory, name)
-            self._receive(stream, length, part)
-            try:
-                with self._placement_lock:
-                    path = self._free_path(self.directory, name)  # jamais d'écrasement entre deux envois simultanés
-                    self._publish(part, path)
-            finally:
-                self._remove(part)
-            saved = {"files": 1, "skipped": 0, "placed": [], "waiting": [os.path.basename(path)]}
+        saved = self._save_zip(name, stream, length)
         self.history.add(user, name, length, saved, int(time.time()), self.library_key)
         return saved
 
     def _save_zip(self, name, stream, length):
         """Le zip arrive dans un fichier caché et est décompressé dans un dossier caché. Chaque album trouvé y est rangé
-        d'un coup dans la bibliothèque (Subsonic n'en voit jamais une moitié) ; le reste rejoint Incoming. Des titres à la
-        racine du zip forment un album au nom du zip (sans artiste connu : il attend dans Incoming). Le zip est effacé."""
-        base = name[:-len(ZIP) - 1].strip(" .") or "album"
+        d'un coup dans la bibliothèque (Subsonic n'en voit jamais une moitié) ; le reste rejoint Incoming. Les titres
+        sans dossier artiste/album font refuser toute l’archive avant placement. Le zip est effacé."""
         archive = self._part(self.directory, name)
-        unpacked = self._part(self.directory, base + ".unzip")
+        unpacked = self._part(self.directory, name + ".unzip")
         self._receive(stream, length, archive)
         try:
             kept, skipped = self._unzip(archive, unpacked)
             if not kept:
                 raise UploadError("upload.empty_zip")
-            self._gather_loose_files(unpacked, base)
+            if any(len(os.path.relpath(album, unpacked).split(os.sep)) < 2 for album in find_albums(unpacked)):
+                raise UploadError("upload.album_required")
             with self._placement_lock:
                 placed = self._place_albums(unpacked)
                 self._remove_empty_dirs(unpacked)
@@ -144,15 +136,6 @@ class Uploads:
             shutil.rmtree(unpacked, ignore_errors=True)
             self._remove(archive)
         return {"files": kept, "skipped": skipped, "placed": placed, "waiting": waiting}
-
-    def _gather_loose_files(self, unpacked, base):
-        """Fichiers à la racine du zip → un dossier au nom du zip."""
-        loose = [entry for entry in os.listdir(unpacked) if os.path.isfile(os.path.join(unpacked, entry))]
-        if loose:
-            folder = self._free_path(unpacked, base, directory=True)
-            self._make_dir(folder)
-            for entry in loose:
-                os.replace(os.path.join(unpacked, entry), os.path.join(folder, entry))
 
     def _place_albums(self, unpacked):
         """Chaque album du zip : le dossier qui le contient est l'artiste. Des dossiers en trop au-dessus de l'artiste
@@ -252,16 +235,6 @@ class Uploads:
         except (OSError, UploadError) as error:
             Uploads._remove(path)
             raise error if isinstance(error, UploadError) else UploadError("upload.write_failed")
-
-    @staticmethod
-    def _publish(part, path):
-        """Donne au fichier ou au dossier caché son vrai nom (lisible par tous, modifiable par le groupe)."""
-        try:
-            os.chmod(part, 0o775 if os.path.isdir(part) else 0o664)
-            os.replace(part, path)
-        except OSError:
-            Uploads._remove(part)
-            raise UploadError("upload.write_failed")
 
     @staticmethod
     def _make_dir(path):

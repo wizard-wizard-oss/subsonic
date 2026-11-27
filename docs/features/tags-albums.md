@@ -1,5 +1,17 @@
 # Modifier les tags d'un album (site web, 1.11)
 
+## Attribution après correction (intégrée à la 1.17)
+
+`WebApplication._refresh_tags` invalide aussi le cache des chemins d’`UploadAttribution`, avant et après
+la synchronisation Subsonic. L’attribution est alors recalculée depuis le chemin courant, y compris si
+un identifiant ID3 a été réutilisé. L’édition n’écrit jamais `upload_history` ni `upload_albums` ; le compte
+qui corrige les tags ne devient pas l’auteur de l’envoi.
+
+Les tests HTTP `AlbumTagsHttpTest` couvrent une correction de style par un autre compte et un ancien
+chemin mis en cache pour un identifiant réutilisé. Le diagnostic de production du 27/11/2026 confirme
+que Coilguns conserve Mnu comme auteur après l’ajout du style Noise Rock ; aucun écrasement persistant
+n’a été constaté. Le défaut de cache est reproduit en test ; son lien avec le cas exact signalé reste à confirmer.
+
 ## Progression de l'enregistrement (1.12.1)
 
 Les changements appliqués restent en brouillon ; l'aide près de « Vérifier les changements » indique la suite

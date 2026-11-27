@@ -5,6 +5,7 @@ import stat
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from pimedia.shared.text import normalize
 from pimedia.webapp.library.incoming import HOUR, IncomingSorter
@@ -225,6 +226,45 @@ class IncomingSorterTest(MusicTestCase):
         self.assertEqual(self.sorter.sort(), [])
         self.assertEqual(files_under(self.music), before)
         self.assertEqual(self.scans, [])
+
+    def test_one_blocked_album_does_not_stop_the_others_or_the_scan(self):
+        self.write("A", "Blocked", "01.mp3")
+        self.write("A", "Ready", "02.mp3")
+        self.write("B", "Ready", "03.mp3")
+        place = self.library.place
+
+        def sometimes_blocked(folder, artist, album):
+            if album == "Blocked":
+                raise PermissionError("permission denied")
+            return place(folder, artist, album)
+
+        with patch.object(self.library, "place", side_effect=sometimes_blocked):
+            self.assertEqual(self.sorter.sort(), ["A/Ready", "B/Ready"])
+        self.assertEqual(files_under(self.incoming), ["A/Blocked/01.mp3"])
+        self.assertEqual(self.scans, [1])
+        self.assertTrue(any("A/Blocked" in line and "permission denied" in line for line in self.logs))
+
+    def test_an_unreadable_artist_does_not_stop_the_following_artist(self):
+        self.write("A", "Blocked", "01.mp3")
+        self.write("B", "Ready", "02.mp3")
+        folders = self.sorter._folders
+
+        def sometimes_unreadable(path):
+            if path == os.path.join(self.incoming, "A"):
+                raise PermissionError("permission denied")
+            return folders(path)
+
+        with patch.object(self.sorter, "_folders", side_effect=sometimes_unreadable):
+            self.assertEqual(self.sorter.sort(), ["B/Ready"])
+        self.assertEqual(files_under(self.incoming), ["A/Blocked/01.mp3"])
+        self.assertEqual(self.scans, [1])
+
+    def test_cleanup_failure_still_scans_albums_already_moved(self):
+        self.write("A", "Ready", "01.mp3")
+        self.write("B", "Ready", "02.mp3")
+        with patch.object(self.sorter, "_remove_if_empty", side_effect=PermissionError("permission denied")):
+            self.assertEqual(self.sorter.sort(), ["A/Ready", "B/Ready"])
+        self.assertEqual(self.scans, [1])
 
     def test_waits_while_it_may_still_be_edited(self):
         self.write("Converge", "Jane Doe", "01.flac")

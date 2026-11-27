@@ -239,7 +239,8 @@ class WebApplication:
 
     def _refresh_tags(self):
         """Une écriture de tags invalide les lectures indexées, pour tous les comptes concernés."""
-        for cache in (self.library.cache, self.library.top_cache, self.folders.cache, self.ratings.cache):
+        for cache in (self.library.cache, self.library.top_cache, self.folders.cache, self.ratings.cache,
+                      self.upload_attribution.paths):
             cache.clear()
 
     def _routes(self):

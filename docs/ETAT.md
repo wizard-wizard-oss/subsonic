@@ -1,5 +1,20 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Diagnostic initial des envois (27/11/2026 ; correctifs intégrés à la 1.17)** : le cache des chemins
+utilisé pour afficher l’auteur d’un envoi est invalidé avec les autres caches avant/après un scan de tags.
+Les tests HTTP couvrent un style modifié par un autre compte et la réutilisation d’un identifiant ID3.
+Le rattrapage Incoming poursuit les autres albums après une erreur et scanne les déplacements réussis,
+y compris en cas d’échec de nettoyage ; trois régressions dédiées. Aucun changement de schéma ni écriture
+dans l’historique par l’éditeur de tags. En production, l’attribution de Coilguns reste Mnu après la correction
+du style ; l’écrasement persistant signalé n’a pas été reproduit. Le MP3 seul de Baston 3000 restait alors dans
+Incoming faute d’album et d’arborescence Artiste/Album, avec des droits corrects. Téléchargement individuel
+200 vérifié via Subsonic ; sa fiche générique Incoming ne renvoie aucune piste. Aucun fichier musical,
+droit ni donnée de production modifié. Détails : [Envois](features/envoi-fichiers.md), [Tags](features/tags-albums.md).
+
+Validation locale du correctif : 139 tests Python ciblés (envois, tags, rangement, dossiers et droits) et
+5 tests de versions réussis. Les deux régressions principales échouent sur les méthodes originales,
+puis passent avec le correctif. `git diff --check` est valide. Aucun changement de navigateur.
+
 **Help structuré par thèmes, 1.16 (26/11/2026, déployée et vérifiée)** : nom **Help** conservé dans
 le menu et le titre à la demande de l’utilisateur. Trois mises en avant (salon, paroles synchronisées,
 presse) puis sept thèmes et 39 guides de trois étapes. Captures des composants réels avec des données
