@@ -1,5 +1,11 @@
 # Déployer le projet
 
+Publication 1.15.2 le 26/11/2026 : le menu et le titre de la page d’aide deviennent « Help »,
+plus court sur mobile, à la demande de l’utilisateur. Correction de texte sur la 1.15.1, sans tests relancés.
+Mise à jour ciblée et reconstruction Docker ; HTTPS confirme le nouveau libellé, la version et la santé du site.
+Aucune migration ni modification de configuration. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.15.2-20261126T213916Z/` ; image précédente : `pimedia-web:pre-1.15.2-20261126t213916z`.
+
 Publication 1.15.1 le 26/11/2026 : le menu « Nouveautés » et le titre de sa page deviennent
 « Découvrir l’application ». Correction de libellé au troisième numéro, publiée sur la version mobile 1.15.
 Mise à jour ciblée des textes, de l’historique et du commentaire du composant, puis reconstruction Docker.

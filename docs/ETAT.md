@@ -1,5 +1,12 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Menu Help, 1.15.2 (26/11/2026, déployée et vérifiée)** : à la demande de l’utilisateur, « Help »
+remplace « Découvrir l’application » dans le menu et le titre de la page pour raccourcir le libellé sur mobile.
+Route, cartes et liens conservés ; seules les traductions, la note de version et le commentaire du composant
+ont changé en production. HTTPS confirme Help et la version 1.15.2 ; conteneur sain, configuration conservée.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15.2-20261126T213916Z/` ; image précédente :
+`pimedia-web:pre-1.15.2-20261126t213916z`. Attentes textuelles existantes adaptées ; aucun test relancé.
+
 **Présentation de l’application, 1.15.1 (26/11/2026, déployée et vérifiée)** : le menu « Nouveautés »
 et le titre de sa page deviennent « Découvrir l’application ». Correction de libellé publiée après la 1.15
 mobile, avec un troisième numéro. Route, cartes et liens conservés. HTTPS confirme le nouveau menu,

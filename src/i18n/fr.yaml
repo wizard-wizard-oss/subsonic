@@ -201,7 +201,7 @@ webapp:
     albums: "Albums"
     mix: "Mix"
     news: "Actualités"
-    whatsnew: "Découvrir l’application"
+    whatsnew: "Help"
     upload: "Envoyer"
     search: "Rechercher un artiste, un album, un titre…"
     artists: "Artistes"
@@ -880,7 +880,7 @@ webapp:
     import_see: "Voir dans Favoris"
     import_accounts: "Relier son compte YouTube ou SoundCloud (pour importer ses « J'aime » privés) : pas encore possible."
   whatsnew:
-    title: "Découvrir l’application"
+    title: "Help"
     idea_title: "Le principe, en trois phrases"
     idea_1: "Subsonic reste la maison de notre musique : vos étoiles, vos cœurs, vos playlists et vos écoutes y sont écrits avec votre compte, donc vous les retrouvez aussi dans les applis Subsonic du téléphone."
     idea_2: "Le site, lui, ajoute de quoi écouter ensemble, papoter, se perdre dans des mix, explorer les labels et les discographies, garder des découvertes pour plus tard et les conseiller aux autres. Et aller chercher ailleurs le titre qui manque."
