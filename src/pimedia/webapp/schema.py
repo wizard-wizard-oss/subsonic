@@ -449,4 +449,119 @@ MIGRATIONS = [
         PRIMARY KEY (user_id, genre_id)
     )
     """,
+    # 24 : une cible écoutée décrite une seule fois ; une date de lecture par destinataire pour chaque message.
+    """
+    CREATE TABLE listening_targets (
+        id INTEGER PRIMARY KEY,
+        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
+        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
+        library_key TEXT NOT NULL DEFAULT '',
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL DEFAULT '',
+        image_ref TEXT NOT NULL DEFAULT '',
+        CHECK (kind != 'song' OR source = 'subsonic'),
+        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
+        UNIQUE (kind, source, library_key, source_id)
+    );
+    INSERT INTO listening_targets (kind, source, library_key, source_id, title, artist, image_ref)
+        SELECT kind, source, library_key, source_id, title, artist, image_ref FROM (
+            SELECT kind, source, library_key, source_id, title, artist, image_ref, created_at, 0 AS origin, id
+            FROM listen_later
+            UNION ALL
+            SELECT kind, source, library_key, source_id, title, artist, image_ref, created_at, 1 AS origin, id
+            FROM recommendations
+        ) WHERE true ORDER BY created_at, origin, id
+        ON CONFLICT (kind, source, library_key, source_id) DO UPDATE
+        SET title = excluded.title, artist = excluded.artist, image_ref = excluded.image_ref;
+    CREATE TABLE listen_later_targets (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        target_id INTEGER NOT NULL REFERENCES listening_targets (id),
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, target_id)
+    );
+    INSERT INTO listen_later_targets (id, user_id, target_id, created_at)
+        SELECT l.id, l.user_id, t.id, l.created_at FROM listen_later l
+        JOIN listening_targets t USING (kind, source, library_key, source_id);
+    DROP TABLE listen_later;
+    ALTER TABLE listen_later_targets RENAME TO listen_later;
+    CREATE INDEX listen_later_by_date ON listen_later (user_id, created_at DESC, id DESC);
+    CREATE TABLE recommendations_targets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        target_id INTEGER NOT NULL REFERENCES listening_targets (id),
+        created_at INTEGER NOT NULL,
+        read_at INTEGER,
+        archived_at INTEGER,
+        CHECK (sender_id != recipient_id)
+    );
+    INSERT INTO recommendations_targets (id, sender_id, recipient_id, target_id, created_at, read_at, archived_at)
+        SELECT r.id, r.sender_id, r.recipient_id, t.id, r.created_at,
+               CASE WHEN r.unread_token IS NULL THEN r.created_at END, r.recipient_archived_at
+        FROM recommendations r JOIN listening_targets t USING (kind, source, library_key, source_id);
+    CREATE TABLE recommendation_comments_read (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recommendation_id INTEGER NOT NULL REFERENCES recommendations (id) ON DELETE CASCADE,
+        author_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        body TEXT NOT NULL CHECK (length(trim(body)) > 0),
+        client_token TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER,
+        CHECK (author_id != recipient_id),
+        UNIQUE (recommendation_id, author_id, client_token)
+    );
+    INSERT INTO recommendation_comments_read
+        (id, recommendation_id, author_id, recipient_id, body, client_token, created_at, read_at)
+        SELECT c.id, c.recommendation_id, c.author_id,
+               CASE WHEN c.author_id = r.sender_id THEN r.recipient_id ELSE r.sender_id END,
+               c.body, c.client_token, c.created_at,
+               CASE WHEN c.id <= CASE WHEN c.author_id = r.sender_id THEN r.recipient_last_read_comment_id
+                                      ELSE r.sender_last_read_comment_id END THEN c.created_at END
+        FROM recommendation_comments c JOIN recommendations r ON r.id = c.recommendation_id;
+    DROP TABLE recommendation_comments;
+    DROP TABLE recommendations;
+    ALTER TABLE recommendations_targets RENAME TO recommendations;
+    ALTER TABLE recommendation_comments_read RENAME TO recommendation_comments;
+    CREATE UNIQUE INDEX recommendations_active_target
+        ON recommendations (sender_id, recipient_id, target_id) WHERE archived_at IS NULL;
+    CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC);
+    CREATE INDEX recommendations_by_sender ON recommendations (sender_id, id DESC);
+    CREATE INDEX recommendations_unread_by_recipient ON recommendations (recipient_id) WHERE read_at IS NULL;
+    CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id);
+    CREATE INDEX recommendation_comments_unread ON recommendation_comments (recipient_id) WHERE read_at IS NULL
+    """,
+    # 25 : les longueurs maximales des notifications vivent dans le code (notification_entities), pas dans le schéma.
+    """
+    CREATE TABLE notifications_text (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+        body TEXT NOT NULL CHECK (length(trim(body)) > 0),
+        client_token TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER,
+        UNIQUE (sender_id, recipient_id, client_token)
+    );
+    INSERT INTO notifications_text SELECT id, sender_id, recipient_id, title, body, client_token, created_at, read_at
+        FROM notifications;
+    DROP TABLE notifications;
+    ALTER TABLE notifications_text RENAME TO notifications;
+    CREATE INDEX notifications_by_recipient ON notifications (recipient_id, id DESC);
+    CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
+    """,
+    # 26 : un style suivi est identifié par son nom exact dans le catalogue MusicBrainz, celui envoyé dans les recherches.
+    """
+    CREATE TABLE release_subscriptions_by_name (
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        genre TEXT NOT NULL CHECK (length(genre) > 0),
+        PRIMARY KEY (user_id, genre)
+    );
+    INSERT OR IGNORE INTO release_subscriptions_by_name (user_id, genre) SELECT user_id, name FROM release_subscriptions;
+    DROP TABLE release_subscriptions;
+    ALTER TABLE release_subscriptions_by_name RENAME TO release_subscriptions
+    """,
 ]

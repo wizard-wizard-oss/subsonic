@@ -21,18 +21,16 @@ from tests.webapp_support import WebAppTestCase
 
 
 class ListenLaterStorageTest(unittest.TestCase):
-    def test_song_migration_preserves_entries_unread_tokens_and_constraints(self):
+    def test_song_migration_preserves_entries_and_constraints(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "webapp.db")
             old = Database(path, MIGRATIONS[:19])
             users = UserRepository(old)
             sender = users.save_login("sender", "salt", "token", ())
             recipient = users.save_login("recipient", "salt", "token", ())
-            bookmarks = ListenLaterRepository(old)
-            album = ListeningTarget("album", "subsonic", "library", "f1", "Album", "Artist", "cover")
-            artist = ListeningTarget("artist", "discogs", "", "7", "Artist")
-            bookmarks.add(sender.id, album, 100)
-            bookmarks.add(sender.id, artist, 200)
+            old.execute("INSERT INTO listen_later (user_id, kind, source, library_key, source_id, title, artist, "
+                        "image_ref, created_at) VALUES (?, 'album', 'subsonic', 'library', 'f1', 'Album', 'Artist', "
+                        "'cover', 100), (?, 'artist', 'discogs', '', '7', 'Artist', '', '', 200)", (sender.id, sender.id))
             old.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, library_key, source_id, "
                         "title, artist, image_ref, created_at) VALUES (?, ?, 'album', 'subsonic', 'library', 'f1', "
                         "'Album', 'Artist', 'cover', 300)", (sender.id, recipient.id))
@@ -44,13 +42,17 @@ class ListenLaterStorageTest(unittest.TestCase):
                       for table in tables}
             old.close()
 
-            db = Database(path, MIGRATIONS)
-            self.addCleanup(db.close)
+            # Migration 20 (morceaux) : contrôlée dans le schéma de sa version, avant les migrations suivantes.
+            migrated = Database(path, MIGRATIONS[:23])
             for table in tables:
                 columns = ", ".join(before[table][0])
-                self.assertEqual([dict(row) for row in db.query("SELECT " + columns + " FROM " + table + " ORDER BY id")],
-                                 before[table])
-            self.assertEqual(db.query("PRAGMA foreign_key_check"), [])
+                self.assertEqual([dict(row) for row in migrated.query(
+                    "SELECT " + columns + " FROM " + table + " ORDER BY id")], before[table])
+            self.assertEqual(migrated.query("PRAGMA foreign_key_check"), [])
+            migrated.close()
+
+            db = Database(path, MIGRATIONS)
+            self.addCleanup(db.close)
             indexes = {row[0] for row in db.query("SELECT name FROM sqlite_master WHERE type = 'index'")}
             self.assertTrue({"listen_later_by_date", "recommendations_by_recipient",
                              "recommendations_unread_by_recipient"} <= indexes)
@@ -67,7 +69,38 @@ class ListenLaterStorageTest(unittest.TestCase):
                 recommendations.add(sender.id, recipient.id, invalid, 700)
             db.execute("DELETE FROM users WHERE id = ?", (sender.id,))
             self.assertEqual(bookmarks.all(sender.id, "library"), [])
-            self.assertEqual(recommendations.received(recipient.id, "library"), [])
+            self.assertEqual(recommendations.received(recipient.id, "library").recommendations, ())
+
+    def test_new_bookmark_refreshes_the_shared_target_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Database(os.path.join(directory, "webapp.db"), MIGRATIONS)
+            self.addCleanup(db.close)
+            users = UserRepository(db)
+            alice = users.save_login("alice", "salt", "token", ())
+            bob = users.save_login("bob", "salt", "token", ())
+            bookmarks = ListenLaterRepository(db)
+            bookmarks.add(alice.id, ListeningTarget("album", "discogs", "", "1", "Ancien titre"), 100)
+            entry = bookmarks.add(bob.id, ListeningTarget("album", "discogs", "", "1", "Titre corrigé", "Artiste"), 200)
+            self.assertEqual(entry.target.title, "Titre corrigé")
+            self.assertEqual(bookmarks.all(alice.id, "server")[0].target.title, "Titre corrigé")
+            self.assertEqual(db.one("SELECT COUNT(*) FROM listening_targets")[0], 1)
+
+    def test_received_recommendations_are_paginated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Database(os.path.join(directory, "webapp.db"), MIGRATIONS)
+            self.addCleanup(db.close)
+            users = UserRepository(db)
+            alice = users.save_login("alice", "salt", "token", ())
+            bob = users.save_login("bob", "salt", "token", ())
+            repository = RecommendationRepository(db)
+            for index in range(5):
+                repository.add(alice.id, bob.id, ListeningTarget("artist", "discogs", "", str(index), "A"), 100 + index)
+            first = repository.received(bob.id, "server", limit=3)
+            self.assertEqual([r.target.source_id for r in first.recommendations], ["4", "3", "2"])
+            self.assertTrue(first.has_more)
+            rest = repository.received(bob.id, "server", limit=3, before=first.recommendations[-1].id)
+            self.assertEqual([r.target.source_id for r in rest.recommendations], ["1", "0"])
+            self.assertFalse(rest.has_more)
 
     def test_migration_preserves_existing_data_and_bookmarks_survive_reopening(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -152,7 +185,7 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertEqual(len(data["recommendations"]), 3)
         group = next(group for group in data["recommendations"] if group["target"]["sourceId"] == "s1")
         self.assertEqual({sender["username"] for sender in group["senders"]}, {"alice", "charlie"})
-        self.assertEqual(len(group["unreadTokens"]), 2)
+        self.assertEqual(len(group["unreadIds"]), 2)
         self.assertTrue(self.unread())
         self.read(self.tokens())
         self.send(kind="song", source_id="s1")
@@ -216,7 +249,8 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.add(kind="artist", source="discogs", source_id="101")
         self.add()
         self.assertEqual(len(self.page()["bookmarks"]), 3)
-        self.assertEqual(self.page(self.bob), dict(bookmarks=[], recommendations=[], readBatchSize=READ_BATCH_SIZE, commentMaxLength=COMMENT_MAX_LENGTH))
+        self.assertEqual(self.page(self.bob), dict(bookmarks=[], recommendations=[], recommendationsHaveMore=False,
+                                                    readBatchSize=READ_BATCH_SIZE, commentMaxLength=COMMENT_MAX_LENGTH))
 
     def test_description_is_resolved_on_server_and_snapshot_needs_no_source(self):
         entry = self.add(title="forged", imageRef="https://untrusted.invalid/").json()["bookmark"]
@@ -329,10 +363,10 @@ class ListenLaterHttpTest(WebAppTestCase):
         return (client or self.bob).get("/api/recommendation/status").json()["unread"]
 
     def tokens(self, client=None):
-        return [token for group in self.page(client or self.bob)["recommendations"] for token in group["unreadTokens"]]
+        return [identity for group in self.page(client or self.bob)["recommendations"] for identity in group["unreadIds"]]
 
-    def read(self, tokens, client=None):
-        return (client or self.bob).post_json("/api/recommendation/read", {"tokens": tokens})
+    def read(self, ids, client=None):
+        return (client or self.bob).post_json("/api/recommendation/read", {"ids": ids})
 
     def test_reading_list_does_not_acknowledge_and_read_state_survives_new_connections(self):
         self.assertFalse(self.unread())
@@ -357,7 +391,7 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.send(client=charlie, source="discogs", source_id="104")
         group = self.page(self.bob)["recommendations"][0]
         self.assertEqual(len(group["senders"]), 2)
-        self.assertEqual(len(group["unreadTokens"]), 1)
+        self.assertEqual(len(group["unreadIds"]), 1)
         self.assertTrue(self.unread())
 
     def test_only_displayed_deliveries_are_marked_read(self):
@@ -388,9 +422,10 @@ class ListenLaterHttpTest(WebAppTestCase):
         owner = self.app.users.by_name("bob")
         reference = ListeningTarget("album", "subsonic", "old-server", "fdir-al1", "Old")
         old = self.app.recommendations.repository.add(self.app.users.by_name("alice").id, owner.id, reference, 100).recommendation
-        self.read([old.unread_token])
-        rows = self.app.db.query("SELECT unread_token FROM recommendations WHERE library_key = 'old-server'")
-        self.assertEqual(rows[0]["unread_token"], old.unread_token)
+        self.read([old.id])
+        rows = self.app.db.query("SELECT r.read_at FROM recommendations r JOIN listening_targets t ON t.id = r.target_id "
+                                 "WHERE t.library_key = 'old-server'")
+        self.assertIsNone(rows[0]["read_at"])
 
     def test_unread_events_only_reach_recipient_tabs_and_reading_updates_them(self):
         alice = self.app.hub.subscribe(self.app.users.by_name("alice"))
@@ -407,16 +442,16 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertTrue(alice.events.empty())
         for subscriber in (bob, bob_tab):
             self.assertIn("event: recommendations", subscriber.events.get_nowait())
-        self.read(["0" * 32])
+        self.read([999999])
         self.assertTrue(bob.events.empty())
 
     def test_unread_routes_require_authentication_csrf_and_valid_batches(self):
         self.assertEqual(self.client().get("/api/recommendation/status").status, 401)
-        self.assertEqual(self.client().post_json("/api/recommendation/read", {"tokens": ["0" * 32]}).status, 401)
-        self.assertEqual(self.bob.post_json("/api/recommendation/read", {"tokens": ["0" * 32]}, csrf=False).status, 403)
-        for tokens in (None, [], True, "0" * 32, [None], ["A" * 32], ["0" * 31], ["0" * 32] * (READ_BATCH_SIZE + 1)):
-            with self.subTest(tokens=tokens):
-                self.assertEqual(self.read(tokens).status, 400)
+        self.assertEqual(self.client().post_json("/api/recommendation/read", {"ids": [1]}).status, 401)
+        self.assertEqual(self.bob.post_json("/api/recommendation/read", {"ids": [1]}, csrf=False).status, 403)
+        for ids in (None, [], True, 1, [None], ["1"], [0], [-1], [True], [1] * (READ_BATCH_SIZE + 1)):
+            with self.subTest(ids=ids):
+                self.assertEqual(self.read(ids).status, 400)
         self.send()
         target = self.page(self.bob)["recommendations"][0]["target"]
         self.bob.post_json("/api/recommendation/remove", target)
@@ -433,12 +468,14 @@ class RecommendationUnreadMigrationTest(unittest.TestCase):
             recipient = users.save_login("recipient", "salt", "token", frozenset())
             old.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, source_id, title, created_at) "
                         "VALUES (?, ?, 'album', 'discogs', '101', 'Arrival', 100)", (sender.id, recipient.id))
-            bookmark = ListenLaterRepository(old).add(recipient.id, ListeningTarget("artist", "discogs", "", "7", "ABBA"), 100)
+            old.execute("INSERT INTO listen_later (user_id, kind, source, source_id, title, created_at) "
+                        "VALUES (?, 'artist', 'discogs', '7', 'ABBA', 100)", (recipient.id,))
             old.close()
             migrated = Database(path, MIGRATIONS)
             repository = RecommendationRepository(migrated)
             self.assertTrue(repository.has_unread(recipient.id, "server"))
-            advice = repository.received(recipient.id, "server")[0]
-            self.assertRegex(advice.unread_token, r"^[0-9a-f]{32}$")
-            self.assertEqual(ListenLaterRepository(migrated).all(recipient.id, "server"), [bookmark])
+            advice = repository.received(recipient.id, "server").recommendations[0]
+            self.assertIsNone(advice.read_at)
+            kept = ListenLaterRepository(migrated).all(recipient.id, "server")
+            self.assertEqual([(entry.target.source_id, entry.created_at) for entry in kept], [("7", 100)])
             migrated.close()

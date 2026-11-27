@@ -25,10 +25,11 @@ REBUILD_PARENT = """
 def fill(db):
     db.execute("INSERT INTO users (username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
                "VALUES ('alice', 's', 't', 0, 0), ('bob', 's', 't', 0, 0)")
-    db.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, library_key, source_id, title, "
-               "created_at) VALUES (1, 2, 'album', 'discogs', '', '1', 'Disque', 0)")
-    db.execute("INSERT INTO recommendation_comments (recommendation_id, author_id, body, created_at, client_token) "
-               "VALUES (1, 1, 'Écoute la face B', 0, 'jeton')")
+    db.execute("INSERT INTO listening_targets (kind, source, library_key, source_id, title) "
+               "VALUES ('album', 'discogs', '', '1', 'Disque')")
+    db.execute("INSERT INTO recommendations (sender_id, recipient_id, target_id, created_at) VALUES (1, 2, 1, 0)")
+    db.execute("INSERT INTO recommendation_comments (recommendation_id, author_id, recipient_id, body, created_at, "
+               "client_token) VALUES (1, 1, 2, 'Écoute la face B', 0, 'jeton')")
 
 
 class MigrationEngineTest(unittest.TestCase):
@@ -59,8 +60,8 @@ class MigrationEngineTest(unittest.TestCase):
         fill(self.migrate_with())
         with self.assertRaisesRegex(RuntimeError, "migration %d" % (len(MIGRATIONS) + 1)):
             self.migrate_with("INSERT INTO recommendation_comments "
-                              "(recommendation_id, author_id, body, created_at, client_token) "
-                              "VALUES (99, 1, 'orphelin', 0, 'x')")
+                              "(recommendation_id, author_id, recipient_id, body, created_at, client_token) "
+                              "VALUES (99, 1, 2, 'orphelin', 0, 'x')")
         connection = sqlite3.connect(self.path)
         self.addCleanup(connection.close)
         self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], len(MIGRATIONS))

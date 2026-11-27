@@ -8,11 +8,11 @@ const dom = new JSDOM('<main></main>', {url: "https://example.test/", runScripts
 const win = dom.window, doc = win.document;
 const src = name => fs.readFileSync(path.join(__dirname, "../src/web-pc/static/js", name + ".js"), "utf8");
 const calls = [], writes = [];
-const ids = ["noise", "techno"];
+const names = ["noise rock", "techno"];   // un style est identifié par son nom exact
 let pending;
 win.getWeekly = async (url, params) => {
   calls.push({url, params});
-  if (url.endsWith("/genres")) return {genres: ids.map((id, i) => ({id, name: ["noise rock", "techno"][i]})), followed: []};
+  if (url.endsWith("/genres")) return {genres: names.map(name => ({name})), followed: []};
   if (url.endsWith("/local")) return {albums: []};
   if (params.genre === "techno") return new Promise(resolve => { pending = resolve; });
   const date = new Date(params.monday + "T12:00:00Z");
@@ -34,7 +34,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(doc.querySelector('a[href="#/whatsnew/press/g5"]'));
   const button = doc.querySelector("button.primary");
   button.click(); await tick();
-  assert.deepEqual(JSON.parse(JSON.stringify(writes[0].body)), {genre: "noise", enabled: true});
+  assert.deepEqual(JSON.parse(JSON.stringify(writes[0].body)), {genre: "noise rock", enabled: true});
   assert.equal(doc.querySelector(".weekly-followed button").textContent, "noise rock");
   button.click(); await tick();
   assert.equal(doc.querySelector(".weekly-followed button"), null);

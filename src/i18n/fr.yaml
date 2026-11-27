@@ -163,6 +163,7 @@ webapp:
     songs_skipped: "Morceaux indisponibles ignorés : {count}."
     empty_bookmarks: "Aucun marque-page dans cette sélection. Gardez un artiste ou un album depuis sa fiche, ou un morceau reçu en recommandation."
     empty_recommendations: "Aucune recommandation reçue dans cette sélection."
+    older_recommendations_hidden: "Seules les recommandations reçues les plus récentes sont affichées. Retirez-en pour voir les plus anciennes."
     loading: "Chargement de vos découvertes…"
     retry: "Réessayer"
     filter: "Afficher"

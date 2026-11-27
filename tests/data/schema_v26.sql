@@ -7,13 +7,12 @@ index | notifications_by_recipient | CREATE INDEX notifications_by_recipient ON 
 index | notifications_unread_by_recipient | CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
 index | playlist_ext_tracks_by_place | CREATE INDEX playlist_ext_tracks_by_place ON playlist_ext_tracks (playlist_id, after_songs, place, id)
 index | recommendation_comments_by_thread | CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id)
+index | recommendation_comments_unread | CREATE INDEX recommendation_comments_unread ON recommendation_comments (recipient_id) WHERE read_at IS NULL
 index | recommendations_active_target | CREATE UNIQUE INDEX recommendations_active_target
-        ON recommendations (sender_id, recipient_id, kind, source, library_key, source_id)
-        WHERE recipient_archived_at IS NULL
+        ON recommendations (sender_id, recipient_id, target_id) WHERE archived_at IS NULL
 index | recommendations_by_recipient | CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC)
 index | recommendations_by_sender | CREATE INDEX recommendations_by_sender ON recommendations (sender_id, id DESC)
-index | recommendations_unread_by_recipient | CREATE INDEX recommendations_unread_by_recipient
-        ON recommendations (recipient_id, library_key) WHERE unread_token IS NOT NULL
+index | recommendations_unread_by_recipient | CREATE INDEX recommendations_unread_by_recipient ON recommendations (recipient_id) WHERE read_at IS NULL
 index | sessions_user | CREATE INDEX sessions_user ON sessions (user_id)
 index | upload_history_by_user | CREATE INDEX upload_history_by_user ON upload_history (user_id, id DESC)
 table | albums_discussed | CREATE TABLE albums_discussed (
@@ -75,6 +74,12 @@ table | ext_searches | CREATE TABLE ext_searches (
 table | listen_later | CREATE TABLE "listen_later" (
         id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        target_id INTEGER NOT NULL REFERENCES listening_targets (id),
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, target_id)
+    )
+table | listening_targets | CREATE TABLE listening_targets (
+        id INTEGER PRIMARY KEY,
         kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
         source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
         library_key TEXT NOT NULL DEFAULT '',
@@ -82,10 +87,9 @@ table | listen_later | CREATE TABLE "listen_later" (
         title TEXT NOT NULL,
         artist TEXT NOT NULL DEFAULT '',
         image_ref TEXT NOT NULL DEFAULT '',
-        created_at INTEGER NOT NULL,
         CHECK (kind != 'song' OR source = 'subsonic'),
         CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = '')),
-        UNIQUE (user_id, kind, source, library_key, source_id)
+        UNIQUE (kind, source, library_key, source_id)
     )
 table | message_mentions | CREATE TABLE message_mentions (
         message_id INTEGER NOT NULL REFERENCES chat_messages (id) ON DELETE CASCADE,
@@ -129,12 +133,12 @@ table | news_hidden_feeds | CREATE TABLE news_hidden_feeds (
         feed_id INTEGER NOT NULL REFERENCES news_feeds (id) ON DELETE CASCADE,
         PRIMARY KEY (user_id, feed_id)
     )
-table | notifications | CREATE TABLE notifications (
+table | notifications | CREATE TABLE "notifications" (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sender_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
         recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-        title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 120),
-        body TEXT NOT NULL CHECK (length(trim(body)) BETWEEN 1 AND 2000),
+        title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+        body TEXT NOT NULL CHECK (length(trim(body)) > 0),
         client_token TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         read_at INTEGER,
@@ -163,40 +167,32 @@ table | playlist_ext_tracks | CREATE TABLE playlist_ext_tracks (
         added_at INTEGER NOT NULL, place INTEGER NOT NULL DEFAULT 0,
         UNIQUE (playlist_id, source, item_id)
     )
-table | recommendation_comments | CREATE TABLE recommendation_comments (
+table | recommendation_comments | CREATE TABLE "recommendation_comments" (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recommendation_id INTEGER NOT NULL REFERENCES recommendations (id) ON DELETE CASCADE,
         author_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
         body TEXT NOT NULL CHECK (length(trim(body)) > 0),
-        created_at INTEGER NOT NULL,
         client_token TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER,
+        CHECK (author_id != recipient_id),
         UNIQUE (recommendation_id, author_id, client_token)
     )
 table | recommendations | CREATE TABLE "recommendations" (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
         recipient_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-        kind TEXT NOT NULL CHECK (kind IN ('artist', 'album', 'song')),
-        source TEXT NOT NULL CHECK (source IN ('subsonic', 'discogs')),
-        library_key TEXT NOT NULL DEFAULT '',
-        source_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        artist TEXT NOT NULL DEFAULT '',
-        image_ref TEXT NOT NULL DEFAULT '',
+        target_id INTEGER NOT NULL REFERENCES listening_targets (id),
         created_at INTEGER NOT NULL,
-        unread_token TEXT,
-        recipient_archived_at INTEGER,
-        sender_last_read_comment_id INTEGER NOT NULL DEFAULT 0 CHECK (sender_last_read_comment_id >= 0),
-        recipient_last_read_comment_id INTEGER NOT NULL DEFAULT 0 CHECK (recipient_last_read_comment_id >= 0),
-        CHECK (sender_id != recipient_id),
-        CHECK (kind != 'song' OR source = 'subsonic'),
-        CHECK ((source = 'subsonic' AND library_key != '') OR (source = 'discogs' AND library_key = ''))
+        read_at INTEGER,
+        archived_at INTEGER,
+        CHECK (sender_id != recipient_id)
     )
-table | release_subscriptions | CREATE TABLE release_subscriptions (
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        genre_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        PRIMARY KEY (user_id, genre_id)
+table | release_subscriptions | CREATE TABLE "release_subscriptions" (
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        genre TEXT NOT NULL CHECK (length(genre) > 0),
+        PRIMARY KEY (user_id, genre)
     )
 table | sessions | CREATE TABLE sessions (
         token_hash TEXT PRIMARY KEY,                     -- sha256 du cookie : une fuite de la base n’ouvre aucune session

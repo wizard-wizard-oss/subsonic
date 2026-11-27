@@ -9,8 +9,10 @@ class ListenLaterController:
         self.bookmarks, self.recommendations = bookmarks, recommendations
 
     def all(self, request, user):
+        received = self.recommendations.received(user)
         return ok(dict(bookmarks=[entry.to_api() for entry in self.bookmarks.all(user)],
-                       recommendations=[group.to_api() for group in self.recommendations.received(user)],
+                       recommendations=[group.to_api() for group in received.groups],
+                       recommendationsHaveMore=received.has_more,
                        readBatchSize=READ_BATCH_SIZE, commentMaxLength=COMMENT_MAX_LENGTH))
 
     def add(self, request, user, body):
@@ -23,25 +25,25 @@ class ListenLaterController:
     def recommend(self, request, user, body):
         entry = self.recommendations.send(user, body.get("recipient"), body.get("kind"),
                                           body.get("source"), body.get("sourceId"), body.get("comment", ""))
-        return ok(entry.to_api(user.id))
+        return ok(entry.to_api())
 
     def dismiss(self, request, user, body):
         return ok(dict(removed=self.recommendations.archive(user, body.get("kind"),
                                                                body.get("source"), body.get("sourceId"))))
 
     def status(self, request, user):
-        return ok(self.recommendations.status(user).to_api(user.id))
+        return ok(self.recommendations.status(user).to_api())
 
     def mark_read(self, request, user, body):
-        return ok(dict(unread=self.recommendations.mark_read(user, body.get("tokens"))))
+        return ok(dict(unread=self.recommendations.mark_read(user, body.get("ids"))))
 
     def discussions(self, request, user):
         return ok(self.recommendations.discussions(user, request.param("scope", "sent"),
-                                                   int_param(request, "before", strict=True)).to_api(user.id))
+                                                   int_param(request, "before", strict=True)).to_api())
 
     def discussion(self, request, user):
         return ok(self.recommendations.discussion(user, int_param(request, "id", strict=True),
-                                                  int_param(request, "before", strict=True), int_param(request, "after", strict=True)).to_api(user.id))
+                                                  int_param(request, "before", strict=True), int_param(request, "after", strict=True)).to_api())
 
     def comment(self, request, user, body):
         comment = self.recommendations.comment(user, body.get("recommendationId"), body.get("body"),

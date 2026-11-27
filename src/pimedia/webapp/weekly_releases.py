@@ -15,32 +15,28 @@ class WeeklyReleases:
     def genres(self):
         return self.musicbrainz.release_genres()
 
-    def genre(self, identity):
-        match = next((genre for genre in self.genres() if genre.id == identity), None)
+    def genre(self, name):
+        match = next((genre for genre in self.genres() if genre.name == name), None)
         if match is None:
             raise ValueError("genre")
         return match
 
     def followed(self, user):
-        names = dict.fromkeys(genre.name for genre in self.repository.for_user(user.id))
-        return tuple(ReleaseGenre.from_name(name) for name in names)
+        return tuple(ReleaseGenre(name) for name in self.repository.for_user(user.id))
 
-    def follow(self, user, identity, enabled):
-        if not isinstance(enabled, bool) or not isinstance(identity, str) or not identity:
+    def follow(self, user, name, enabled):
+        if not isinstance(enabled, bool) or not isinstance(name, str) or not name:
             raise ValueError("follow")
         if enabled:
-            self.repository.follow(user.id, self.genre(identity))
+            self.repository.follow(user.id, self.genre(name).name)
         else:
-            subscription = next((genre for genre in self.repository.for_user(user.id)
-                                 if identity in (genre.id, ReleaseGenre.from_name(genre.name).id)), None)
-            if subscription is not None:
-                self.repository.unfollow(user.id, subscription.name)
+            self.repository.unfollow(user.id, name)
 
-    def week(self, identity, start, offset):
+    def week(self, name, start, offset):
         monday = date.fromisoformat(start or "")
         if monday.weekday() or not 0 <= offset <= 100000 or monday.year >= 9999:
             raise ValueError("week")
         sunday = monday + timedelta(days=6)
-        genre = self.genre(identity)
+        genre = self.genre(name)
         page = self.musicbrainz.weekly_groups(genre.name, monday, sunday, self.PAGE_SIZE, offset)
         return replace(page, albums=tuple(album for album in page.albums if monday <= album.released_on <= sunday))

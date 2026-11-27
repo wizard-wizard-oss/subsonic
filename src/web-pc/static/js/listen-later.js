@@ -84,15 +84,15 @@ const ListenLaterUI = (() => {
   }
 
   async function acknowledge(data, route, render) {
-    const tokens = data.recommendations.flatMap(group => group.unreadTokens || []);
-    if (!tokens.length || document.hidden) return;
+    const ids = data.recommendations.flatMap(group => group.unreadIds || []);
+    if (!ids.length || document.hidden) return;
     const owner = App.user.id;
     showIndicator(true);
     notificationGeneration++;
     try {
-      for (let offset = 0; offset < tokens.length; offset += data.readBatchSize) {
+      for (let offset = 0; offset < ids.length; offset += data.readBatchSize) {
         if (route.stale || render !== renderGeneration || document.hidden || App.user.id !== owner) return;
-        await App.api.post("/api/recommendation/read", {tokens: tokens.slice(offset, offset + data.readBatchSize)});
+        await App.api.post("/api/recommendation/read", {ids: ids.slice(offset, offset + data.readBatchSize)});
       }
       if (App.user.id === owner) await refreshNotifications();
     } catch (failure) { /* Reading failed: leave the indicator and retry when this page is opened again. */ }
@@ -418,7 +418,8 @@ const ListenLaterUI = (() => {
             text: App.t("listen_later.recommended_by", {names: group.senders.map(sender => sender.username).join(", ")})}),
             group.recommendations.map(RecommendationComments.summary))))
             : el("p.muted", {text: t("empty_recommendations")}),
-            songs.length ? songRecommendations(songs, main, route) : null]);
+            songs.length ? songRecommendations(songs, main, route) : null,
+            data.recommendationsHaveMore ? el("p.muted", {text: t("older_recommendations_hidden")}) : null]);
         };
         filter.onchange = () => { selectedKind = filter.value; draw(); sent.applyFilter(); archived.applyFilter(); };
         App.append(App.clear(main), [el("h1", {text: t("title")}), el("p.muted", {text: t("intro")}),

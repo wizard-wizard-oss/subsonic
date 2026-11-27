@@ -8,7 +8,7 @@ class WeeklyReleasesController:
 
     def genres(self, request, user):
         return ok({"genres": [g.to_api() for g in self.releases.genres()],
-                   "followed": [g.id for g in self.releases.followed(user)]})
+                   "followed": [g.name for g in self.releases.followed(user)]})
 
     def week(self, request, user):
         page = self.releases.week(request.param("genre"), request.param("monday"),

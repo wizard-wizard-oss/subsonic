@@ -7,12 +7,13 @@ SELECT = ("SELECT c.*, u.username AS author_name FROM recommendation_comments c 
 
 
 def insert_comment(connection, recommendation_id, author_id, body, now, client_token):
+    """Le destinataire du commentaire est l'autre participant du fil ; un tiers n'écrit rien."""
     connection.execute("INSERT INTO recommendation_comments "
-                       "(recommendation_id, author_id, body, created_at, client_token) "
-                       "SELECT id, ?, ?, ?, ? FROM recommendations WHERE id = ? "
-                       "AND (sender_id = ? OR recipient_id = ?) "
+                       "(recommendation_id, author_id, recipient_id, body, created_at, client_token) "
+                       "SELECT id, ?, CASE WHEN sender_id = ? THEN recipient_id ELSE sender_id END, ?, ?, ? "
+                       "FROM recommendations WHERE id = ? AND (sender_id = ? OR recipient_id = ?) "
                        "ON CONFLICT (recommendation_id, author_id, client_token) DO NOTHING",
-                       (author_id, body, now, client_token, recommendation_id, author_id, author_id))
+                       (author_id, author_id, body, now, client_token, recommendation_id, author_id, author_id))
     row = connection.execute(SELECT + "WHERE c.recommendation_id = ? AND c.author_id = ? AND c.client_token = ?",
                              (recommendation_id, author_id, client_token)).fetchone()
     return RecommendationComment.from_row(row) if row else None
@@ -35,15 +36,10 @@ class RecommendationCommentRepository:
                              (recommendation_id, before or 2 ** 63 - 1, limit + 1))
         return RecommendationCommentPage(tuple(RecommendationComment.from_row(row) for row in rows[:limit][::-1]), len(rows) > limit)
 
-    def mark_read(self, recommendation_id, user_id, comment_id):
+    def mark_read(self, recommendation_id, user_id, through_id, now):
+        """Lus jusqu'au commentaire affiché, qui doit appartenir à ce fil : un identifiant étranger ne lit rien."""
         return self.db.execute(
-            "UPDATE recommendations SET "
-            "sender_last_read_comment_id = CASE WHEN sender_id = ? THEN MAX(sender_last_read_comment_id, ?) "
-            "ELSE sender_last_read_comment_id END, "
-            "recipient_last_read_comment_id = CASE WHEN recipient_id = ? THEN MAX(recipient_last_read_comment_id, ?) "
-            "ELSE recipient_last_read_comment_id END "
-            "WHERE id = ? AND ((sender_id = ? AND sender_last_read_comment_id < ?) "
-            "OR (recipient_id = ? AND recipient_last_read_comment_id < ?)) "
+            "UPDATE recommendation_comments SET read_at = ? WHERE recommendation_id = ? AND recipient_id = ? "
+            "AND read_at IS NULL AND id <= ? "
             "AND EXISTS (SELECT 1 FROM recommendation_comments WHERE id = ? AND recommendation_id = ?)",
-            (user_id, comment_id, user_id, comment_id, recommendation_id, user_id, comment_id,
-             user_id, comment_id, comment_id, recommendation_id)).rowcount
+            (now, recommendation_id, user_id, through_id, through_id, recommendation_id)).rowcount

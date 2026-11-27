@@ -18,8 +18,7 @@ from pimedia.webapp.storage.exploration import ExplorationRepository
 from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
 from pimedia.webapp.weekly_releases import WeeklyReleases
 
-GENRE = "genre:noise rock"
-LEGACY_GENRE = "8e5474b7-f445-49a7-866d-0f8e34b0a519"
+GENRE = "noise rock"   # un style est identifié par son nom exact dans le catalogue MusicBrainz
 GROUP = "aaaaaaaa-1111-4222-8333-444444444444"
 
 
@@ -112,13 +111,12 @@ class WeeklyTest(unittest.TestCase):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": False})
         self.assertEqual(followed(self.alice), [])
 
-    def test_legacy_subscription_survives_and_can_be_removed_without_duplicates(self):
-        self.repository.db.execute("INSERT INTO release_subscriptions (user_id, genre_id, name) VALUES (?, ?, ?)",
-                                   (self.alice.id, LEGACY_GENRE, "noise rock"))
-        initial = json.loads(self.controller.genres(None, self.alice).body)
-        self.assertEqual(initial["followed"], [GENRE])
+    def test_follow_and_unfollow_by_name_without_duplicates(self):
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
-        self.assertEqual([genre.id for genre in self.repository.for_user(self.alice.id)], [LEGACY_GENRE])
+        self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": True})
+        self.assertEqual(self.repository.for_user(self.alice.id), ["noise rock"])
+        genres = json.loads(self.controller.genres(None, self.alice).body)["genres"]
+        self.assertIn({"name": "noise rock"}, genres)
         self.controller.follow(None, self.alice, {"genre": GENRE, "enabled": False})
         self.assertEqual(self.repository.for_user(self.alice.id), [])
 
@@ -167,7 +165,7 @@ class WeeklyReleaseMigrationTest(unittest.TestCase):
 
             upgraded = Database(path, MIGRATIONS)
             try:
-                self.assertEqual(upgraded.version, 23)
+                self.assertEqual(upgraded.version, len(MIGRATIONS))
                 self.assertEqual(upgraded.query("SELECT body FROM notifications")[0]["body"], "kept")
                 self.assertEqual(ReleaseSubscriptions(upgraded).for_user(1), [])
                 self.assertEqual(upgraded.query("PRAGMA foreign_key_check"), [])

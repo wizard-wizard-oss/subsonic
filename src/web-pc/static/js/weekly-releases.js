@@ -36,9 +36,9 @@ const WeeklyReleaseView = (() => {
 
     function updateControls() {
       follow.disabled = !selected || saving;
-      follow.textContent = t(selected && followed.has(selected.id) ? "unfollow" : "follow");
+      follow.textContent = t(selected && followed.has(selected.name) ? "unfollow" : "follow");
       App.clear(follows);
-      for (const genre of genres.filter(item => followed.has(item.id))) {
+      for (const genre of genres.filter(item => followed.has(item.name))) {
         follows.appendChild(el("button.chip", {type: "button", text: genre.name, onclick: () => choose(genre)}));
       }
       if (!follows.firstChild) follows.appendChild(el("span.muted", {text: t("none")}));
@@ -46,12 +46,12 @@ const WeeklyReleaseView = (() => {
 
     async function toggleFollow() {
       if (!selected || saving) return;
-      const id = selected.id, enabled = !followed.has(id);
+      const name = selected.name, enabled = !followed.has(name);
       saving = true;
       updateControls();
       try {
-        await App.api.post("/api/news/releases/follow", {genre: id, enabled});
-        if (enabled) followed.add(id); else followed.delete(id);
+        await App.api.post("/api/news/releases/follow", {genre: name, enabled});
+        if (enabled) followed.add(name); else followed.delete(name);
       } catch (error) { if (!route.stale) App.toast(App.errorText(error), "error"); }
       finally { saving = false; if (!route.stale) updateControls(); }
     }
@@ -88,7 +88,7 @@ const WeeklyReleaseView = (() => {
       async function page(offset) {
         App.clear(status).textContent = t("loading");
         try {
-          const data = await App.api.get("/api/news/releases", {genre: selected.id, monday: iso(monday), offset});
+          const data = await App.api.get("/api/news/releases", {genre: selected.name, monday: iso(monday), offset});
           if (route.stale || version !== generation) return;
           App.clear(status);
           const cards = [];
@@ -125,7 +125,7 @@ const WeeklyReleaseView = (() => {
       genres = data.genres;
       followed = new Set(data.followed);
       App.append(options, genres.map(genre => el("option", {value: genre.name})));
-      const initial = genres.find(g => followed.has(g.id)) || genres.find(g => g.name === "noise rock");
+      const initial = genres.find(g => followed.has(g.name)) || genres.find(g => g.name === "noise rock");
       if (initial) choose(initial);
       else { updateControls(); reload(); }
     } catch (error) {

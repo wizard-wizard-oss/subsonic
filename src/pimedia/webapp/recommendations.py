@@ -3,12 +3,14 @@ import re
 import secrets
 import time
 
-from .recommendation_entities import (COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, RecommendationDiscussion,
-                                      RecommendationError, RecommendationGroup, RecommendationStatus)
+from .recommendation_entities import (COMMENT_MAX_LENGTH, DISCUSSION_PAGE_SIZE, ReceivedRecommendations,
+                                      RecommendationDiscussion, RecommendationError, RecommendationGroup,
+                                      RecommendationStatus)
 from .listening_targets import ListenLaterError, entry_id
 
 
 READ_BATCH_SIZE = 200
+RECEIVED_LIMIT = 200
 
 
 class Recommendations:
@@ -17,10 +19,12 @@ class Recommendations:
         self.targets, self.users, self.hub, self.clock = targets, users, hub, clock
 
     def received(self, user):
+        page = self.repository.received(user.id, self.targets.library_key, RECEIVED_LIMIT)
         groups = {}
-        for recommendation in self.repository.received(user.id, self.targets.library_key):
+        for recommendation in page.recommendations:
             groups.setdefault(recommendation.target.key, []).append(recommendation)
-        return [RecommendationGroup(items[0].target, tuple(items)) for items in groups.values()]
+        return ReceivedRecommendations(tuple(RecommendationGroup(items[0].target, tuple(items))
+                                             for items in groups.values()), page.has_more)
 
     def send(self, sender, recipient_name, kind, source, source_id, comment=""):
         comment = self._comment_body(comment, optional=True)
@@ -53,12 +57,11 @@ class Recommendations:
     def has_unread(self, user):
         return self.repository.has_unread(user.id, self.targets.library_key)
 
-    def mark_read(self, user, tokens):
-        if not isinstance(tokens, list) or not 1 <= len(tokens) <= READ_BATCH_SIZE:
+    def mark_read(self, user, ids):
+        if not isinstance(ids, list) or not 1 <= len(ids) <= READ_BATCH_SIZE:
             raise ValueError("read batch")
-        if any(not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{32}", token) for token in tokens):
-            raise ValueError("unread token")
-        updated = self.repository.mark_read(user.id, self.targets.library_key, tokens)
+        ids = [entry_id(identity) for identity in ids]
+        updated = self.repository.mark_read(user.id, self.targets.library_key, ids, int(self.clock()))
         if updated:
             self.hub.publish("recommendations", {}, to_user_id=user.id)
         return self.has_unread(user)
@@ -113,7 +116,7 @@ class Recommendations:
 
     def mark_comments_read(self, user, identity, comment_id):
         recommendation = self._discussion(user, identity)
-        changed = self.comments.mark_read(recommendation.id, user.id, entry_id(comment_id))
+        changed = self.comments.mark_read(recommendation.id, user.id, entry_id(comment_id), int(self.clock()))
         if changed:
             self.hub.publish("recommendations", dict(discussionId=recommendation.id), to_user_id=user.id)
         return self.has_unread(user)

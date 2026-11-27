@@ -6,15 +6,11 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class ReleaseGenre:
-    id: str
+    """Un style est identifié par son nom exact dans le catalogue MusicBrainz : la valeur envoyée dans les recherches."""
     name: str
 
-    @classmethod
-    def from_name(cls, name):
-        return cls("genre:" + name, name)
-
     def to_api(self):
-        return {"id": self.id, "name": self.name}
+        return {"name": self.name}
 
 
 @dataclass(frozen=True)

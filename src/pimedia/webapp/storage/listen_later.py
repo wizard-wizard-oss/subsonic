@@ -1,8 +1,9 @@
 """SQLite persistence for each user's listening bookmarks."""
 from ..listen_later_entities import ListenLaterEntry
-from .listening_targets import COLUMNS, values
+from .listening_targets import COLUMNS, IN_LIBRARY, save_target
 
-REFERENCE = "user_id = ? AND kind = ? AND source = ? AND library_key = ? AND source_id = ?"
+SELECT = ("SELECT l.id, l.user_id, l.created_at, " + COLUMNS + " FROM listen_later l "
+          "JOIN listening_targets t ON t.id = l.target_id ")
 
 
 class ListenLaterRepository:
@@ -10,19 +11,16 @@ class ListenLaterRepository:
         self.db = db
 
     def all(self, user_id, library_key):
-        rows = self.db.query("SELECT * FROM listen_later WHERE user_id = ? "
-                             "AND (source != 'subsonic' OR library_key = ?) ORDER BY created_at DESC, id DESC",
+        rows = self.db.query(SELECT + "WHERE l.user_id = ? AND " + IN_LIBRARY + " ORDER BY l.created_at DESC, l.id DESC",
                              (user_id, library_key))
         return [ListenLaterEntry.from_row(row) for row in rows]
 
     def add(self, user_id, target, now):
         with self.db.transaction() as connection:
-            connection.execute("INSERT INTO listen_later (user_id, " + COLUMNS + ", created_at) "
-                               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
-                               "ON CONFLICT (user_id, kind, source, library_key, source_id) DO NOTHING",
-                               (user_id,) + values(target) + (now,))
-            row = connection.execute("SELECT * FROM listen_later WHERE " + REFERENCE,
-                                     (user_id,) + target.key).fetchone()
+            target_id = save_target(connection, target)
+            connection.execute("INSERT INTO listen_later (user_id, target_id, created_at) VALUES (?, ?, ?) "
+                               "ON CONFLICT (user_id, target_id) DO NOTHING", (user_id, target_id, now))
+            row = connection.execute(SELECT + "WHERE l.user_id = ? AND l.target_id = ?", (user_id, target_id)).fetchone()
         return ListenLaterEntry.from_row(row)
 
     def remove(self, user_id, identity):

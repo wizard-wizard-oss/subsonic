@@ -35,6 +35,7 @@ class RecommendationComment:
 
 @dataclass(frozen=True)
 class Recommendation:
+    """Un conseil vu par une personne : unread_comments compte les commentaires qu'elle n'a pas lus."""
     id: int
     sender_id: int
     sender_name: str
@@ -42,36 +43,24 @@ class Recommendation:
     recipient_name: str
     target: ListeningTarget
     created_at: int
-    unread_token: str | None
-    recipient_archived_at: int | None
-    sender_last_read_comment_id: int
-    recipient_last_read_comment_id: int
-    sender_last_comment_id: int
-    recipient_last_comment_id: int
+    read_at: int | None
+    archived_at: int | None
     comment_count: int
     comment_preview: str
+    unread_comments: int
 
     @classmethod
     def from_row(cls, row):
         return cls(row["id"], row["sender_id"], row["sender_name"], row["recipient_id"], row["recipient_name"],
-                   ListeningTarget.from_row(row), row["created_at"], row["unread_token"],
-                   row["recipient_archived_at"], row["sender_last_read_comment_id"],
-                   row["recipient_last_read_comment_id"], row["sender_last_comment_id"],
-                   row["recipient_last_comment_id"], row["comment_count"], row["comment_preview"])
+                   ListeningTarget.from_row(row), row["created_at"], row["read_at"], row["archived_at"],
+                   row["comment_count"], row["comment_preview"], row["unread_comments"])
 
-    def last_read(self, user_id):
-        return self.sender_last_read_comment_id if user_id == self.sender_id else self.recipient_last_read_comment_id
-
-    def unread_comments(self, user_id):
-        last_incoming = self.recipient_last_comment_id if user_id == self.sender_id else self.sender_last_comment_id
-        return last_incoming > self.last_read(user_id)
-
-    def to_api(self, user_id):
+    def to_api(self):
         return dict(id=self.id, sender=self.sender_name, senderId=self.sender_id,
                     recipient=self.recipient_name, recipientId=self.recipient_id,
                     target=self.target.to_api(), createdAt=self.created_at,
-                    archivedAt=self.recipient_archived_at, commentCount=self.comment_count,
-                    commentPreview=self.comment_preview, commentsUnread=self.unread_comments(user_id))
+                    archivedAt=self.archived_at, commentCount=self.comment_count,
+                    commentPreview=self.comment_preview, commentsUnread=self.unread_comments > 0)
 
 
 @dataclass(frozen=True)
@@ -79,8 +68,8 @@ class RecommendationDelivery:
     recommendation: Recommendation
     created: bool
 
-    def to_api(self, user_id):
-        return dict(recommendation=self.recommendation.to_api(user_id), created=self.created)
+    def to_api(self):
+        return dict(recommendation=self.recommendation.to_api(), created=self.created)
 
 
 @dataclass(frozen=True)
@@ -90,9 +79,9 @@ class RecommendationGroup:
 
     def to_api(self):
         return dict(target=self.target.to_api(),
-                    unreadTokens=[r.unread_token for r in self.recommendations if r.unread_token is not None],
+                    unreadIds=[r.id for r in self.recommendations if r.read_at is None],
                     senders=[dict(id=r.sender_id, username=r.sender_name) for r in self.recommendations],
-                    recommendations=[r.to_api(r.recipient_id) for r in self.recommendations],
+                    recommendations=[r.to_api() for r in self.recommendations],
                     createdAt=max(r.created_at for r in self.recommendations))
 
 
@@ -101,8 +90,15 @@ class RecommendationPage:
     recommendations: tuple[Recommendation, ...]
     has_more: bool
 
-    def to_api(self, user_id):
-        return dict(recommendations=[r.to_api(user_id) for r in self.recommendations], hasMore=self.has_more)
+    def to_api(self):
+        return dict(recommendations=[r.to_api() for r in self.recommendations], hasMore=self.has_more)
+
+
+@dataclass(frozen=True)
+class ReceivedRecommendations:
+    """Conseils reçus et actifs, regroupés par cible ; has_more signale des conseils plus anciens non affichés."""
+    groups: tuple[RecommendationGroup, ...]
+    has_more: bool
 
 
 @dataclass(frozen=True)
@@ -116,8 +112,8 @@ class RecommendationDiscussion:
     recommendation: Recommendation
     page: RecommendationCommentPage
 
-    def to_api(self, user_id):
-        return dict(recommendation=self.recommendation.to_api(user_id),
+    def to_api(self):
+        return dict(recommendation=self.recommendation.to_api(),
                     comments=[comment.to_api() for comment in self.page.comments], hasMore=self.page.has_more,
                     maxLength=COMMENT_MAX_LENGTH, pageSize=DISCUSSION_PAGE_SIZE)
 
@@ -127,5 +123,5 @@ class RecommendationStatus:
     unread: bool
     discussion: Recommendation | None
 
-    def to_api(self, user_id):
-        return dict(unread=self.unread, unreadDiscussion=self.discussion.to_api(user_id) if self.discussion else None)
+    def to_api(self):
+        return dict(unread=self.unread, unreadDiscussion=self.discussion.to_api() if self.discussion else None)

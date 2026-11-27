@@ -95,7 +95,7 @@ class RecommendationCommentStorageTest(unittest.TestCase):
                         (alice.id, bob.id, kind, source_id, token))
         before = [dict(row) for row in old.query("SELECT * FROM recommendations ORDER BY id")]
         old.close()
-        migrated = Database(self.path, MIGRATIONS)
+        migrated = Database(self.path, MIGRATIONS[:23])   # la migration 21 dans le schéma de sa version
         self.addCleanup(migrated.close)
         for previous, row in zip(before, migrated.query("SELECT * FROM recommendations ORDER BY id")):
             self.assertEqual({key: row[key] for key in previous}, previous)
@@ -137,9 +137,9 @@ class RecommendationCommentHttpTest(WebAppTestCase):
         return (client or self.bob).get("/api/listen-later").json()
 
     def mark_delivery(self):
-        tokens = [token for group in self.page()["recommendations"] for token in group["unreadTokens"]]
-        if tokens:
-            self.bob.post_json("/api/recommendation/read", {"tokens": tokens})
+        ids = [identity for group in self.page()["recommendations"] for identity in group["unreadIds"]]
+        if ids:
+            self.bob.post_json("/api/recommendation/read", {"ids": ids})
 
     def test_initial_comment_and_both_participants_share_one_chronological_entity(self):
         sent = self.send("  Pour la basse\nEt les cuivres.  ").json()
@@ -235,9 +235,22 @@ class RecommendationCommentHttpTest(WebAppTestCase):
         self.read(identity, foreign["id"])
         self.read(identity, 2 ** 62)
         self.assertTrue(self.status()["unread"])
-        recommendation = self.app.recommendations.repository.get(
-            self.app.users.by_name("bob").id, identity, self.app.recommendations.targets.library_key)
-        self.assertEqual(recommendation.recipient_last_read_comment_id, 0)
+        bob = self.app.users.by_name("bob").id
+        self.assertEqual(self.app.db.one("SELECT COUNT(*) FROM recommendation_comments "
+                                         "WHERE recipient_id = ? AND read_at IS NOT NULL", (bob,))[0], 0)
+
+    def test_comment_is_unread_for_the_other_participant_only(self):
+        identity = self.send().json()["recommendation"]["id"]
+        self.mark_delivery()
+        self.assertFalse(self.status(self.alice)["unread"])
+        thread = self.discussion(identity).json()
+        self.assertTrue(thread["recommendation"]["commentsUnread"])
+        self.read(identity, thread["comments"][0]["id"])
+        reply = self.post(identity, "Merci !").json()["comment"]
+        self.assertFalse(self.status()["unread"])
+        self.assertEqual(self.status(self.alice)["unreadDiscussion"]["id"], identity)
+        self.assertFalse(self.read(identity, reply["id"], self.alice).json()["unread"])
+        self.assertFalse(self.status(self.alice)["unread"])
 
     def test_archiving_keeps_the_thread_and_new_delivery_gets_a_separate_identity(self):
         identity = self.send().json()["recommendation"]["id"]
@@ -278,7 +291,8 @@ class RecommendationCommentHttpTest(WebAppTestCase):
         with patch.object(self.app.recommendations.targets, "resolve", side_effect=AssertionError("no catalog lookup")):
             self.assertEqual(self.post(identity, "Même sans la source").status, 200)
             self.assertEqual(self.discussion(identity).status, 200)
-        self.app.db.execute("UPDATE recommendations SET library_key = 'old-server' WHERE id = ?", (identity,))
+        self.app.db.execute("UPDATE listening_targets SET library_key = 'old-server' WHERE id = "
+                            "(SELECT target_id FROM recommendations WHERE id = ?)", (identity,))
         self.assertEqual(self.discussion(identity).status, 404)
         self.assertEqual(self.post(identity, "Ancienne bibliothèque").status, 404)
         self.assertFalse(self.status()["unread"])

@@ -142,7 +142,7 @@ class MusicBrainzMetadata:
 
     def release_genres(self) -> tuple[ReleaseGenre, ...]:
         result = self.get("genre/all", cache_seconds=GENRE_CATALOG_TTL, fmt="txt", read=self._read_genre_catalog)
-        return tuple(ReleaseGenre.from_name(name) for name in result.data["names"])
+        return tuple(ReleaseGenre(name) for name in result.data["names"])
 
     def _read_genre_catalog(self, url):
         names = dict.fromkeys(name.strip() for name in self.fetcher.get_text(url).splitlines())
