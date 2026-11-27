@@ -13,6 +13,7 @@
     - "Les commentaires sont repliés sous chaque pochette : un clic sur la bulle les déplie, avec juste en dessous une ligne pour écrire (Entrée envoie), comme sur un réseau social."
     - "L'onglet Envoyées reprend la grille de pochettes, avec la bulle de commentaires et le destinataire de chaque conseil."
     - "Quand plusieurs personnes ont conseillé la même chose, « Voir les autres conseillers » déplie leurs échanges."
+    - "La carte garde sa place dans la grille : le fil se déplie dessous avec une petite animation, sans prendre toute la largeur."
 
 - version: "1.20"
   date: 2026-11-27

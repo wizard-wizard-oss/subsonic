@@ -174,8 +174,9 @@ const RecommendationComments = (() => {
   function summary(recommendation, options = {}) {
     let current = recommendation, view = null;
     const other = rec => App.user.id === rec.senderId ? rec.recipient : rec.sender;
-    const thread = el("div.recommendation-thread", {hidden: true},
+    const inner = el("div.recommendation-thread-inner", {},
       options.named ? el("p.recommendation-thread-name", {text: other(recommendation)}) : null);
+    const thread = el("div.recommendation-thread", {hidden: true}, inner);
     const node = el("div.recommendation-comment-summary", {dataset: {recommendationId: String(recommendation.id)}}, thread);
     const paint = () => {
       node.classList.toggle("open", !!view);
@@ -183,7 +184,7 @@ const RecommendationComments = (() => {
     };
     node.toggle = () => {
       if (view) { unmount(view); view = null; thread.hidden = true; }
-      else { thread.hidden = false; view = mount(current, thread); }
+      else { thread.hidden = false; view = mount(current, inner); }
       paint();
       node.dispatchEvent(new CustomEvent("thread-toggle", {bubbles: true}));
     };

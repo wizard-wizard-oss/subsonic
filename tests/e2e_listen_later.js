@@ -480,7 +480,7 @@ function client() {
     assert(grouped.querySelector(".recommendation-comments-all").hidden, "les autres conseillers attendent le premier fil");
     grouped.querySelector(".recommendation-bubble").click();
     await until(() => grouped.querySelector(".recommendation-thread:not([hidden]) .recommendation-comment-form"), "thread opens in place");
-    assert(grouped.classList.contains("expanded"), "la carte s’élargit quand le fil est ouvert");
+    assert(grouped.classList.contains("expanded"), "la carte est marquée dépliée (hauteurs libres) quand le fil est ouvert");
     assert(!$(".dialog"), "aucune fenêtre superposée");
     assert(grouped.querySelector(".recommendation-comment-input").rows === 1, "saisie d'une ligne, à la Facebook");
     assert(grouped.querySelector(".recommendation-comment-others").hidden, "les autres conseillers sont repliés");

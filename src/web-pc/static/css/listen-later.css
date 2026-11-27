@@ -42,9 +42,7 @@
 .listen-later-grid:not(.has-expanded) { grid-auto-rows: 1fr; }
 .listen-later-grid > p { grid-column: 1 / -1; }
 .listen-later-tile { flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; background: var(--bg-raised); }
-.listen-later-tile.expanded { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(140px, 200px) minmax(0, 1fr); }
 .listen-later-tile-art { position: relative; }
-.listen-later-tile.expanded .listen-later-tile-art { align-self: start; }
 .listen-later-tile .listen-later-artwork { display: grid; width: 100%; height: auto; aspect-ratio: 1; border-radius: 0; }
 .listen-later-kind { position: absolute; top: .4rem; left: .4rem; background: rgba(0, 0, 0, .6); color: #fff; font-size: .7rem; padding: 0 .5rem; border-radius: 999px; }
 .listen-later-new { position: absolute; top: .45rem; right: .45rem; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
@@ -59,7 +57,9 @@
 .recommendation-bubble:hover { background: var(--bg-hover); color: var(--text); }
 .recommendation-bubble.unread { color: var(--accent); }
 .recommendation-bubble small { font-size: .75rem; }
-@media (max-width: 480px) { .listen-later-tile.expanded { grid-template-columns: 88px minmax(0, 1fr); } .listen-later-tile.expanded .listen-later-kind, .listen-later-tile.expanded .listen-later-play { display: none; } }
+.listen-later-grid.has-expanded { align-items: start; }
+.listen-later-tile .recommendation-comment-form { flex-direction: column; align-items: stretch; }
+.listen-later-tile .recommendation-comment-form > button { align-self: flex-end; }
 
 /* Liste de morceaux : petite pochette, ligne dépliable. */
 .recommendation-songs-table .song-title-cell { display: flex; align-items: center; gap: .75rem; min-width: 0; }
@@ -76,8 +76,25 @@
 
 /* Fil déplié en place sous l'aperçu. */
 .recommendation-comment-group { display: grid; gap: .25rem; min-width: 0; }
-.recommendation-thread { width: 100%; min-width: 0; }
+.recommendation-thread { display: grid; width: 100%; min-width: 0; transform-origin: top center;
+  animation: thread-unfold .38s ease-out both, thread-pop .5s cubic-bezier(.2, .9, .3, 1.3) both; }
 .recommendation-thread[hidden], .recommendation-comment-others[hidden] { display: none; }
+.recommendation-thread-inner { min-height: 0; overflow: hidden; padding: 0 2px 2px; }
+.recommendation-comment { animation: comment-in .45s ease-out both; }
+.recommendation-comment:nth-child(2) { animation-delay: .07s; }
+.recommendation-comment:nth-child(3) { animation-delay: .14s; }
+.recommendation-comment:nth-child(n+4) { animation-delay: .2s; }
+.recommendation-comment-form { animation: comment-in .45s .12s ease-out both; }
+.recommendation-bubble svg { transition: transform .25s cubic-bezier(.2, .9, .3, 1.5); }
+.recommendation-bubble[aria-expanded="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.recommendation-bubble[aria-expanded="true"] svg { transform: scale(1.18); }
+@keyframes thread-unfold { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
+@keyframes thread-pop { from { transform: translateY(-10px) scaleY(.94); } to { transform: none; } }
+@keyframes comment-in { from { opacity: 0; transform: translateY(-8px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .recommendation-thread, .recommendation-comment, .recommendation-comment-form { animation: none; }
+  .recommendation-bubble svg { transition: none; }
+}
 .recommendation-comment-others { display: grid; gap: .25rem; }
 .recommendation-comments-all { justify-self: start; font-size: .8rem; }
 

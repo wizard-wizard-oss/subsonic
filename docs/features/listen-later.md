@@ -43,6 +43,8 @@
   qui déplie le fil du conseiller le plus récent (non lu d'abord, puis avec message, puis le plus récent) ; « Voir les
   autres conseillers » ouvre les autres. La saisie est une ligne (Entrée envoie, Maj+Entrée = nouvelle ligne).
   L'onglet Envoyées (et archivées) utilise les mêmes tuiles.
+  Le fil se déplie sous la carte (la carte reste dans sa colonne) avec une animation CSS (déroulement, apparition
+  échelonnée des commentaires), désactivée si le système demande moins d'animations.
   Le fil se déplie en place (`mount`) ; la fenêtre ne sert plus qu'à l'ouverture depuis la notification ou après
   un envoi. Plusieurs fils peuvent être dépliés ; l'actualisation temps réel les met à jour sans redessiner la page.
 - Pas de changement de données, de routes ni de migration. Les conseils YouTube restent hors périmètre.
