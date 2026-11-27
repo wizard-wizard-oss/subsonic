@@ -55,11 +55,27 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
 2. Le Pi (`server/`, `menu/`) n'importe **jamais** `webapp`.
 3. Rien n'empêche encore `webapp` d'importer `server` (c'est le « partagé de fait » ci-dessus) : à resserrer quand le
    déplacement vers `shared/` sera fait.
+4. Les services de `webapp/` n'importent jamais `controllers/` (erreurs de droits : `webapp/errors.py`).
+5. Chaque adresse d'API externe n'est appelée que par sa classe (MusicBrainz, Deezer, Spotify, Last.fm, Discogs, iTunes).
+6. Pas d'`urllib.request` hors du transport `shared/providers/http.py` dans `shared/` et `webapp/` (exceptions déclarées :
+   le client Subsonic et le flux audio des radios).
+7. `tests/test_code_size.py` : 40 lignes par fonction et 300 par fichier dans `webapp/` et `shared/` ; les exceptions
+   existantes sont figées et ne peuvent que diminuer. `tests/test_webapp_routes.py` fige la table des routes.
+
+## Services externes (remise à plat du 27/11/2026)
+- Socle commun dans `shared/providers/` : `http.py` (seul transport, adresses publiques vérifiées), `cache.py` et
+  `metadata.py` (`PublicMetadata` : cache par préfixe, cadence par service, une reprise, copie de moins de 30 jours servie
+  pendant une panne, jamais pour un rafraîchissement demandé ni pour une entité supprimée).
+- Une classe par service : `shared/providers/` pour ceux des deux éditions (MusicBrainz, Wikipédia, paroles, Deezer,
+  Spotify), `webapp/providers/` pour ceux du site seul (Discogs, Last.fm, Gravatar).
+- YouTube garde ses transports pour l'instant (décision du 27/11) ; recherche de podcasts iTunes, PodcastIndex et Jamendo
+  passent encore par `JsonHttp` côté Pi.
 
 ## Couches dans chaque édition
-L'exploration des labels et collaborations (07/11/2026) est propre au site (`webapp/exploration*`, dépôt et contrôleur).
-Elle réutilise `shared/external.JsonFetcher` ; ses appels MusicBrainz, comme ceux des anecdotes des deux éditions,
-partagent désormais un régulateur par processus (1,05 seconde entre départs). Aucun module n'a changé de zone.
+L'exploration des labels et collaborations est propre au site (`webapp/exploration*`) ; toutes ses requêtes passent par
+la classe `shared/providers/musicbrainz`, qui garde aussi la cadence (1,05 seconde entre départs).
+Les fonctionnalités récentes sont rangées en paquets (`webapp/tags/`, `notifications/`, `recommendations/`,
+`listen_later/`, `weekly_releases/`) ; chaque contrôleur déclare ses routes (`routes()`), `app.py` assemble seulement.
 
 Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement), assemblés à **un seul endroit**
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.

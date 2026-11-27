@@ -6,6 +6,18 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.19.2"
+  date: 2026-11-27
+  title: "Corrections et fiabilité"
+  changes:
+    - "Sorties de la semaine : un album déjà gardé « À écouter » s'affiche bien comme gardé, et un clic le retire."
+    - "Pendant une panne de MusicBrainz, Discogs ou Last.fm, les informations récentes déjà chargées restent affichées."
+    - "Éditeur de tags : un fichier modifié ailleurs pendant l'enregistrement ne bloque plus l'éditeur, et un fichier qu'il ne peut pas réécrire n'est plus proposé comme modifiable."
+    - "Envoi d'albums : un ZIP sans dossiers artiste/album est refusé tout de suite, sans être décompressé."
+    - "Une préférence refusée par le serveur (colonnes des morceaux…) revient à son réglage enregistré."
+    - "L'envoi de notifications fonctionne aussi en accédant au site par le réseau local."
+    - "La page « À écouter » reste en place quand vous ouvrez une discussion."
+
 - version: "1.19.1"
   date: 2026-11-27
   title: "Charger les styles des sorties de la semaine"
