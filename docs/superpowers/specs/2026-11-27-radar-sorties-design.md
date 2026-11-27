@@ -93,15 +93,20 @@ Disposition de page : trois maquettes montrées (pastilles en haut / colonne à 
 ### Tendances et découvertes (calcul par compte, pendant la synchronisation)
 
 - La tâche appelle Subsonic **au nom de chaque compte** (`Credentials.of(user)`, comme `ArtistIndexes`).
-- **Artistes des tendances** : artistes des favoris (`getStarred2`) et des albums les plus écoutés
-  (`getAlbumList2 type=frequent`). Plafond (ex. 30) défini une seule fois.
-- **Labels des tendances, via MusicBrainz** (choix de l'utilisateur) : pour chaque album favori ou très écouté,
+- **Artistes des tendances : signaux propres à chaque compte seulement.** La liste « plus écoutés » de Subsonic
+  (`getAlbumList2 type=frequent`) est commune au serveur (confirmé par l'utilisateur) : elle n'est **pas**
+  utilisée. Signaux retenus, du plus fort au plus faible : artistes, albums et morceaux favoris (`getStarred2`) ;
+  albums bien notés sur le site (table `album_ratings`) ; marque-pages « À écouter » (artistes et albums).
+  Plafond (ex. 30) défini une seule fois.
+- Le site ne garde pas d'historique d'écoute par compte (le scrobble part vers Subsonic, puis Last.fm si la
+  personne l'a relié) : un historique propre au site est une piste pour plus tard, hors de cette version.
+- **Labels des tendances, via MusicBrainz** (choix de l'utilisateur) : pour chaque album favori ou bien noté,
   on retrouve son édition MusicBrainz (`find_releases`, puis `release_credits` qui donne ses labels) et on
   **enregistre en base le lien album ↔ label** (album Subsonic, MBID et nom du label, édition retenue, date de
   recherche ; un « rien trouvé » est aussi enregistré pour ne pas refaire la recherche à chaque nuit). Le lien
   sert ensuite sans appel. Ces labels entrent dans les sources suivies (origine « tendances ») et se décochent
-  comme les autres. Discogs n'intervient pas. Si Subsonic expose déjà le label de l'album (champ OpenSubsonic
-  `recordLabels`), on le prend d'abord et on ne cherche dans MusicBrainz que son MBID.
+  comme les autres. Discogs n'intervient pas. On ne lit pas le label dans Subsonic : il est stocké dans notre
+  base, lié à l'identifiant de l'album (choix de l'utilisateur).
 - **Styles des tendances** : styles du catalogue MusicBrainz les plus fréquents parmi les tags des artistes des
   tendances (déjà lus par la synchronisation). Même règle que les artistes et les labels des tendances
   (*décision de conception*) : suivis d'office, étiquetés « d'après tes écoutes », retirables, jamais réajoutés
@@ -154,7 +159,7 @@ Disposition de page : trois maquettes montrées (pastilles en haut / colonne à 
 Nouvelles requêtes dans la classe `MusicBrainz` uniquement ; paquet `webapp/weekly_releases/` (entités, service,
 synchronisation dans des fichiers distincts) ; SQL dans `webapp/storage/` ; contrôleur mince ; limites définies une
 fois ; 40 lignes par fonction, 300 par fichier ; tests écrits avant le code (unitaires + parcours jsdom) ; entrée
-**1.21** dans `src/i18n/versions.yaml` ; documentation `docs/features/actualite.md` et guide Help mis à jour.
+**1.23** (ajoutée à l’entrée Help déjà publiée, choix de l’utilisateur) dans `src/i18n/versions.yaml` ; documentation `docs/features/actualite.md` et guide Help mis à jour.
 
 ## Laissé au constructeur
 
@@ -167,8 +172,36 @@ fois ; 40 lignes par fonction, 300 par fichier ; tests écrits avant le code (un
 
 - Les résultats de recherche `release-group` de MusicBrainz contiennent-ils les tags ? Sinon, le tri (2) se fait
   sur les tags de l'artiste.
-- La clé Last.fm est-elle configurée en production, et `artist.getSimilar` renvoie-t-il des MBID pour la
-  majorité des proches ?
-- Le serveur Subsonic expose-t-il `recordLabels` sur les albums ?
-- `getAlbumList2 type=frequent` est-il propre au compte ou commun au serveur ? Si commun, les tendances
-  s'appuient d'abord sur les favoris.
+- `artist.getSimilar` renvoie-t-il des MBID pour la majorité des proches ? (La clé Last.fm est configurée en
+  production.)
+- Nombre d'écoutes par compte : non utilisé dans cette version (décision de l'utilisateur).
+
+Document validé par l'utilisateur le 27/11/2026.
+
+---
+
+## Version 2 (validée par l'utilisateur le 27/11/2026, soir, après la première mise en ligne)
+
+Constats en production : MusicBrainz renvoie des 503 par moments ; un seul échec annulait tout le « profil de goûts »
+(0 profil sur 14) ; le tri par ressemblance de tags était jugé flou (« un peu vaste »). Décisions :
+
+- **Signaux : les favoris seulement** (artistes, albums, morceaux de `getStarred2`). Plus de marque-pages ni de
+  playlists pour l'instant ; chacun ajoute ensuite ce qu'il veut dans « Mes sources ».
+- **Styles dominants** : pour chaque artiste favori, ses 3 premiers tags MusicBrainz présents dans le catalogue des
+  styles, lus **par lots de 20 artistes en une requête** (recherche `arid:… OR …`, qui renvoie les tags). On compte les
+  artistes par style ; un style porté par moins de 3 artistes est écarté ; les **5 premiers** deviennent des sources
+  « d'après vos favoris », décochables ; on peut en ajouter.
+- **Sans favori** : message « pas encore de favoris » et **styles génériques du sub**, calculés de la même façon à
+  partir des albums les plus écoutés du serveur (`getAlbumList2 type=frequent`, liste commune : c'est voulu ici).
+- **Plus de profil additionné ni de tri par ressemblance** : les cartes sont rangées par date puis par titre.
+- **Sorties des artistes : ListenBrainz** (`explore/fresh-releases`), deux requêtes par nuit pour tout le site
+  (14 jours avant, 60 jours après : ~2,3 Mo, ~3 000 albums et EP), gardées en base avec les MBID et noms des artistes
+  crédités. « Mes artistes » = rapprochement local par MBID. Les requêtes MusicBrainz groupées par artiste disparaissent.
+- **Découvertes remplacées par « Autour de… »** : on choisit un de ses artistes ; Last.fm donne ses proches (une
+  requête : l'utilisateur fait davantage confiance à Last.fm pour ça) ; on les cherche dans les sorties ListenBrainz
+  déjà en base (MBID quand Last.fm le donne, sinon nom normalisé). Plus de sources « proches » ni d'interrupteur.
+- **Styles et labels** : MusicBrainz comme en version 1 (nouvel essai 30 min après un échec, raison journalisée).
+- **Pas de cache de 7 jours pour le radar** : la synchronisation interroge les services en direct ; ce qu'on garde
+  (sorties, labels d'albums, styles des artistes) est dans les tables du radar.
+- **Version 1.24** (la 1.23 est en ligne ; la 1.23.1 non déployée y est intégrée). Un seul déploiement, après la fin de
+  la première synchronisation en cours.

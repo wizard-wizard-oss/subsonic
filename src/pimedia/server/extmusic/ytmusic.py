@@ -4,6 +4,7 @@ lecture (toujours le lecteur officiel). La bibliothèque peut casser quand YouTu
 DirectoryError, et YouTubeSource se rabat alors sur l'API officielle. Sans ytmusicapi installé, même repli."""
 from concurrent.futures import ThreadPoolExecutor
 
+from ...shared.text import normalize
 from ..podcasts.directories import DirectoryError
 
 try:
@@ -13,6 +14,7 @@ except ImportError:                     # Pi ou poste sans la bibliothèque : AP
     YTMusic = None
 
 TIMEOUT = 10
+ALBUM_RESULTS = 10                      # albums examinés pour trouver celui de l'artiste et du titre cherchés
 VIDEO_SLOTS = 6                         # places gardées aux vidéos (concerts, clips, titres absents des « titres »)
 
 
@@ -24,10 +26,17 @@ def music_track(item):
     # Les compteurs (« 1,9 Md lectures ») arrivent comme de faux artistes, sans identifiant.
     artists = [a["name"] for a in item.get("artists") or [] if a.get("id") and a.get("name")]
     return {"id": "yt-" + video, "youtubeId": video, "title": item.get("title") or "Sans titre",
-            "artist": ", ".join(artists), "album": (item.get("album") or {}).get("name") or "",
+            "artist": ", ".join(artists), "album": _album_name(item.get("album")),
             "duration": int(item.get("duration_seconds") or 0),
             # Les pochettes des « titres » sont sur googleusercontent.com, refusé par la page : vignette de la vidéo.
             "imageUrl": "https://i.ytimg.com/vi/%s/mqdefault.jpg" % video, "ext": "youtube"}
+
+
+def _album_name(album):
+    """Nom de l'album : un objet {name, id} dans les recherches, un simple texte dans les morceaux d'un album."""
+    if isinstance(album, dict):
+        return album.get("name") or ""
+    return album if isinstance(album, str) else ""
 
 
 def mix(songs, videos, limit):
@@ -69,14 +78,35 @@ class YouTubeMusicSearch:
         return mix(songs, videos, limit)
 
     def _search(self, term, kind, limit, region):
+        return self._guarded(lambda: self._tracks(self._client(region, kind).search(term, filter=kind, limit=limit)))
+
+    def _client(self, region, kind):
+        key = (region, kind)
+        return self._clients.get(key) or self._clients.setdefault(key, self.client_factory(region))
+
+    @staticmethod
+    def _guarded(work):
         try:
-            key = (region, kind)
-            client = self._clients.get(key) or self._clients.setdefault(key, self.client_factory(region))
-            return self._tracks(client.search(term, filter=kind, limit=limit))
+            return work()
         except DirectoryError:
             raise
         except Exception as error:      # format changé, réseau, refus : on ne sait pas d'avance ce que lèvera la bibliothèque
             raise DirectoryError("YouTube Music : %s" % error.__class__.__name__) from error
+
+    def album(self, artist, title, region):
+        """Morceaux de l'album de cet artiste et de ce titre (égalité des noms normalisés) ; [] s'il n'y en a pas.
+        Sert à écouter une sortie toute récente, absente de la bibliothèque : l'album lui-même, pas des titres voisins."""
+        def look_up():
+            client = self._client(region, "albums")
+            for found in client.search("%s %s" % (artist, title), filter="albums", limit=ALBUM_RESULTS) or []:
+                names = {normalize(a.get("name")) for a in found.get("artists") or []}
+                if found.get("browseId") and normalize(found.get("title")) == normalize(title) \
+                        and normalize(artist) in names:
+                    album = client.get_album(found["browseId"]) or {}
+                    tracks = self._tracks(album.get("tracks"))
+                    return [dict(track, album=album.get("title") or title) for track in tracks]
+            return []
+        return self._guarded(look_up)
 
     @staticmethod
     def _tracks(items):

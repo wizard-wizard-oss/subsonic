@@ -572,4 +572,85 @@ MIGRATIONS = [
     """
     UPDATE music_metadata SET cache_key = 'lastfm:' || substr(cache_key, 14) WHERE cache_key LIKE 'label-lastfm:%'
     """,
+    # 29 : radar des sorties. Les styles suivis deviennent des sources parmi d'autres (labels, artistes, proches) ;
+    # les sorties trouvées par la synchronisation de fond sont partagées entre les comptes.
+    """
+    CREATE TABLE release_sources (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        identity TEXT NOT NULL CHECK (length(identity) > 0),
+        name TEXT NOT NULL,
+        origin TEXT NOT NULL,
+        hidden INTEGER NOT NULL DEFAULT 0,
+        via TEXT,
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, kind, identity)
+    );
+    INSERT INTO release_sources (user_id, kind, identity, name, origin, created_at)
+        SELECT user_id, 'style', genre, genre, 'manual', 0 FROM release_subscriptions;
+    DROP TABLE release_subscriptions;
+    CREATE INDEX release_sources_identity ON release_sources (kind, identity);
+    CREATE TABLE radar_releases (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        released_on TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        tags TEXT NOT NULL DEFAULT '[]'
+    );
+    CREATE INDEX radar_releases_date ON radar_releases (released_on);
+    CREATE TABLE radar_release_sources (
+        release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,
+        source_kind TEXT NOT NULL,
+        source_identity TEXT NOT NULL,
+        PRIMARY KEY (release_id, source_kind, source_identity)
+    );
+    CREATE INDEX radar_release_sources_source ON radar_release_sources (source_kind, source_identity);
+    CREATE TABLE radar_sync (
+        source_kind TEXT NOT NULL,
+        source_identity TEXT NOT NULL,
+        synced_at INTEGER,
+        failed_at INTEGER,
+        PRIMARY KEY (source_kind, source_identity)
+    );
+    CREATE TABLE radar_runs (
+        name TEXT PRIMARY KEY,
+        finished_at INTEGER NOT NULL
+    );
+    CREATE TABLE album_labels (
+        album_id TEXT PRIMARY KEY,
+        label_id TEXT,
+        label_name TEXT,
+        release_id TEXT,
+        looked_up_at INTEGER NOT NULL
+    );
+    CREATE TABLE radar_profiles (
+        user_id INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+        tags TEXT NOT NULL DEFAULT '{}',
+        computed_at INTEGER,
+        refresh_requested_at INTEGER,
+        discoveries_off INTEGER NOT NULL DEFAULT 0
+    )
+    """,
+    # 30 : radar, version 2. Les découvertes deviennent « Autour de… » (calculé à la demande) : plus de sources
+    # « proches ». Chaque sortie garde ses artistes crédités ; un nom d'artiste résolu dans MusicBrainz est mémorisé ;
+    # le profil dit d'où viennent les styles proposés (favoris du compte ou, sans favori, le sub).
+    """
+    DELETE FROM radar_release_sources WHERE source_kind = 'similar';
+    DELETE FROM radar_sync WHERE source_kind = 'similar';
+    DELETE FROM release_sources WHERE kind = 'similar';
+    CREATE TABLE radar_release_artists (
+        release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,
+        artist_id TEXT NOT NULL,
+        PRIMARY KEY (release_id, artist_id)
+    );
+    CREATE INDEX radar_release_artists_artist ON radar_release_artists (artist_id);
+    CREATE TABLE artist_resolutions (
+        name_key TEXT PRIMARY KEY,
+        artist_id TEXT,
+        resolved_at INTEGER NOT NULL
+    );
+    ALTER TABLE radar_profiles ADD COLUMN basis TEXT
+    """,
 ]

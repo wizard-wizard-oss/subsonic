@@ -22,13 +22,13 @@ win.getWeekly = async (url, params) => {
 win.writeWeekly = async (url, body) => writes.push({url, body});
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 (async () => {
-  win.eval(src("core") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + `
+  win.eval(src("core") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-listen") + `
     App.api.get=window.getWeekly; App.api.post=window.writeWeekly;
     window.weekly=WeeklyReleaseView; window.news=News;
   `);
   assert.equal(win.weekly.mondayFor(new win.Date(2026, 10, 23)).toISOString().slice(0, 10), "2026-11-23");
   assert.equal(win.weekly.mondayFor(new win.Date(2027, 0, 3)).toISOString().slice(0, 10), "2026-12-28");
-  await win.news.view.render(doc.querySelector("main"), {id: "releases"});
+  await win.weekly.browse(doc.querySelector("main"), {id: "releases"});
   await tick();
   assert.equal(doc.querySelector("h3").textContent, "Album vendredi");
   assert.ok(doc.querySelector('a[href="#/whatsnew/press/g5"]'));

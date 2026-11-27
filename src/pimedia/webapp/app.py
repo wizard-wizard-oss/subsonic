@@ -42,8 +42,7 @@ from .controllers.lyrics import LyricsController
 from .controllers.mixes import MixController
 from .controllers.news import NewsController
 from .controllers.weekly_releases import WeeklyReleasesController
-from .weekly_releases.service import WeeklyReleases
-from .storage.weekly_releases import ReleaseSubscriptions
+from .weekly_releases import assembly as weekly_releases
 from .controllers.playlists import PlaylistController
 from .controllers.uploads import UploadController
 from .controllers.profile import ProfileController
@@ -260,7 +259,8 @@ class WebApplication:
         extmusic = ExtMusicController(self.extmusic, self.ext_favorites)
         uploads = UploadController(self.uploads)
         news = NewsController(self.news)
-        releases = WeeklyReleasesController(WeeklyReleases(self.musicbrainz, ReleaseSubscriptions(self.db)))
+        styles, radar, self.release_sync = weekly_releases.build(self)
+        releases = WeeklyReleasesController(styles, radar)
         covers = CoverController(self.covers)
         tags = TagController(self.album_tags)
         notifications = NotificationController(self.notifications)
@@ -289,6 +289,7 @@ class WebApplication:
         if self.extmusic.status()["youtube"]:          # vidéos YouTube gardées : relues tous les 30 jours
             threading.Thread(target=self.extmusic.run, daemon=True).start()
         threading.Thread(target=self.news.run, daemon=True).start()     # flux de l'Actualité : relus toutes les heures
+        threading.Thread(target=self.release_sync.run, daemon=True).start()   # radar des sorties : nuit et démarrage
         print("Édition PC : http://%s:%d/ (Subsonic : %s)" % (self.config.bind, self.config.port,
                                                                self.config.subsonic_url or "non réglé"))
         server.serve_forever()

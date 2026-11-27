@@ -99,5 +99,43 @@ class YouTubeSourceTest(unittest.TestCase):
         self.assertEqual(len(working.search("get lucky")), 1)              # YouTube Music n'est pas limité ici
 
 
+
+RED_BOX = {"resultType": "album", "title": "Red Box", "browseId": "MPRE-redbox", "type": "EP",
+           "artists": [{"name": "Red Axes", "id": "UCredaxes"}]}
+OTHER = {"resultType": "album", "title": "Red Box", "browseId": "MPRE-other", "artists": [{"name": "Simply Red", "id": "UCs"}]}
+ALBUM = {"title": "Red Box", "tracks": [
+    {"videoId": "redbox0001", "title": "Sabaya", "duration_seconds": 412, "album": "Red Box",
+     "artists": [{"name": "Red Axes", "id": "UCredaxes"}]},
+    {"videoId": None, "title": "Indisponible", "artists": [{"name": "Red Axes", "id": "UCredaxes"}]},
+    {"videoId": "redbox0002", "title": "Zion", "duration_seconds": 380, "artists": [{"name": "Red Axes", "id": "UCredaxes"}]}]}
+
+
+class AlbumLookupTest(unittest.TestCase):
+    def search(self, results):
+        self.fake = FakeYouTubeMusic(results, {"MPRE-redbox": ALBUM})
+        return YouTubeMusicSearch(self.fake)
+
+    def test_the_album_of_this_artist_and_title_with_its_tracks(self):
+        found = self.search({"albums": [OTHER, RED_BOX]}).album("Red Axes", "Red Box", "FR")
+        self.assertEqual(self.fake.terms, [("Red Axes Red Box", "albums"), ("MPRE-redbox", "get_album")])
+        self.assertEqual([(t["title"], t["artist"], t["album"]) for t in found],
+                         [("Sabaya", "Red Axes", "Red Box"), ("Zion", "Red Axes", "Red Box")])
+
+    def test_no_album_of_another_artist_or_title(self):
+        self.assertEqual(self.search({"albums": [OTHER, dict(RED_BOX, title="Red Box (Live)")]})
+                         .album("Red Axes", "Red Box", "FR"), [])
+
+    def test_a_broken_library_is_a_directory_error(self):
+        with self.assertRaises(DirectoryError):
+            self.search(None).album("Red Axes", "Red Box", "FR")
+
+    def test_the_source_keeps_only_playable_tracks_and_needs_youtube_music(self):
+        source = YouTubeSource(FakeHttp({}), CONFIG, self.search({"albums": [RED_BOX]}))
+        source.details = lambda ids: {"redbox0001": {"status": {"embeddable": True, "privacyStatus": "public"},
+                                                     "contentDetails": {"duration": "PT6M52S"}}}
+        self.assertEqual([t["youtubeId"] for t in source.album("Red Axes", "Red Box")], ["redbox0001"])
+        self.assertEqual(YouTubeSource(FakeHttp({}), CONFIG).album("Red Axes", "Red Box"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

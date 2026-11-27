@@ -12,6 +12,9 @@ class ExtMusicController:
     def search(self, request, user):
         return ok({"items": self.extmusic.search(user, request.param("src"), request.param("q"))})
 
+    def album(self, request, user):
+        return ok({"items": self.extmusic.album(user, request.param("artist"), request.param("title"))})
+
     def known(self, request, user):
         return ok({"items": self.extmusic.known(request.param("q"))})
 
@@ -41,6 +44,7 @@ class ExtMusicController:
 
     def routes(self):
         return [
+            get("/api/ext/album", self.album),
             get("/api/ext/favorites", self.favorite_list),
             get("/api/ext/known", self.known),
             get("/api/ext/search", self.search),

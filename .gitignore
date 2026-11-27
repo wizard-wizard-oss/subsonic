@@ -14,3 +14,5 @@ sources.zip
 
 # Musique de test en local (MUSIC_DIR vide)
 datas/
+
+.superpowers/

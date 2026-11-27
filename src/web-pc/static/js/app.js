@@ -176,7 +176,8 @@ class MusicApp {
     });
   }
 
-  /** #/  #/artist/<id>  #/album/<id>  #/playlist/<id>  #/search/<texte>  #/favorites  #/albums/<onglet>[/<décennie ou genre>]
+  /** #/  #/artist/<id>  #/album/<id>  #/playlist/<id>  #/search/<texte>  #/listen/<artiste>/<titre>  #/favorites
+      #/albums/<onglet>[/<décennie ou genre>]
       #/mix[/<artiste de départ>]  #/news[/<flux>]  #/whatsnew  #/versions  #/account  #/import[/guide] */
   static parse(hash) {
     const [, view, ...rest] = (hash || "#/").replace(/^#/, "").split("/");
@@ -184,6 +185,8 @@ class MusicApp {
     if (view === "explore" || view === "discogs") return {view, kind: rest[0], id: rest[1] || ""};
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
+    if (view === "listen") return rest.length > 1 ? {view, artist: decodeURIComponent(rest[0]),
+                                                     id: decodeURIComponent(rest.slice(1).join("/"))} : {view: "home"};
     if (view === "listen-later") return {view: "listenLater"};
     if (view === "whatsnew" && id) return {view, id};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||

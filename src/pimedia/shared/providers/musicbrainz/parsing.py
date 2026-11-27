@@ -3,7 +3,7 @@ import re
 from datetime import date
 from uuid import UUID
 
-from .entities import Edition, MusicLink, MusicWork, Track, WeeklyRelease
+from .entities import Edition, MusicLabel, MusicLink, MusicWork, Track, WeeklyRelease
 
 ROLES = {"producer": "producer", "executive producer": "producer", "co-producer": "producer",
          "instrument": "musician", "vocal": "vocals", "performer": "musician", "guest performer": "musician",
@@ -107,7 +107,35 @@ def weekly_group(row):
         released_on = date.fromisoformat(value)
     except ValueError:
         return None
-    return WeeklyRelease(mbid(row["id"]), row["title"], artist_name(row), released_on, row.get("primary-type", ""))
+    return WeeklyRelease(mbid(row["id"]), row["title"], artist_name(row), released_on, row.get("primary-type", ""),
+                         tags(row), artist_ids(row))
+
+
+def artist_ids(raw):
+    """MBID des artistes crédités, dans l'ordre du crédit."""
+    found = []
+    for credit in raw.get("artist-credit") or []:
+        try:
+            found.append(mbid((credit.get("artist") or {}).get("id")))
+        except (ValueError, AttributeError):
+            continue
+    return tuple(dict.fromkeys(found))
+
+
+def tags(raw):
+    """Tags votés (au moins une voix), du plus voté au moins voté."""
+    ranked = [(number(tag.get("count"), zero=True) or 0, tag["name"].strip()[:100]) for tag in raw.get("tags") or []
+              if isinstance(tag, dict) and isinstance(tag.get("name"), str) and tag["name"].strip()]
+    return tuple(dict.fromkeys(name for count, name in sorted(ranked, key=lambda item: -item[0]) if count > 0))
+
+
+def label(raw):
+    """Label d'une recherche, ou None si son identifiant n'est pas un MBID."""
+    try:
+        return MusicLabel(mbid(raw.get("id")), str(raw.get("name") or "")[:300], str(raw.get("country") or ""),
+                          str(raw.get("disambiguation") or "")[:300])
+    except ValueError:
+        return None
 
 
 def connections(raw):

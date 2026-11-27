@@ -1,8 +1,11 @@
-"""La seule classe Last.fm du site : popularité d'un album (découverte par label) et pochettes proposées."""
+"""La seule classe Last.fm du site : popularité d'un album (découverte par label), pochettes proposées et artistes
+proches (radar des sorties)."""
 from dataclasses import asdict, dataclass
+from typing import Optional
 
 from ...shared.external import query_url
 from ...shared.providers.metadata import PublicMetadata
+from ...shared.providers.musicbrainz.parsing import mbid
 from ...shared.text import normalize
 
 LASTFM_BLANK = "2a96cbd8b46e442fc41c2b86b821562f"  # Visuel vide renvoyé par Last.fm.
@@ -27,6 +30,14 @@ class CoverCandidate:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class SimilarArtist:
+    """Artiste proche selon Last.fm ; mbid vide quand Last.fm ne le connaît pas."""
+    name: str
+    mbid: Optional[str]
+    match: float
+
+
 def _text(value):
     return value.strip() if isinstance(value, str) else ""
 
@@ -49,6 +60,25 @@ class LastFm(PublicMetadata):
         key = query_url(name, sorted(params.items()))
         url = query_url(self.base, dict(params, api_key=self.api_key))
         return self.fetch(key, url, read=lambda address: project(self.http.get_json(address))).data
+
+    def similar_artists(self, name, limit):
+        """Proches d'un artiste, du plus proche au moins proche (gardés 7 jours) ; () sans clé Last.fm."""
+        if not self.enabled:
+            return ()
+        params = {"method": "artist.getsimilar", "artist": name, "limit": limit, "autocorrect": 1}
+        return tuple(SimilarArtist(**found) for found in self._call("similar", params, self._similar)["artists"])
+
+    @staticmethod
+    def _similar(raw):
+        if raw.get("error"):
+            if str(raw["error"]) == "6":
+                return {"artists": []}
+            raise ValueError("Last.fm")
+        found = (raw.get("similarartists") or {}).get("artist") or []
+        found = [found] if isinstance(found, dict) else found
+        return {"artists": [{"name": _text(a.get("name")), "mbid": _valid_mbid(a.get("mbid")),
+                             "match": float(a.get("match") or 0)}
+                            for a in found if isinstance(a, dict) and _text(a.get("name"))]}
 
     def album(self, artist, title, cached=False):
         params = dict(method="album.getInfo", artist=artist, album=title, autocorrect=0, format="json")
@@ -95,3 +125,10 @@ class LastFm(PublicMetadata):
         if not urls:
             return None
         return CoverCandidate(urls[0], urls[min(1, len(urls) - 1)], _text(match.get("name")), _text(match.get("artist")))
+
+
+def _valid_mbid(value):
+    try:
+        return mbid(value)
+    except ValueError:
+        return None

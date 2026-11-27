@@ -174,6 +174,17 @@ class WeeklyTest(unittest.TestCase):
         reply = request("GET", path + "?" + params, cookie)
         self.assertEqual(reply.status, 200)
         self.assertEqual(json.loads(reply.body)["albums"][0]["id"], GROUP)
+        # radar : lu en base, actualisation limitée (la synchronisation de fond n'est pas lancée ici)
+        app.release_sync.spawn = lambda work: None
+        radar = path + "/radar?" + urlencode({"monday": this_monday.isoformat()})
+        self.assertEqual(request("GET", radar).status, 401)
+        calls = len(self.calls)
+        self.assertEqual(json.loads(request("GET", radar, cookie).body)["filters"][1]["key"], "style:" + GENRE)
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual(request("POST", path + "/refresh", cookie, {}).status, 403)
+        self.assertEqual(request("POST", path + "/refresh", headers, {}).status, 200)
+        refused = request("POST", path + "/refresh", headers, {})
+        self.assertEqual((refused.status, json.loads(refused.body)["error"]), (429, "weekly.refresh_too_soon"))
 
 
 class WeeklyReleaseMigrationTest(unittest.TestCase):

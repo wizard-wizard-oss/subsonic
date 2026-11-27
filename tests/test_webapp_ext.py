@@ -66,6 +66,22 @@ class ExtMusicHttpTest(WebAppTestCase):
                          [("abc123def45", "Daft Punk", "Discovery", 320)])                # live écarté
         self.assertEqual(self.youtube_searches(), 0)
 
+    def test_listening_to_a_new_album_finds_the_album_itself(self):
+        album = {"title": "Discovery", "tracks": [{"videoId": "abc123def45", "title": "One More Time",
+                                                  "artists": [{"name": "Daft Punk", "id": "UC1"}]}]}
+        fake = FakeYouTubeMusic({"albums": [{"title": "Discovery", "browseId": "MPRE1",
+                                              "artists": [{"name": "Daft Punk", "id": "UC1"}]}]}, {"MPRE1": album})
+        self.app.extmusic.youtube.music = YouTubeMusicSearch(fake)
+        bob = self.client("bob", "pw2")
+        found = bob.get("/api/ext/album?artist=Daft+Punk&title=Discovery").json()["items"]
+        self.assertEqual([(t["youtubeId"], t["title"], t["album"]) for t in found],
+                         [("abc123def45", "One More Time", "Discovery")])
+        self.assertEqual(self.youtube_searches(), 0)                                      # sans quota de recherche
+        terms = len(fake.terms)
+        bob.get("/api/ext/album?artist=Daft+Punk&title=Discovery")
+        self.assertEqual(len(fake.terms), terms)                                          # gardé un moment
+        self.assertEqual(bob.get("/api/ext/album?artist=&title=Discovery").status, 400)
+
     def test_searches_are_limited_per_person(self):
         self.app.extmusic.youtube.music = YouTubeMusicSearch(FakeYouTubeMusic({"songs": MUSIC_SONGS}))
         bob, alice = self.client("bob", "pw2"), self.client("alice", "secret")
@@ -233,3 +249,4 @@ class ExtMusicWithoutKeysTest(WebAppTestCase):
         bob = self.client("bob", "pw2")
         self.assertEqual(bob.get("/api/ext/status").json(), {"jamendo": False, "youtube": False})
         self.assertEqual(bob.get("/api/ext/search?src=youtube&q=daft").json()["error"], "ext.disabled")
+        self.assertEqual(bob.get("/api/ext/album?artist=Daft+Punk&title=Discovery").json()["error"], "ext.disabled")

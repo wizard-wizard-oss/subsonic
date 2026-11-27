@@ -6,6 +6,50 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.24.1"
+  date: 2026-11-27
+  title: "Écouter l'album : correction"
+  changes:
+    - "« Écouter l'album » affichait une erreur au lieu des morceaux de l'album trouvé sur YouTube Music."
+
+- version: "1.24"
+  date: 2026-11-27
+  title: "Sorties de la semaine : vos styles et « Autour de… »"
+  changes:
+    - "Le radar part de vos favoris (artistes, albums, morceaux) : il propose les 4 ou 5 styles qui reviennent le plus chez vos artistes, que vous pouvez décocher ou compléter."
+    - "Sans favori, le radar propose les styles les plus présents dans le sub, et le dit."
+    - "Nouveau : « Autour de… ». Choisissez un de vos artistes pour voir les sorties de ses artistes proches (Last.fm). La pastille Découvertes disparaît."
+    - "Les sorties de vos artistes viennent de ListenBrainz : plus complètes, et les cartes sont rangées par date."
+    - "« Écouter l'album » sur une sortie absente du sub ouvre l'album lui-même trouvé sur YouTube Music, au lieu d'une recherche qui ramenait tout ce qui ressemblait aux mots."
+    - "Les pochettes des sorties toutes récentes s'affichent même quand Cover Art Archive n'a pas encore préparé leur miniature."
+    - "Quand MusicBrainz ne répond pas pour un style ou un label, la recherche est relancée une demi-heure plus tard au lieu d'attendre la nuit."
+
+- version: "1.23"
+  date: 2026-11-27
+  title: "Sorties de la semaine pour vous, et une pochette pour « Voyage, voyage »"
+  changes:
+    - "Sorties de la semaine devient votre radar : les albums et EP de vos styles, de vos labels et de vos artistes, réunis sur une seule page."
+    - "Le radar se remplit d'après vos favoris : leurs artistes, les labels de vos albums et vos styles dominants. Tout se retire dans ⚙ Mes sources, et ce que vous retirez ne revient pas."
+    - "Des découvertes : les sorties d'artistes proches de ceux que vous aimez et absents de la bibliothèque, avec « proche de … » sur la carte. Elles se coupent d'un clic."
+    - "Des pastilles filtrent la semaine (un style, Labels, Mes artistes, Découvertes) et les sorties les plus proches de vos goûts passent devant."
+    - "Changer de semaine est instantané : les sorties sont cherchées chaque nuit. Le bouton ↻ relance la recherche pour vous (une fois toutes les 10 minutes)."
+    - "Dans Help, la carte « La musique d'ailleurs » a sa pochette en noir et blanc, The Dark Side of the Moon : les quatre cartes sont désormais illustrées."
+
+- version: "1.22.1"
+  date: 2026-11-27
+  title: "Help : captures plus nettes"
+  changes:
+    - "Dans les guides de Help, les captures d'écran (salon, paroles…) ne s'étirent plus en très hauteur : elles tiennent dans un cadre régulier, et un clic ouvre la capture en entier."
+
+- version: "1.22"
+  date: 2026-11-27
+  title: "Help : bienvenue dans le sub"
+  changes:
+    - "La page Help devient un accueil : l'idée du sub en quelques lignes, puis quatre grandes cartes (musique d'ailleurs, rester au courant, découvrir, échanger entre potes) avec leur capture."
+    - "Un parcours en 2 minutes pour démarrer, et un bloc « C'est votre espace » qui montre les gestes qui font vivre le sub : ajouter un journal, suivre un style, conseiller un disque, lancer une playlist communautaire."
+    - "Une recherche dans les guides et un dépannage « Help! » qui répond aux cinq questions les plus courantes."
+    - "Plus colorée, avec le sous-marin jaune du sub en vedette, et mieux adaptée au téléphone ; la liste des guides est alignée à gauche."
+
 - version: "1.21.1"
   date: 2026-11-27
   title: "Corrections dans À écouter"
