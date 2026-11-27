@@ -1,0 +1,126 @@
+"""Radar des sorties en base : sources de chaque compte, sorties synchronisées (partagées), labels des albums."""
+import json
+import time
+
+from ..weekly_releases.entities import RadarRelease, RadarSource
+
+SOURCE_COLUMNS = "id, kind, identity, name, origin, hidden, via"
+FULL_SYNC = "full"
+
+
+class ReleaseSources:
+    def __init__(self, db, clock=time.time):
+        self.db, self.clock = db, clock
+
+    def for_user(self, user_id, include_hidden=False):
+        hidden = "" if include_hidden else " AND hidden = 0"
+        rows = self.db.query("SELECT " + SOURCE_COLUMNS + " FROM release_sources WHERE user_id = ?" + hidden +
+                             " ORDER BY kind, name COLLATE NOCASE, id", (user_id,))
+        return [RadarSource.from_row(row) for row in rows]
+
+    def get(self, user_id, kind, identity):
+        row = self.db.one("SELECT " + SOURCE_COLUMNS + " FROM release_sources WHERE user_id = ? AND kind = ? "
+                          "AND identity = ?", (user_id, kind, identity))
+        return RadarSource.from_row(row) if row else None
+
+    def add(self, user_id, kind, identity, name, origin, via=None):
+        """Une source masquée ne revient que si la personne l'ajoute elle-même (origine « manual »)."""
+        self.db.execute(
+            "INSERT INTO release_sources (user_id, kind, identity, name, origin, via, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, kind, identity) DO UPDATE SET "
+            "name = excluded.name, via = CASE WHEN hidden = 0 THEN COALESCE(excluded.via, via) ELSE via END, "
+            "origin = CASE WHEN excluded.origin = 'manual' THEN 'manual' ELSE origin END, "
+            "hidden = CASE WHEN excluded.origin = 'manual' THEN 0 ELSE hidden END",
+            (user_id, kind, identity, name, origin, via, int(self.clock())))
+        return self.get(user_id, kind, identity)
+
+    def hide(self, user_id, source_id):
+        self.db.execute("UPDATE release_sources SET hidden = 1 WHERE id = ? AND user_id = ?", (source_id, user_id))
+
+    def hide_identity(self, user_id, kind, identity):
+        self.db.execute("UPDATE release_sources SET hidden = 1 WHERE user_id = ? AND kind = ? AND identity = ?",
+                        (user_id, kind, identity))
+
+    def active_union(self):
+        """Sources visibles d'au moins un compte, sans doublon : ce que la synchronisation interroge."""
+        rows = self.db.query("SELECT kind, identity, MIN(name) AS name FROM release_sources WHERE hidden = 0 "
+                             "GROUP BY kind, identity ORDER BY kind, identity")
+        return [(row["kind"], row["identity"], row["name"]) for row in rows]
+
+
+class RadarReleases:
+    def __init__(self, db):
+        self.db = db
+
+    def save(self, kind, identity, releases, start, end):
+        """Remplace ce que cette source a trouvé entre start et end (bornes comprises)."""
+        with self.db.transaction() as connection:
+            connection.execute(
+                "DELETE FROM radar_release_sources WHERE source_kind = ? AND source_identity = ? AND release_id IN "
+                "(SELECT id FROM radar_releases WHERE released_on BETWEEN ? AND ?)",
+                (kind, identity, start.isoformat(), end.isoformat()))
+            for release in releases:
+                connection.execute(
+                    "INSERT INTO radar_releases (id, title, artist, released_on, kind, tags) VALUES (?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT (id) DO UPDATE SET title = excluded.title, artist = excluded.artist, "
+                    "released_on = excluded.released_on, kind = excluded.kind, tags = excluded.tags",
+                    (release.id, release.title, release.artist, release.released_on.isoformat(), release.kind,
+                     json.dumps(sorted(release.tags))))
+                connection.execute("INSERT OR IGNORE INTO radar_release_sources VALUES (?, ?, ?)",
+                                   (release.id, kind, identity))
+
+    def for_sources(self, sources, start, end):
+        """[(sortie, type de source, identité de source)] des sources données, sorties entre start et end."""
+        rows = self.db.query(
+            "SELECT r.*, l.source_kind, l.source_identity FROM radar_releases r "
+            "JOIN radar_release_sources l ON l.release_id = r.id WHERE r.released_on BETWEEN ? AND ? "
+            "ORDER BY r.released_on, r.id", (start.isoformat(), end.isoformat()))
+        return [(RadarRelease.from_row(row), row["source_kind"], row["source_identity"]) for row in rows
+                if (row["source_kind"], row["source_identity"]) in sources]
+
+    def purge(self, before):
+        self.db.execute("DELETE FROM radar_releases WHERE released_on < ?", (before.isoformat(),))
+
+    def mark_synced(self, kind, identity, at):
+        self.db.execute("INSERT INTO radar_sync (source_kind, source_identity, synced_at) VALUES (?, ?, ?) "
+                        "ON CONFLICT DO UPDATE SET synced_at = excluded.synced_at", (kind, identity, int(at)))
+
+    def mark_failed(self, kind, identity, at):
+        self.db.execute("INSERT INTO radar_sync (source_kind, source_identity, failed_at) VALUES (?, ?, ?) "
+                        "ON CONFLICT DO UPDATE SET failed_at = excluded.failed_at", (kind, identity, int(at)))
+
+    def synced_at(self, kind, identity):
+        row = self.db.one("SELECT synced_at FROM radar_sync WHERE source_kind = ? AND source_identity = ?",
+                          (kind, identity))
+        return row["synced_at"] if row else None
+
+    def oldest_first(self, union):
+        """Les sources jamais synchronisées d'abord, puis de la plus ancienne synchronisation à la plus récente."""
+        synced = {(row["source_kind"], row["source_identity"]): row["synced_at"] or 0
+                  for row in self.db.query("SELECT * FROM radar_sync")}
+        return sorted(union, key=lambda source: synced.get(source[:2], 0))
+
+    def mark_full_sync(self, at):
+        self.db.execute("INSERT INTO radar_runs (name, finished_at) VALUES (?, ?) ON CONFLICT DO UPDATE SET "
+                        "finished_at = excluded.finished_at", (FULL_SYNC, int(at)))
+
+    def last_full_sync(self):
+        row = self.db.one("SELECT finished_at FROM radar_runs WHERE name = ?", (FULL_SYNC,))
+        return row["finished_at"] if row else None
+
+
+class AlbumLabels:
+    """Label d'un album de la bibliothèque, trouvé une fois dans MusicBrainz (label_id vide : rien trouvé)."""
+    def __init__(self, db):
+        self.db = db
+
+    def get(self, album_id):
+        row = self.db.one("SELECT label_id, label_name, release_id, looked_up_at FROM album_labels "
+                          "WHERE album_id = ?", (album_id,))
+        return dict(row) if row else None
+
+    def save(self, album_id, label_id, label_name, release_id, at):
+        self.db.execute("INSERT INTO album_labels VALUES (?, ?, ?, ?, ?) ON CONFLICT (album_id) DO UPDATE SET "
+                        "label_id = excluded.label_id, label_name = excluded.label_name, "
+                        "release_id = excluded.release_id, looked_up_at = excluded.looked_up_at",
+                        (album_id, label_id, label_name, release_id, int(at)))

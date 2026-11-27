@@ -6,6 +6,8 @@ index | news_articles_by_date | CREATE INDEX news_articles_by_date ON news_artic
 index | notifications_by_recipient | CREATE INDEX notifications_by_recipient ON notifications (recipient_id, id DESC)
 index | notifications_unread_by_recipient | CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
 index | playlist_ext_tracks_by_place | CREATE INDEX playlist_ext_tracks_by_place ON playlist_ext_tracks (playlist_id, after_songs, place, id)
+index | radar_release_sources_source | CREATE INDEX radar_release_sources_source ON radar_release_sources (source_kind, source_identity)
+index | radar_releases_date | CREATE INDEX radar_releases_date ON radar_releases (released_on)
 index | recommendation_comments_by_thread | CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id)
 index | recommendation_comments_unread | CREATE INDEX recommendation_comments_unread ON recommendation_comments (recipient_id) WHERE read_at IS NULL
 index | recommendations_active_target | CREATE UNIQUE INDEX recommendations_active_target
@@ -13,8 +15,16 @@ index | recommendations_active_target | CREATE UNIQUE INDEX recommendations_acti
 index | recommendations_by_recipient | CREATE INDEX recommendations_by_recipient ON recommendations (recipient_id, created_at DESC, id DESC)
 index | recommendations_by_sender | CREATE INDEX recommendations_by_sender ON recommendations (sender_id, id DESC)
 index | recommendations_unread_by_recipient | CREATE INDEX recommendations_unread_by_recipient ON recommendations (recipient_id) WHERE read_at IS NULL
+index | release_sources_identity | CREATE INDEX release_sources_identity ON release_sources (kind, identity)
 index | sessions_user | CREATE INDEX sessions_user ON sessions (user_id)
 index | upload_history_by_user | CREATE INDEX upload_history_by_user ON upload_history (user_id, id DESC)
+table | album_labels | CREATE TABLE album_labels (
+        album_id TEXT PRIMARY KEY,
+        label_id TEXT,
+        label_name TEXT,
+        release_id TEXT,
+        looked_up_at INTEGER NOT NULL
+    )
 table | albums_discussed | CREATE TABLE albums_discussed (
         album_id TEXT PRIMARY KEY,                       -- pour la liste « albums commentés récemment »
         title TEXT NOT NULL DEFAULT '',
@@ -167,6 +177,38 @@ table | playlist_ext_tracks | CREATE TABLE playlist_ext_tracks (
         added_at INTEGER NOT NULL, place INTEGER NOT NULL DEFAULT 0,
         UNIQUE (playlist_id, source, item_id)
     )
+table | radar_profiles | CREATE TABLE radar_profiles (
+        user_id INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+        tags TEXT NOT NULL DEFAULT '{}',
+        computed_at INTEGER,
+        refresh_requested_at INTEGER,
+        discoveries_off INTEGER NOT NULL DEFAULT 0
+    )
+table | radar_release_sources | CREATE TABLE radar_release_sources (
+        release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,
+        source_kind TEXT NOT NULL,
+        source_identity TEXT NOT NULL,
+        PRIMARY KEY (release_id, source_kind, source_identity)
+    )
+table | radar_releases | CREATE TABLE radar_releases (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        released_on TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        tags TEXT NOT NULL DEFAULT '[]'
+    )
+table | radar_runs | CREATE TABLE radar_runs (
+        name TEXT PRIMARY KEY,
+        finished_at INTEGER NOT NULL
+    )
+table | radar_sync | CREATE TABLE radar_sync (
+        source_kind TEXT NOT NULL,
+        source_identity TEXT NOT NULL,
+        synced_at INTEGER,
+        failed_at INTEGER,
+        PRIMARY KEY (source_kind, source_identity)
+    )
 table | recommendation_comments | CREATE TABLE "recommendation_comments" (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         recommendation_id INTEGER NOT NULL REFERENCES recommendations (id) ON DELETE CASCADE,
@@ -189,10 +231,17 @@ table | recommendations | CREATE TABLE "recommendations" (
         archived_at INTEGER,
         CHECK (sender_id != recipient_id)
     )
-table | release_subscriptions | CREATE TABLE "release_subscriptions" (
+table | release_sources | CREATE TABLE release_sources (
+        id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-        genre TEXT NOT NULL CHECK (length(genre) > 0),
-        PRIMARY KEY (user_id, genre)
+        kind TEXT NOT NULL,
+        identity TEXT NOT NULL CHECK (length(identity) > 0),
+        name TEXT NOT NULL,
+        origin TEXT NOT NULL,
+        hidden INTEGER NOT NULL DEFAULT 0,
+        via TEXT,
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, kind, identity)
     )
 table | sessions | CREATE TABLE sessions (
         token_hash TEXT PRIMARY KEY,                     -- sha256 du cookie : une fuite de la base n’ouvre aucune session

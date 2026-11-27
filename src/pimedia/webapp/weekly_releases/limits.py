@@ -1,0 +1,20 @@
+"""Limites et valeurs du radar des sorties : seule définition, envoyée au front quand il en a besoin."""
+from datetime import timedelta
+
+WINDOW_BEFORE = timedelta(days=14)        # sorties gardées en base avant aujourd'hui
+WINDOW_AFTER = timedelta(days=60)         # … et annoncées après aujourd'hui
+PURGE_AFTER = timedelta(days=30)          # une sortie plus ancienne que ça quitte la base
+FULL_SYNC_EVERY = 86400                   # synchronisation complète au plus tard toutes les 24 h
+NIGHT_HOUR = 4                            # heure locale de la synchronisation de nuit
+REFRESH_COOLDOWN = 600                    # « Actualiser » : une fois toutes les 10 min par compte
+STYLE_PAGES_PER_WEEK = 2                  # pages MusicBrainz lues par style et par semaine
+MB_PAGE = 100                             # taille de page maximale de la recherche MusicBrainz
+TREND_ARTISTS = 30                        # artistes des tendances par compte
+TREND_LABEL_ALBUMS = 30                   # albums dont on cherche le label, par compte et par nuit
+TREND_STYLES = 5                          # styles des tendances par compte
+SIMILAR_PER_ARTIST = 5                    # proches Last.fm gardés par artiste des tendances
+DISCOVERIES_PER_USER = 60                 # proches (découvertes) par compte
+ARTISTS_PER_QUERY = 20                    # artistes regroupés dans une requête MusicBrainz
+
+KINDS = ("style", "label", "artist", "similar")
+ORIGINS = ("manual", "trends", "discovery")
