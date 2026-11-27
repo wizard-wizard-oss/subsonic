@@ -292,6 +292,28 @@ const ListenLaterUI = (() => {
     } catch (failure) { App.toast(App.errorText(failure), "error"); }
   }
 
+  function songRecommendationRow(group, targets, main, route) {
+    const target = group.target;
+    const keep = button(target, () => !route.stale && page.render(main, route, false));
+    keep.classList.add("link-button");
+    return el("tr.song", {dataset: {id: target.sourceId},
+      ondblclick: event => playSongs(targets, event.currentTarget, target.sourceId)},
+      el("td.title", {}, App.can("stream") ? el("button.row-play", {
+        type: "button", title: t("play_song"), "aria-label": t("play_song"),
+        onclick: event => playSongs(targets, event.currentTarget, target.sourceId),
+        ondblclick: event => event.stopPropagation()}, App.icon("play", 14)) : null,
+        el("span", {text: target.title})),
+      el("td.song-artist.muted", {text: target.artist}),
+      el("td.recommendation-senders", {},
+        el("span.muted", {text: group.senders.map(sender => sender.username).join(", ")}),
+        group.recommendations.map(RecommendationComments.summary)),
+      el("td.more", {}, keep, recommendButton(target, true),
+        el("button.link-button.recommendation-remove", {
+          type: "button", title: t("dismiss"), "aria-label": t("dismiss"),
+          onclick: () => remove("/api/recommendation/remove", reference(target), main, route),
+          ondblclick: event => event.stopPropagation()}, App.icon("close", 16))));
+  }
+
   function songRecommendations(groups, main, route) {
     const targets = groups.map(group => group.target);
     const table = el("table.songs.recommendation-songs-table", {},
@@ -300,27 +322,7 @@ const ListenLaterUI = (() => {
         el("th.song-artist", {scope: "col", text: SongColumns.label("artist")}),
         el("th", {scope: "col", text: t("advisers")}),
         el("th.more", {scope: "col", "aria-label": SongColumns.label("actions")}))),
-      el("tbody", {}, groups.map(group => {
-        const target = group.target;
-        const keep = button(target, () => !route.stale && page.render(main, route, false));
-        keep.classList.add("link-button");
-        return el("tr.song", {dataset: {id: target.sourceId},
-          ondblclick: event => playSongs(targets, event.currentTarget, target.sourceId)},
-          el("td.title", {}, App.can("stream") ? el("button.row-play", {
-            type: "button", title: t("play_song"), "aria-label": t("play_song"),
-            onclick: event => playSongs(targets, event.currentTarget, target.sourceId),
-            ondblclick: event => event.stopPropagation()}, App.icon("play", 14)) : null,
-            el("span", {text: target.title})),
-          el("td.song-artist.muted", {text: target.artist}),
-          el("td.recommendation-senders", {},
-            el("span.muted", {text: group.senders.map(sender => sender.username).join(", ")}),
-            group.recommendations.map(RecommendationComments.summary)),
-          el("td.more", {}, keep, recommendButton(target, true),
-            el("button.link-button.recommendation-remove", {
-              type: "button", title: t("dismiss"), "aria-label": t("dismiss"),
-              onclick: () => remove("/api/recommendation/remove", reference(target), main, route),
-              ondblclick: event => event.stopPropagation()}, App.icon("close", 16))));
-      })));
+      el("tbody", {}, groups.map(group => songRecommendationRow(group, targets, main, route))));
     const highlight = () => table.querySelectorAll("tr.song").forEach(row => {
       row.classList.toggle("playing", !!App.player.current && row.dataset.id === App.player.current.id);
     });
@@ -378,6 +380,29 @@ const ListenLaterUI = (() => {
     return root;
   }
 
+  function drawBookmarks(box, own, main, route) {
+    App.append(App.clear(box), [own.length ? own.map(entry => card(entry.target, [
+      el("button.listen-later-remove", {type: "button", text: t("remove_bookmark"),
+        onclick: () => remove("/api/listen-later/remove", {id: entry.id}, main, route)}),
+      recommendButton(entry.target)
+    ])) : el("p.muted", {text: t("empty_bookmarks")})]);
+  }
+
+  function drawReceived(box, data, show, main, route) {
+    const received = data.recommendations.filter(group => show(group.target));
+    const songs = received.filter(group => group.target.kind === "song");
+    const others = received.filter(group => group.target.kind !== "song").map(group => card(group.target, [
+      button(group.target, () => !route.stale && page.render(main, route, false), true),
+      el("button.recommendation-remove", {type: "button", text: t("dismiss"),
+        onclick: () => remove("/api/recommendation/remove", reference(group.target), main, route)})
+    ], el("div.recommendation-senders", {}, el("p", {
+      text: App.t("listen_later.recommended_by", {names: group.senders.map(sender => sender.username).join(", ")})}),
+      group.recommendations.map(RecommendationComments.summary))));
+    App.append(App.clear(box), [received.length ? others : el("p.muted", {text: t("empty_recommendations")}),
+      songs.length ? songRecommendations(songs, main, route) : null,
+      data.recommendationsHaveMore ? el("p.muted", {text: t("older_recommendations_hidden")}) : null]);
+  }
+
   const page = {
     table: null,
     destroy() {
@@ -402,24 +427,8 @@ const ListenLaterUI = (() => {
         this.lists = {sent, archived};
         const draw = () => {
           this.destroy();
-          const own = data.bookmarks.filter(entry => show(entry.target));
-          const received = data.recommendations.filter(group => show(group.target));
-          const songs = received.filter(group => group.target.kind === "song");
-          App.append(App.clear(bookmarks), [own.length ? own.map(entry => card(entry.target, [
-            el("button.listen-later-remove", {type: "button", text: t("remove_bookmark"),
-              onclick: () => remove("/api/listen-later/remove", {id: entry.id}, main, route)}),
-            recommendButton(entry.target)
-          ])) : el("p.muted", {text: t("empty_bookmarks")})]);
-          App.append(App.clear(recommendations), [received.length ? received.filter(group => group.target.kind !== "song").map(group => card(group.target, [
-            button(group.target, () => !route.stale && page.render(main, route, false), true),
-            el("button.recommendation-remove", {type: "button", text: t("dismiss"),
-              onclick: () => remove("/api/recommendation/remove", reference(group.target), main, route)})
-          ], el("div.recommendation-senders", {}, el("p", {
-            text: App.t("listen_later.recommended_by", {names: group.senders.map(sender => sender.username).join(", ")})}),
-            group.recommendations.map(RecommendationComments.summary))))
-            : el("p.muted", {text: t("empty_recommendations")}),
-            songs.length ? songRecommendations(songs, main, route) : null,
-            data.recommendationsHaveMore ? el("p.muted", {text: t("older_recommendations_hidden")}) : null]);
+          drawBookmarks(bookmarks, data.bookmarks.filter(entry => show(entry.target)), main, route);
+          drawReceived(recommendations, data, show, main, route);
         };
         filter.onchange = () => { selectedKind = filter.value; draw(); sent.applyFilter(); archived.applyFilter(); };
         App.append(App.clear(main), [el("h1", {text: t("title")}), el("p.muted", {text: t("intro")}),
