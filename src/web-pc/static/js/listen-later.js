@@ -48,15 +48,36 @@ const ListenLaterUI = (() => {
     } catch (failure) { /* Keep the current indicator; reconnecting or revisiting retries. */ }
   }
 
+  async function updateDiscussion(id) {
+    // Une discussion modifiée ne met à jour que ses résumés : la page (filtre, archives, pagination) reste en place.
+    const route = App.music && App.music.route, owner = App.user && App.user.id;
+    await refreshNotifications();
+    if (!owner || document.hidden || !route || route.view !== "listenLater" || !page.lists) return;
+    try {
+      const data = await App.api.get("/api/recommendation/comments", {id});
+      if (route.stale || !App.user || App.user.id !== owner || !page.lists.sent.isConnected) return;
+      const summaries = document.querySelectorAll('.recommendation-comments-open[data-recommendation-id="' + id + '"]');
+      summaries.forEach(button => button.closest(".recommendation-comment-summary")
+        .replaceWith(RecommendationComments.summary(data.recommendation)));
+      if (summaries.length) return;
+      // Discussion absente de la page : un conseil envoyé s'ajoute à sa liste, un conseil reçu recharge la page.
+      if (data.recommendation.senderId === owner) page.lists.sent.prepend(data.recommendation);
+      else await page.render(App.music.main, route);
+    } catch (failure) { /* Les résumés restent tels quels ; la prochaine visite les recharge. */ }
+  }
+
   function start() {
     if (!listenersReady) {
-      const refresh = (data = {}) => {
-        invalidate(); RecommendationComments.refresh(); refreshNotifications(true, !!data.discussionId);
+      const refresh = (data = {}, external = false) => {
+        invalidate();
+        if (external) RecommendationComments.refresh();  // le fil ouvert se recharge lui-même après ses propres actions
+        if (data.discussionId) updateDiscussion(data.discussionId);
+        else refreshNotifications(true);
       };
-      App.live.on("recommendations", refresh);
+      App.live.on("recommendations", data => refresh(data, true));
       App.bus.on("recommendations", refresh);
-      App.live.on("status", status => { if (status.connected) refresh(); });
-      document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+      App.live.on("status", status => { if (status.connected) refresh({}, true); });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh({}, true); });
       listenersReady = true;
     }
     refreshNotifications();
@@ -327,6 +348,13 @@ const ListenLaterUI = (() => {
       empty.textContent = t(cards.length ? "empty_discussions_filter" : "empty_" + scope);
       empty.hidden = cards.some(({node}) => !node.hidden);
     };
+    const add = (recommendation, first) => {
+      const node = card(recommendation.target, [], el("div", {}, el("p.muted", {text: t("discussion_participants", {
+        sender: recommendation.sender, recipient: recommendation.recipient})}), RecommendationComments.summary(recommendation)));
+      cards.push({node, target: recommendation.target});
+      if (first) list.prepend(node); else list.appendChild(node);
+    };
+    root.prepend = recommendation => { add(recommendation, true); root.applyFilter(); };
     let before = null, loading = false;
     const current = () => !route.stale && root.isConnected && App.user && App.user.id === owner;
     const fetchPage = async () => {
@@ -336,12 +364,7 @@ const ListenLaterUI = (() => {
       try {
         const data = await App.api.get("/api/recommendation/discussions", Object.assign({scope}, before ? {before} : {}));
         if (!current()) return;
-        for (const recommendation of data.recommendations) {
-          const node = card(recommendation.target, [], el("div", {}, el("p.muted", {text: t("discussion_participants", {
-            sender: recommendation.sender, recipient: recommendation.recipient})}), RecommendationComments.summary(recommendation)));
-          cards.push({node, target: recommendation.target});
-          list.appendChild(node);
-        }
+        data.recommendations.forEach(recommendation => add(recommendation, false));
         root.applyFilter();
         if (data.recommendations.length) before = data.recommendations[data.recommendations.length - 1].id;
         more.hidden = !data.hasMore;
@@ -376,6 +399,7 @@ const ListenLaterUI = (() => {
         filter.value = selectedKind;
         const show = target => filter.value === "all" || target.kind === filter.value;
         const sent = discussionList("sent", route, show), archived = discussionList("archived", route, show);
+        this.lists = {sent, archived};
         const draw = () => {
           this.destroy();
           const own = data.bookmarks.filter(entry => show(entry.target));

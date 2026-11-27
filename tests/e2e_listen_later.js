@@ -348,6 +348,8 @@ function client() {
 
     await navigate("#/listen-later", () => $$(".bookmark-list .listen-later-card").length === 3);
     const sentBefore = (await (await bob.request("/api/recommendation/discussions?scope=sent")).json()).recommendations.length;
+    const archivedSection = $("details.listen-later-archived");
+    archivedSection.open = true;
     $$(".bookmark-list .listen-later-card").find(card => card.textContent.includes("Rare")).querySelector(".recommendation-open").click();
     await until(() => $(".recommendation-recipient"), "recommend from listening list");
     $(".recommendation-recipient").value = "alice";
@@ -366,6 +368,7 @@ function client() {
     $(".recommendation-comment-form").dispatchEvent(new window.Event("submit", {cancelable:true}));
     await until(() => $$(".recommendation-comment").length === 2 && !$(".recommendation-comment-form button").disabled, "preserved draft explicitly sent as a comment");
     $(".dialog-head button").click();
+    assert.ok(archivedSection.isConnected && archivedSection.open, "the page stays in place: archived section still open");
     assert.equal($$(".listen-later-sent .listen-later-card").length, sentBefore + 1);
     await alice.post("/api/recommendation/remove", {kind:"album", source:"discogs", sourceId:"104"});
     console.log("OK sending from a bookmark refreshes sent advice; an existing advice preserves the draft without duplication");
@@ -448,7 +451,8 @@ function client() {
     $(".dialog-head button").click();
     await until(() => $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]'), "sent thread updated");
     $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]').click();
-    await until(() => $$(".recommendation-comment").length === threadPage.pageSize && !$(".recommendation-comments-older").hidden, "bounded initial comment page");
+    await until(() => $$(".recommendation-comment").length === threadPage.pageSize && !$(".recommendation-comments-older").hidden
+      && !$(".recommendation-comments-older").disabled, "bounded initial comment page");
     $(".recommendation-comments-older").click();
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6 && $(".recommendation-comments-older").hidden, "older comments prepend without duplicates");
     assert.equal(new Set($$(".recommendation-comment").map(node => node.dataset.id)).size, threadPage.pageSize + 6);
