@@ -1,4 +1,4 @@
-/* Help : navigation par thèmes, guides pas à pas et aperçus des fonctions.
+/* Help : sommaire par thèmes, guides pas à pas et leçon du guide choisi (l'accueil est dans help-home.css).
    Le conteneur suit la place réellement disponible entre les panneaux de l’application. */
 .help-page {
   --help-radius: calc(var(--radius) + 6px);
@@ -13,44 +13,8 @@
 .help-page :is(button, a) { overflow-wrap: anywhere; }
 .help-page .icon { flex: none; }
 .help-page .kicker { color: var(--accent-strong); font-size: 12px; }
-.help-header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
-.help-heading { min-width: 0; }
-.help-heading h1 { margin-top: 8px; font-size: 32px; font-weight: 600; letter-spacing: -.025em; }
-.help-page .help-intro { margin-top: 10px; color: var(--text-soft); max-width: 65ch; line-height: 1.6; }
-.help-page .help-versions { display: inline-flex; align-items: center; margin: 0; color: var(--text-soft); font-size: 13px; }
-.help-featured, .help-guides { margin-top: 30px; }
-.help-page :is(.help-featured, .help-guides) > h2 { margin-bottom: 14px; font-size: 19px; font-weight: 600; }
-
-/* Les trois mises en avant ouvrent des guides, sans lancer de lecture ni envoyer de message. */
-.help-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.help-page .help-feature {
-  display: flex; flex-direction: column; align-items: stretch; gap: 14px; min-width: 0;
-  padding: 18px; text-align: left; background: var(--bg-raised); border: 1px solid var(--line);
-  border-radius: var(--help-radius); color: var(--text); transition: border-color .15s ease;
-}
-.help-page .help-feature:hover { border-color: var(--accent); }
-.help-feature[data-feature="chat"] { background: var(--help-tint); border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); }
-.help-feature-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-.help-feature-label > .icon { color: var(--accent-strong); }
-.help-feature-label > span { min-width: 0; }
-.help-feature h3 { font-size: 17px; font-weight: 600; line-height: 1.35; }
-.help-page .help-feature-text { color: var(--text-soft); font-size: 13px; line-height: 1.55; }
-.help-feature-preview {
-  display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 10px; min-width: 0;
-  padding: 10px 0; color: var(--text-soft); font-size: 12px;
-}
-.help-preview-message { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
-.help-preview-message p { min-width: 0; line-height: 1.5; }
-.help-preview-message strong { display: block; color: var(--text); font-weight: 600; }
-.help-preview-avatar {
-  display: inline-grid; place-items: center; flex: none; width: 25px; height: 25px; border-radius: 50%;
-  background: var(--help-tint); color: var(--accent-strong); font-size: 12px; font-weight: 600;
-}
-.help-preview-lyrics { text-align: center; }
-.help-preview-lyrics .is-sung { color: var(--accent-strong); font-weight: 600; font-size: 14px; }
-.help-preview-press p { line-height: 1.5; }
-.help-preview-press > p:first-child { color: var(--text); font-size: 14px; font-weight: 600; }
-.help-preview-source { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--accent-strong); font-size: 12px; }
+.help-guides { margin-top: 44px; }
+.help-page .help-plain-title { margin-bottom: 14px; font-size: 19px; font-weight: 600; }
 
 /* Le sommaire reste complet. Seul le panneau du guide choisi est remplacé. */
 .help-browser { display: grid; grid-template-columns: 215px minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -75,10 +39,11 @@
 .help-page .help-panel-heading p { margin-top: 6px; color: var(--text-soft); font-size: 13px; line-height: 1.6; }
 .help-guide-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 0 16px 18px; }
 .help-page .help-guide-button {
-  display: flex; align-items: flex-start; gap: 8px; min-width: 0; width: 100%; padding: 10px 8px;
+  display: flex; align-items: flex-start; justify-content: flex-start; gap: 8px; min-width: 0; width: 100%; padding: 10px 8px;
   text-align: left; color: var(--text-soft); background: transparent; border: 1px solid transparent;
   border-radius: 6px; font-size: 13px; line-height: 1.45;
 }
+.help-guide-button > span { min-width: 0; text-align: left; }
 .help-guide-button > .icon { margin-top: 2px; width: 14px; height: 14px; }
 .help-page .help-guide-button:hover { color: var(--text); background: var(--bg-hover); border-color: transparent; }
 .help-page .help-guide-button[aria-pressed="true"] { color: var(--accent-strong); background: var(--help-tint); }
@@ -109,21 +74,15 @@
   .help-illustration { max-width: 600px; }
 }
 @container help-content (max-width: 820px) {
-  .help-header { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .help-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .help-feature[data-feature="chat"] { grid-column: 1 / -1; }
   .help-browser { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .help-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
 }
 @container help-content (max-width: 560px) {
-  .help-page .help-feature { padding: 15px; }
   .help-panel-heading, .help-lesson { padding: 18px; }
   .help-guide-list { grid-template-columns: minmax(0, 1fr); padding: 0 12px 16px; }
   .help-lesson-body { gap: 18px; }
-  .help-feature-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @container help-content (max-width: 420px) {
-  .help-heading h1 { font-size: 28px; }
   .help-themes { grid-template-columns: minmax(0, 1fr); }
   .help-theme-title { font-size: 14px; }
   .help-panel-heading, .help-lesson { padding: 16px; }
@@ -136,19 +95,15 @@
 @media (pointer: coarse) {
   .help-page :is(.help-theme, .help-guide-button, .help-action, .whatsnew-link, .help-versions) { min-height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .help-page .help-feature { transition: none; }
-}
 @media print {
   .help-page {
     --text: CanvasText; --text-soft: CanvasText; --accent: CanvasText; --accent-strong: CanvasText;
     --accent-text: Canvas; --bg: Canvas; --bg-raised: Canvas; --bg-sunken: Canvas; --bg-hover: Canvas; --line: GrayText;
     max-width: none; container-type: normal; color: var(--text); background: var(--bg);
   }
-  .help-header, .help-feature-grid, .help-browser, .help-lesson-body { display: block; }
-  .help-feature, .help-panel, .help-lesson, .help-note, .help-illustration { break-inside: avoid; }
-  .help-feature-grid > *, .help-browser > *, .help-lesson-body > * { margin-bottom: 16px; }
-  .help-feature { box-shadow: none; }
+  .help-browser, .help-lesson-body { display: block; }
+  .help-panel, .help-lesson, .help-note, .help-illustration { break-inside: avoid; }
+  .help-browser > *, .help-lesson-body > * { margin-bottom: 16px; }
   .help-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px; }
   .help-illustration { max-width: 450px; }
 }

@@ -6,9 +6,24 @@ Page **Help** (`#/whatsnew`, menu du haut et menu mobile). Le nom court demandé
 reste celui du menu et du titre. La refonte **1.16**, publiée le 26/11/2026, remplace les six parties
 et 34 cartes par trois mises en avant puis sept thèmes et 40 guides.
 
-Les mises en avant **salon**, **paroles synchronisées** et **presse musicale** ouvrent directement le guide
-correspondant. Le lien **Les dernières nouveautés** mène à `#/versions` ; il conserve l’historique et
-les indicateurs de versions existants. Une mise en avant n’est pas une annonce datée de publication.
+**1.22 (27/11/2026) : la page devient un accueil « bienvenue dans le sub »**, en tutoiement, dans l’ordre :
+1. **Hero** : titre, intro, bouton « Le parcours en 2 minutes », lien **Les dernières nouveautés** (`#/versions`),
+   et **recherche** dans les guides (titre, thème, étapes, précision ; sans accent ni casse, 8 résultats au plus).
+2. **Quatre piliers** titrés par une chanson : *Voyage, voyage* (musique d’ailleurs → guide `elsewhere/g1`),
+   *Nouvelle Vague* (rester au courant → `press/g5`), *One More Time* (découvrir → `explore/g4`),
+   *Wish You Were Here* (échanger → `social/g1`). Chacun a sa couleur et sa **pochette en noir et blanc**
+   (`static/help/`, 600 px, filtre CSS `grayscale`) : Unknown Pleasures, Discovery, Abbey Road ; « d’ailleurs »
+   n’a pas encore de pochette (fond uni avec icône). Le hero montre la photo de *Welcome to the Sky Valley*
+   (Kyuss, 447 px) et le bandeau « Help! » la pochette de *Licensed to Ill*. Pochettes ajoutées à la main :
+   à remplacer par d’autres fichiers du même nom si besoin.
+3. **Start Me Up** : parcours en 2 minutes (lancer un album, cœur/note, salon, marque-page), avec liens ou boutons.
+4. **Come Together** : « C’est votre espace », six gestes (flux RSS, style suivi, conseil privé, playlist
+   communautaire, import, envoi), chacun ouvrant son guide.
+5. Les **7 thèmes et 40 guides** (sommaire inchangé, liste des guides alignée à gauche).
+6. **Help!** : dépannage en cinq questions repliables (YouTube, paroles, droits, mot de passe, import).
+
+Les titres de chansons sont des clins d’œil : la phrase dessous dit toujours l’essentiel. Le nom « Help »
+reste celui du menu. Podcasts et lecteur hi-fi ne sont **pas** décrits : ils n’existent que sur le Pi.
 
 Chaque thème propose ses guides. Un seul thème et un seul guide sont sélectionnés à la fois. Le guide
 contient un titre, trois étapes, une précision sur son fonctionnement et, lorsque cela aide le geste,
@@ -56,6 +71,10 @@ Les captures sont chargées à la demande ; aucun appel externe ni service de d�
 
 - `src/web-pc/static/js/whatsnew.js` : catalogue des thèmes, métadonnées de destinations/captures,
   sélection locale, rendu DOM et délégation aux commandes existantes. Aucune concaténation HTML.
+- `help-home.js` : hero, piliers, parcours, espace et dépannage (données littérales en tête de fichier).
+- `help-search.js` : recherche locale dans les guides (aucune requête réseau).
+- `css/help-home.css` : style de l’accueil (jaune du sous-marin (le favicon sert d’illustration, il flotte sauf
+  `prefers-reduced-motion`), couleurs par pilier, ombres décalées, rangées adaptées par requêtes de conteneur) ; `css/help.css` : sommaire et leçon.
 - `src/i18n/fr.yaml`, section `webapp.whatsnew` : tous les textes, titres, trois étapes et précision
   de chaque guide. Le catalogue des guides vient des clés traduites ; pas de second décompte dans le rendu.
 - `src/web-pc/static/css/help.css` : styles dédiés, variables et icônes existantes ; feuille chargée dans

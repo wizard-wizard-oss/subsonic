@@ -6,6 +6,15 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.22"
+  date: 2026-11-27
+  title: "Help : bienvenue dans le sub"
+  changes:
+    - "La page Help devient un accueil : l'idée du sub en quelques lignes, puis quatre grandes cartes (musique d'ailleurs, rester au courant, découvrir, échanger entre potes) avec leur capture."
+    - "Un parcours en 2 minutes pour démarrer, et un bloc « C'est votre espace » qui montre les gestes qui font vivre le sub : ajouter un journal, suivre un style, conseiller un disque, lancer une playlist communautaire."
+    - "Une recherche dans les guides et un dépannage « Help! » qui répond aux cinq questions les plus courantes."
+    - "Plus colorée, avec le sous-marin jaune du sub en vedette, et mieux adaptée au téléphone ; la liste des guides est alignée à gauche."
+
 - version: "1.21.1"
   date: 2026-11-27
   title: "Corrections dans À écouter"

@@ -13,11 +13,6 @@ Views.whatsnew = (() => {
     {id: "press", icon: "list", first: "g2"},
     {id: "settings", icon: "settings", first: "g1"},
   ];
-  const FEATURES = [
-    {id: "chat", label: "nav.chat", theme: "social", guide: "g1", icon: "chat"},
-    {id: "lyrics", label: "lyrics.title", theme: "listen", guide: "g4", icon: "mic"},
-    {id: "press", label: "nav.news", theme: "press", guide: "g2", icon: "list"},
-  ];
   // Seules les destinations diffèrent des textes : les fiches musicales s'ouvrent après choix d'un album.
   const DESTINATIONS = {
     listen: {g1: "#/albums/newest", g2: "queue", g3: "queue", g4: "lyrics", g5: "shortcuts"},
@@ -58,25 +53,6 @@ Views.whatsnew = (() => {
     else if (action === "shortcuts") Dialogs.shortcuts();
     else if (action === "settings") Dialogs.settings();
     else if (action === "search") document.getElementById("search").focus();
-  }
-
-  function preview(feature) {
-    const key = "whatsnew.preview.";
-    const box = el("div.help-feature-preview.help-preview-" + feature, {"aria-hidden": "true"});
-    if (feature === "chat") {
-      for (const [name, icon] of [["chat_question", "chat"], ["chat_answer", "disc"]]) {
-        box.appendChild(el("div.help-preview-message", {},
-          el("span.help-preview-avatar", {}, App.icon(icon, 16)), el("p", {text: t(key + name)})));
-      }
-    } else if (feature === "lyrics") {
-      for (const name of ["lyrics_previous", "lyrics_current", "lyrics_next"]) {
-        box.appendChild(el("p" + (name === "lyrics_current" ? ".is-sung" : ""), {text: t(key + name)}));
-      }
-    } else {
-      App.append(box, [el("p.help-preview-source", {text: t(key + "press_source")}),
-        el("p", {text: t(key + "press_title")}), el("p.help-preview-path", {text: t(key + "press_path")})]);
-    }
-    return box;
   }
 
   function actions(theme, guide) {
@@ -165,27 +141,26 @@ Views.whatsnew = (() => {
       return button;
     }
 
-    featureCard(feature) {
-      return el("button.help-feature", {type: "button", dataset: {feature: feature.id},
-        "aria-controls": "help-panel", onclick: () => {
-          this.selectTheme(THEMES.find(theme => theme.id === feature.theme), feature.guide);
-          reveal(this.lesson.querySelector("h4"));
-        }}, el("span.help-feature-label", {}, App.icon(feature.icon, 18), el("span", {text: t(feature.label)})),
-        preview(feature.id), el("h3", {text: t("whatsnew.featured." + feature.id + ".title")}),
-        el("p.help-feature-text", {text: t("whatsnew.featured." + feature.id + ".text")}));
+    /** Ouvre un guide depuis l'accueil (pilier, espace, recherche) et l'amène à l'écran. */
+    pick(themeId, guide) {
+      this.selectTheme(THEMES.find(theme => theme.id === themeId), guide);
+      reveal(this.lesson.querySelector("h4"));
+    }
+
+    searchEntries() {
+      return THEMES.flatMap(theme => guides(theme.id).map(guide =>
+        HelpSearch.entry(theme.id, guide, guideKey(theme.id, guide), t(themeKey(theme.id) + ".title"))));
     }
 
     show(route) {
       App.append(this.themes, THEMES.map(theme => this.themeButton(theme)));
-      const page = el("div.help-page", {}, el("header.help-header", {}, el("div.help-heading", {},
-          el("p.kicker", {text: t("whatsnew.eyebrow")}), el("h1", {text: t("whatsnew.title")}),
-          el("p.help-intro", {text: t("whatsnew.intro")})),
-        el("a.whatsnew-versions.help-versions", {href: "#/versions", text: t("whatsnew.versions") + " →"})),
-        el("section.help-featured", {"aria-labelledby": "help-featured-title"},
-          el("h2", {id: "help-featured-title", text: t("whatsnew.featured_title")}),
-          el("div.help-feature-grid", {}, FEATURES.map(feature => this.featureCard(feature)))),
+      const deps = {open: (theme, guide) => this.pick(theme, guide), run: openAction, reveal,
+        search: HelpSearch.create(this.searchEntries(), (theme, guide) => this.pick(theme, guide))};
+      const page = el("div.help-page", {}, HelpHome.top(deps),
         el("section.help-guides", {"aria-labelledby": "help-guides-title"},
-          el("h2", {id: "help-guides-title", text: t("whatsnew.themes_title")}), el("div.help-browser", {}, this.themes, this.panel)),
+          el("h2.help-plain-title", {id: "help-guides-title", text: t("whatsnew.themes_title")}),
+          el("div.help-browser", {}, this.themes, this.panel)),
+        HelpHome.bottom(),
         el("p.help-footer", {text: t("whatsnew.footer")}));
       App.clear(this.main).appendChild(page);
       const [themeId, guideId] = (route.id || "").split("/");
