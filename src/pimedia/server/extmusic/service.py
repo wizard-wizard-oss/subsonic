@@ -64,6 +64,17 @@ class ExtMusicService:
             self.cache.put(key, cached)
         return {"items": self._filtered(cached, allow_versions)}
 
+    def album(self, artist, title):
+        """Morceaux de l'album cherché sur YouTube Music (une sortie récente, absente de la bibliothèque)."""
+        if not self.enabled("youtube"):
+            raise DirectoryError("Source désactivée")
+        key = "album:" + normalize(artist) + "\n" + normalize(title)
+        cached = self.cache.get(key)
+        if cached is None:
+            cached = self.sources["youtube"].album(artist, title)
+            self.cache.put(key, cached)
+        return {"items": self._filtered(cached, allow_versions=True)}     # un album garde ses versions (live, remix)
+
     def _filtered(self, items, allow_versions=False):
         """Filtres appliqués après le cache : un changement de réglage ou une vidéo refusée comptent tout de suite."""
         items = [i for i in items if not (i.get("youtubeId") and i["youtubeId"] in self.unplayable)]

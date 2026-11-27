@@ -22,7 +22,7 @@ win.getWeekly = async (url, params) => {
 win.writeWeekly = async (url, body) => writes.push({url, body});
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 (async () => {
-  win.eval(src("core") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + `
+  win.eval(src("core") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-listen") + `
     App.api.get=window.getWeekly; App.api.post=window.writeWeekly;
     window.weekly=WeeklyReleaseView; window.news=News;
   `);

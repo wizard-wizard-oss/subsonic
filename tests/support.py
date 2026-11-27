@@ -67,8 +67,8 @@ class FakeYouTubeMusic:
     """Remplace ytmusicapi : results[filtre] = résultats bruts (« songs », « videos ») ; sans results, en panne
     (la source se rabat alors sur l'API officielle, comme avant). Recherches notées."""
 
-    def __init__(self, results=None):
-        self.results, self.terms = results, []
+    def __init__(self, results=None, albums=None):
+        self.results, self.terms, self.albums = results, [], albums or {}
 
     def __call__(self, region):                 # client_factory de YouTubeMusicSearch
         self.region = region
@@ -79,6 +79,12 @@ class FakeYouTubeMusic:
         if self.results is None:
             raise DirectoryError("YouTube Music en panne")
         return self.results.get(filter, [])[:limit]
+
+    def get_album(self, browse_id):
+        self.terms.append((browse_id, "get_album"))
+        if self.results is None:
+            raise DirectoryError("YouTube Music en panne")
+        return self.albums[browse_id]
 
 
 def youtube_music_down():

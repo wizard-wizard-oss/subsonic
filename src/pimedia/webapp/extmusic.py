@@ -30,6 +30,8 @@ VIDEO_ID = re.compile(r"^[\w-]{6,20}$")
 NOT_THE_VIDEO = {"2", "5", "153", "youtube-unreachable"}
 
 
+MAX_TERM = 200                          # longueur maximale d'une recherche (texte, artiste, titre)
+
 class ExtMusicError(ValueError):
     """Demande impossible (clé de texte i18n)."""
 
@@ -108,7 +110,7 @@ class ExternalMusic:
         return {name: self.service.enabled(name) for name in ("jamendo", "youtube")}
 
     def search(self, user, source, term, allow_versions=False):
-        term = (term or "").strip()[:200]
+        term = (term or "").strip()[:MAX_TERM]
         if source not in ("jamendo", "youtube") or not self.service.enabled(source):
             raise ExtMusicError("ext.disabled")
         if source == "youtube" and len(term) >= 2 and self.service.cache.get("youtube:" + term.lower()) is None:
@@ -118,6 +120,18 @@ class ExternalMusic:
         except DirectoryError:
             raise ExtMusicError("ext.unreachable")
         return self._played_first(items) if source == "youtube" else items
+
+    def album(self, user, artist, title):
+        """Écouter une sortie absente de la bibliothèque : les morceaux de l'album lui-même sur YouTube Music."""
+        artist, title = (value.strip() if isinstance(value, str) else "" for value in (artist, title))
+        if not 1 <= len(artist) <= MAX_TERM or not 1 <= len(title) <= MAX_TERM:
+            raise ValueError("album")
+        if not self.service.enabled("youtube"):
+            raise ExtMusicError("ext.disabled")
+        try:
+            return self.service.album(artist, title)["items"]
+        except DirectoryError:
+            raise ExtMusicError("ext.unreachable")
 
     def known(self, term):
         """Vidéos déjà trouvées sur le site (par n'importe qui) qui répondent à ces mots : sans quota."""

@@ -58,58 +58,67 @@ Dans l’édition web, l’onglet `#/news/releases` ouvre le **radar** du compte
 sortie tombe dans la semaine (lundi → dimanche, date locale du lecteur), pour **tout ce que la personne suit**.
 Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan : `docs/superpowers/plans/2026-11-27-radar-sorties.md`.
 
-### Ce que ça fait
+### Ce que ça fait (version 2, 1.24)
 - **Sources** d’un compte (table `release_sources`) : styles (nom exact du catalogue MusicBrainz), labels et artistes
-  (MBID), proches (« découvertes », MBID). Origine : `manual` (ajoutée par la personne), `trends` (d’après ses
-  favoris), `discovery` (proche Last.fm, avec « proche de X »). Une source retirée est **masquée**, pas effacée :
-  le calcul suivant ne la remet pas ; l’ajouter à la main la réactive.
-- **Tendances**, recalculées à chaque synchronisation, à partir de signaux **propres au compte** seulement :
-  favoris Subsonic (`getStarred2` : artistes, albums, morceaux) et marque-pages « À écouter ». La liste « plus
-  écoutés » de Subsonic est commune au serveur : elle n’est pas utilisée. Artistes (30 au plus, MBID de Subsonic
-  ou recherche MusicBrainz au nom exact), labels des albums favoris (lien album ↔ label gardé dans `album_labels`,
-  « rien trouvé » compris : un album n’est cherché qu’une fois), styles dominants du profil de tags (5 au plus).
-- **Découvertes** : `artist.getSimilar` de Last.fm (pas `getArtistInfo2` de Subsonic, limité à la bibliothèque),
-  proches absents de la bibliothèque et des artistes déjà suivis, 5 par artiste, 60 par compte. Interrupteur dans
-  « ⚙ Mes sources » ; sans clé Last.fm, ni pastille ni interrupteur.
-- **Tri selon les goûts** : profil de tags pondérés par compte (`radar_profiles`) ; une carte est classée par
-  cosinus entre ses tags MusicBrainz et ce profil, puis par date.
-- **Page** : pastilles Tout · chaque style · Labels · Mes artistes · ✨ Découvertes, avec leur nombre ; chaque carte
-  dit pourquoi elle est là ; « Ouvrir l’album » quand l’album est déjà dans la bibliothèque (rapprochement fait par
-  le serveur, gardé 5 min). Changer de pastille ou de semaine remplace la grille seulement. 48 cartes par page.
-- **Hors période** (plus de 14 jours en arrière, plus de 60 jours en avant) : la page le dit et propose la
-  consultation « un style à la fois » (l’ancienne vue, requête MusicBrainz à la demande, cache 1 h).
+  (MBID). Origine : `manual` (ajoutée par la personne) ou `trends` (d’après ses favoris). Une source retirée est
+  **masquée**, pas effacée : le calcul suivant ne la remet pas ; l’ajouter à la main la réactive.
+- **Tendances**, recalculées à chaque synchronisation, d’après les **favoris seulement** (`getStarred2` : artistes,
+  albums, morceaux) :
+  - artistes (30 au plus ; MBID de Subsonic, sinon recherche MusicBrainz au nom exact, gardée dans
+    `artist_resolutions` ; un nom introuvable ou porté par plusieurs artistes est recherché de nouveau après 30 jours) ;
+  - labels des albums favoris (lien album ↔ label gardé dans `album_labels`, « rien trouvé » compris) ;
+  - **styles dominants** : les 3 premiers tags du catalogue de chaque artiste, lus par lots de 20 artistes en une
+    requête ; un style porté par moins de 3 artistes est écarté ; les 5 premiers sont proposés.
+  - **Sans favori** : styles génériques calculés de la même façon sur les albums les plus écoutés du sub
+    (`getAlbumList2 type=frequent`, liste commune au serveur) ; la page le dit (`radar_profiles.basis = 'site'`).
+- **Page** : pastilles Tout · chaque style · Labels · Mes artistes, avec leur nombre ; chaque carte dit pourquoi elle est
+  là ; cartes par date puis titre ; « Ouvrir l’album » quand l’album est déjà dans la bibliothèque (rapprochement
+  serveur, gardé 5 min). 48 cartes par page. Pochette Cover Art Archive : miniature 250 px, sinon l’image d’origine
+  (archive.org ne fabrique pas tout de suite les miniatures des sorties récentes), sinon pochette vide.
+- **« Écouter l’album »** (sortie absente de la bibliothèque) : `#/listen/<artiste>/<titre>` cherche l’album lui-même
+  dans YouTube Music (même recherche sans clé que le reste du site, `YouTubeMusicSearch.album` : titre et artiste
+  égaux après normalisation, puis ses morceaux lisibles ici), route `GET /api/ext/album?artist=&title=` ; introuvable :
+  lien vers la recherche habituelle (`web-pc/static/js/weekly-listen.js`).
+- **« Autour de… »** : on choisit un de ses artistes ; Last.fm donne ses proches (une requête) ; on cherche leurs
+  sorties parmi celles de ListenBrainz déjà en base (MBID quand Last.fm le donne, sinon nom normalisé).
+- **Hors période** (plus de 14 jours en arrière, plus de 60 jours en avant) : consultation « un style à la fois ».
 
 ### Synchronisation de fond
 - Fil lancé par `app.run()` (`ReleaseSync.run`) : au démarrage si la dernière synchronisation complète date de plus
-  de 24 h, puis chaque nuit à 4 h. **La mise en production lance donc la première synchronisation.**
-- Elle recalcule les tendances de chaque compte, puis interroge l’**union dédoublonnée** des sources de tous les
-  comptes, des plus anciennes aux plus récentes : un style = une requête par semaine de la fenêtre (2 pages de 100
-  au plus) ; un label = ses éditions de la fenêtre, puis une requête groupée `rgid:` pour ne garder que les
-  nouveautés (pas les rééditions) ; les artistes et proches = requêtes groupées par 20 (`arid:`).
-- Une panne garde les sorties déjà en base, note l’échec (`radar_sync.failed_at`) et sa raison dans le journal du
-  conteneur ; la source est réessayée 30 min plus tard (vérification toutes les 15 min), sans attendre la nuit.
-  Les sorties plus vieilles que 30 jours sont purgées.
-- Ajouter une source la synchronise tout de suite ; « ↻ » relance tendances et sources du compte, une fois toutes
-  les 10 min (refus : 429 `weekly.refresh_too_soon`).
-- Toutes les valeurs (fenêtre, plafonds, délais) sont dans `webapp/weekly_releases/limits.py`.
+  de 24 h, puis chaque nuit à 4 h ; vérification toutes les 15 min.
+- Ordre : sources déjà suivies (styles, labels), puis **ListenBrainz** (`explore/fresh-releases`, deux requêtes pour
+  tout le site : 14 jours avant, 60 après, albums et EP, gardés avec leurs artistes crédités dans
+  `radar_release_artists`), puis tendances de chaque compte, puis sources nouvelles. Un style = une requête
+  MusicBrainz par semaine de la fenêtre ; un label = ses éditions de la fenêtre puis une requête groupée `rgid:` pour
+  ne garder que les nouveautés.
+- **Pas de cache de 7 jours pour le radar** : ListenBrainz est lu en direct ; ce que le radar garde est dans ses tables.
+- Une panne garde les sorties déjà en base, note l’échec (`radar_sync.failed_at`) et sa raison dans le journal ; la
+  source est réessayée 30 min plus tard. Une panne pendant les tendances n’en retire aucune. Sorties de plus de 30 jours
+  purgées.
+- Ajouter une source la synchronise tout de suite ; « ↻ » relance ListenBrainz, les tendances et les sources du
+  compte, une fois toutes les 10 min (refus : 429 `weekly.refresh_too_soon`). Une seule file de travail, sans doublon.
+- Valeurs (fenêtre, seuils, délais) : `webapp/weekly_releases/limits.py`.
 
 ### Où
-Paquet `webapp/weekly_releases/` : `radar.py` (service de la page et des sources), `trends.py`, `taste.py`,
-`sync.py`, `entities.py`, `limits.py`, `assembly.py` (câblage) ; `service.py` (consultation par style).
-Dépôts : `storage/release_radar.py`, `storage/weekly_releases.py`. Migration 29. Requêtes : classe `MusicBrainz`
-(`groups_by_artists`, `label_groups`, `release_label`, `search_labels`, `artist_tags`) et `LastFm.similar_artists`.
-Page : `web-pc/static/js/weekly-radar.js`, `weekly-sources.js`, `weekly-releases.js` (vue par style).
-Routes : `GET /api/news/releases/radar?monday=&filter=&offset=`, `GET …/sources`, `POST …/sources/add
-{kind, identity, name}`, `POST …/sources/hide {id}`, `POST …/discoveries {enabled}`, `GET …/search?kind=label|artist&q=`,
-`POST …/refresh` ; et toujours `GET /api/news/releases`, `GET …/genres`, `POST …/follow`.
+Paquet `webapp/weekly_releases/` : `radar.py` (page, « Autour de… », sources), `trends.py`, `sync.py`, `entities.py`,
+`limits.py`, `assembly.py` (câblage) ; `service.py` (consultation par style). Dépôts : `storage/release_radar.py`,
+`storage/weekly_releases.py`. Migrations 29 et 30. Requêtes : `MusicBrainz` (`label_groups`, `release_label`,
+`search_labels`, `artists_tags`, `weekly_groups`), `webapp/providers/listenbrainz.py`, `LastFm.similar_artists`.
+Page : `web-pc/static/js/weekly-radar.js`, `weekly-sources.js`, `weekly-releases.js` (vue par style, pochettes).
+Routes : `GET /api/news/releases/radar?monday=&filter=&offset=`, `GET …/around?name=&mbid=&monday=&offset=`,
+`GET …/sources`, `POST …/sources/add {kind, identity, name}`, `POST …/sources/hide {id}`,
+`GET …/search?kind=label|artist&q=`, `POST …/refresh` ; et toujours `GET /api/news/releases`, `GET …/genres`,
+`POST …/follow`.
 
 ### Tests
 `tests/test_release_radar_storage.py` (dont migration 29 depuis une base remplie), `test_musicbrainz_radar.py`,
-`test_lastfm_similar.py`, `test_release_trends.py`, `test_release_sync.py`, `test_release_radar_service.py`,
+`test_lastfm_similar.py`, `test_listenbrainz.py`, `test_release_trends.py`, `test_release_sync.py`, `test_release_radar_service.py`,
 `test_weekly_releases.py` (routes, session, CSRF, 429) ; parcours jsdom `e2e_weekly_radar.js` et
 `e2e_weekly_releases.js`.
 
 ### N’existe pas / pas vérifié
 - Pas de partie communauté (« ce que suivent les autres ») ni de projets parallèles via les relations MusicBrainz.
+- « Autour de… » depuis la page d’un artiste : pas encore (seulement depuis le radar).
+- ListenBrainz date les éditions : une réédition d’un artiste suivi peut apparaître dans « Mes artistes ».
 - Pas d’historique d’écoute par compte (le site ne garde pas les écoutes).
 - **Pas vérifié** sur le vrai serveur : durée de la première synchronisation, part des proches Last.fm avec MBID.

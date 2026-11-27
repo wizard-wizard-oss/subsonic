@@ -146,6 +146,21 @@ const WeeklyReleaseView = (() => {
     }
   }
 
+  /* Pochette Cover Art Archive d'un groupe de sorties. Pour une sortie toute récente, archive.org n'a souvent pas encore
+     fabriqué les miniatures : on charge alors l'image d'origine, et la pochette vide seulement si elle manque aussi. */
+  function releaseCover(id, title) {
+    const original = "https://coverartarchive.org/release-group/" + id + "/front";
+    const image = el("img.cover", {alt: title, loading: "lazy", width: 180, height: 180, src: original + "-250"});
+    let triedOriginal = false;
+    image.addEventListener("error", () => {
+      if (!triedOriginal) { triedOriginal = true; image.src = original; return; }
+      image.removeAttribute("src");
+      image.alt = "";
+      image.classList.add("empty");
+    });
+    return image;
+  }
+
   function render(main, route) {
     return WeeklyRadar.render(main, route);
   }
@@ -155,10 +170,10 @@ const WeeklyReleaseView = (() => {
   }
 
   function card(album, grid) {
-    const image = App.cover("https://coverartarchive.org/release-group/" + album.id + "/front-250", 180, album.title);
+    const image = releaseCover(album.id, album.title);
     const cover = el("a", {href: "https://musicbrainz.org/release-group/" + album.id, target: "_blank", rel: "noopener"}, image);
     const actions = el("div.weekly-actions");
-    const search = el("a.chip", {href: "#/search/" + encodeURIComponent(album.artist + " " + album.title), text: t("listen")});
+    const search = el("a.chip", {href: Views.listen.link(album.artist, album.title), text: t("listen")});
     const date = new Date(album.date + "T00:00:00Z");
     const now = new Date();
     const today = iso(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));
@@ -187,5 +202,5 @@ const WeeklyReleaseView = (() => {
     }
   }
 
-  return {render, browse, mondayFor, shift, display, iso};
+  return {render, browse, mondayFor, shift, display, iso, releaseCover};
 })();

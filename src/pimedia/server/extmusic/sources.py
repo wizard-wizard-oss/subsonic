@@ -153,6 +153,13 @@ class YouTubeSource:
             tracks = self._official_search(term)
         return self._keep_playable(tracks)
 
+    def album(self, artist, title):
+        """Morceaux lisibles de l'album cherché, par YouTube Music seulement (l'API officielle ne cherche pas
+        d'albums) ; [] sans YouTube Music ou si l'album est introuvable."""
+        if self.music is None:
+            return []
+        return self._keep_playable(self.music.album(artist, title, self.region))
+
     def _official_search(self, term):
         if self.official_guard:
             self.official_guard()

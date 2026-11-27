@@ -31,6 +31,7 @@ GET /api/explore/artists read right=None limit=None ExplorationController.artist
 GET /api/explore/connections read right=None limit=None ExplorationController.connections
 GET /api/explore/local read right=None limit=None ExplorationController.local
 GET /api/explore/profile read right=None limit=None ExplorationController.profile
+GET /api/ext/album read right=None limit=None ExtMusicController.album
 GET /api/ext/favorites read right=None limit=None ExtMusicController.favorite_list
 GET /api/ext/known read right=None limit=None ExtMusicController.known
 GET /api/ext/search read right=None limit=None ExtMusicController.search

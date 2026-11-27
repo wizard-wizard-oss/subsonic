@@ -6,11 +6,17 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
-- version: "1.23.1"
+- version: "1.24"
   date: 2026-11-27
-  title: "Sorties de la semaine : nouvel essai plus rapide"
+  title: "Sorties de la semaine : vos styles et « Autour de… »"
   changes:
-    - "Quand MusicBrainz ne répond pas pour un style, un label ou un artiste, sa recherche est relancée une demi-heure plus tard au lieu d'attendre la nuit."
+    - "Le radar part de vos favoris (artistes, albums, morceaux) : il propose les 4 ou 5 styles qui reviennent le plus chez vos artistes, que vous pouvez décocher ou compléter."
+    - "Sans favori, le radar propose les styles les plus présents dans le sub, et le dit."
+    - "Nouveau : « Autour de… ». Choisissez un de vos artistes pour voir les sorties de ses artistes proches (Last.fm). La pastille Découvertes disparaît."
+    - "Les sorties de vos artistes viennent de ListenBrainz : plus complètes, et les cartes sont rangées par date."
+    - "« Écouter l'album » sur une sortie absente du sub ouvre l'album lui-même trouvé sur YouTube Music, au lieu d'une recherche qui ramenait tout ce qui ressemblait aux mots."
+    - "Les pochettes des sorties toutes récentes s'affichent même quand Cover Art Archive n'a pas encore préparé leur miniature."
+    - "Quand MusicBrainz ne répond pas pour un style ou un label, la recherche est relancée une demi-heure plus tard au lieu d'attendre la nuit."
 
 - version: "1.23"
   date: 2026-11-27

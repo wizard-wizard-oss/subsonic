@@ -1,13 +1,12 @@
 "use strict";
 
-/* Panneau « Mes sources » du radar : ce que la personne suit (styles, labels, artistes, découvertes), d'où ça vient,
-   retrait d'une source, ajout par le catalogue des styles ou par une recherche MusicBrainz, interrupteur Découvertes.
+/* Panneau « Mes sources » du radar : ce que la personne suit (styles, labels, artistes), d'où ça vient,
+   retrait d'une source, ajout par le catalogue des styles ou par une recherche MusicBrainz.
    onChange recharge la grille de la page ; le panneau, lui, se met à jour sur place. */
 const WeeklySources = (() => {
   const el = App.el;
   const t = (key, values) => App.t("weekly." + key, values);
-  // types traités à part : un style s'ajoute par le catalogue, un proche n'existe que si les découvertes sont possibles
-  const STYLE = "style", SIMILAR = "similar";
+  const STYLE = "style";             // un style s'ajoute par le catalogue, sans recherche
   const API = "/api/news/releases";
 
   class SourcesPanel {
@@ -35,13 +34,12 @@ const WeeklySources = (() => {
     draw(settings) {
       App.clear(this.box);
       this.box.appendChild(el("h2", {text: t("sources_title")}));
+      if (settings.basis === "site") this.box.appendChild(el("p.muted", {text: t("basis_site")}));
       for (const kind of settings.kinds) {
-        if (kind === SIMILAR && !settings.discoveriesAvailable) continue;
         this.lists[kind] = el("ul.weekly-source-list");
         App.append(this.box, [el("h3", {text: t("kind_" + kind)}), this.lists[kind]]);
       }
       for (const source of settings.sources) this.addRow(source);
-      if (settings.discoveriesAvailable) this.box.appendChild(this.discoveriesToggle(settings.discoveriesEnabled));
       this.box.appendChild(this.addForm(settings.addable));
       this.status = el("p.muted", {"aria-live": "polite"});
       this.box.appendChild(this.status);
@@ -50,8 +48,7 @@ const WeeklySources = (() => {
     addRow(source) {
       const list = this.lists[source.kind];
       if (!list || list.querySelector('[data-source="' + source.id + '"]')) return;
-      const origin = source.origin === "trends" ? t("origin_trends")
-        : source.origin === "discovery" ? t("origin_similar", {name: source.via || ""}) : t("origin_manual");
+      const origin = t(source.origin === "trends" ? "origin_trends" : "origin_manual");
       const hide = el("button.icon", {type: "button", text: "×", title: t("hide", {name: source.name}),
                                       "aria-label": t("hide", {name: source.name}), onclick: () => this.hide(source)});
       list.appendChild(el("li", {"data-source": String(source.id)}, el("span", {text: source.name}),
@@ -65,18 +62,6 @@ const WeeklySources = (() => {
         if (row) row.remove();
         this.onChange();
       } catch (error) { App.toast(App.errorText(error), "error"); }
-    }
-
-    discoveriesToggle(enabled) {
-      const box = el("input", {type: "checkbox"});
-      box.checked = enabled;
-      box.addEventListener("change", async () => {
-        try {
-          await App.api.post(API + "/discoveries", {enabled: box.checked});
-          this.onChange();
-        } catch (error) { box.checked = !box.checked; App.toast(App.errorText(error), "error"); }
-      });
-      return el("label.weekly-discoveries", {}, box, el("span", {text: t("discoveries_toggle")}));
     }
 
     addForm(addable) {
