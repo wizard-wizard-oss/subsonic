@@ -210,6 +210,17 @@ class MusicBrainz(PublicMetadata):
         found = (parsing.label(raw) for raw in response.data.get("labels", []))
         return Result(tuple(label for label in found if label is not None), response.stale)
 
+    def artists_tags(self, artist_ids):
+        """{MBID: tags votés, du plus voté au moins voté} de plusieurs artistes en une recherche (IDS_PER_QUERY au plus).
+        Un artiste absent de la réponse a des tags vides."""
+        ids = [parsing.mbid(identity) for identity in artist_ids][:IDS_PER_QUERY]
+        query = "(" + " OR ".join("arid:" + identity for identity in ids) + ")"
+        found = {identity: () for identity in ids}
+        for raw in self._get("artist", ttl=WEEKLY_TTL, query=query, limit=MAX_LIMIT).data.get("artists", []):
+            if raw.get("id") in found:
+                found[raw["id"]] = parsing.tags(raw)[:MAX_TAGS]
+        return found
+
     def artist_tags(self, artist_id):
         """Tags votés d'un artiste, du plus voté au moins voté (gardés 7 jours)."""
         return parsing.tags(self._get("artist/" + parsing.mbid(artist_id), inc="tags").data)[:MAX_TAGS]
