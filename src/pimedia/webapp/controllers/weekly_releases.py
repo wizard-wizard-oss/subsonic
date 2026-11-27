@@ -36,9 +36,10 @@ class WeeklyReleasesController:
         self.radar_service.hide_source(user, body.get("id"))
         return ok()
 
-    def discoveries(self, request, user, body):
-        self.radar_service.set_discoveries(user, body.get("enabled"))
-        return ok()
+    def around(self, request, user):
+        return ok(self.radar_service.around(user, request.param("name"), request.param("mbid"),
+                                            request.param("monday"),
+                                            int_param(request, "offset", strict=True) or 0).to_api())
 
     def search(self, request, user):
         return ok(self.radar_service.search(request.param("kind"), request.param("q")).to_api())
@@ -55,7 +56,7 @@ class WeeklyReleasesController:
             get("/api/news/releases/sources", self.sources),
             post("/api/news/releases/sources/add", self.add_source),
             post("/api/news/releases/sources/hide", self.hide_source),
-            post("/api/news/releases/discoveries", self.discoveries),
+            get("/api/news/releases/around", self.around),
             get("/api/news/releases/search", self.search),
             post("/api/news/releases/refresh", self.refresh),
         ]

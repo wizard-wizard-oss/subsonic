@@ -6,7 +6,8 @@ from pathlib import Path
 
 from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.storage.release_radar import AlbumLabels, RadarProfiles, RadarReleases, ReleaseSources
+from pimedia.webapp.storage.release_radar import (AlbumLabels, ArtistResolutions, RadarProfiles, RadarReleases,
+                                                   ReleaseSources)
 from pimedia.webapp.weekly_releases.entities import RadarRelease
 
 RADAR_MIGRATION = 29   # première migration du radar (numérotée à partir de 1)
@@ -15,6 +16,9 @@ RADAR_MIGRATION = 29   # première migration du radar (numérotée à partir de 
 def add_user(db, name):
     db.execute("INSERT INTO users(username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
                "VALUES (?, '', '', 0, 0)", (name,))
+
+
+WEEK_WINDOW = (date(2026, 11, 23), date(2026, 11, 29))
 
 
 def release(identity, released_on, tags=()):
@@ -63,15 +67,27 @@ class RadarStorageTest(unittest.TestCase):
 
     def test_profiles(self):
         profiles = RadarProfiles(self.db)
-        self.assertEqual(profiles.get(1), ({}, True))
-        profiles.save_tags(1, {"techno": 2.5}, 10)
-        profiles.set_discoveries(1, False)
-        self.assertEqual(profiles.get(1), ({"techno": 2.5}, False))
+        self.assertEqual(profiles.basis(1), None)
+        profiles.set_basis(1, "site")
+        self.assertEqual(profiles.basis(1), "site")
         self.assertIsNone(profiles.refresh_requested_at(1))
         profiles.request_refresh(1, 20)
         self.assertEqual(profiles.refresh_requested_at(1), 20)
-        profiles.set_discoveries(1, True)
-        self.assertEqual(profiles.get(1), ({"techno": 2.5}, True))
+        self.assertEqual(profiles.basis(1), "site")
+
+    def test_releases_keep_their_credited_artists(self):
+        a = RadarRelease("a", "A", "Moderat", date(2026, 11, 27), "Album", (), ("m1", "m2"))
+        self.releases.save("fresh", "listenbrainz", [a, release("b", date(2026, 11, 28))], *WEEK_WINDOW)
+        found = {r.id: r.artist_ids for r in self.releases.window(*WEEK_WINDOW)}
+        self.assertEqual(found, {"a": ("m1", "m2"), "b": ()})
+        self.assertEqual(self.releases.window(date(2026, 12, 7), date(2026, 12, 13)), [])
+
+    def test_artist_resolutions_remember_found_and_not_found(self):
+        names = ArtistResolutions(self.db)
+        self.assertIsNone(names.get("air"))
+        names.save("air", None, 10)
+        names.save("moderat", "m1", 11)
+        self.assertEqual((names.get("air"), names.get("moderat")), ((None, 10), ("m1", 11)))
 
     def test_union_is_deduplicated_and_skips_hidden(self):
         self.sources.add(1, "label", "warp-id", "Warp", "manual")
@@ -129,6 +145,31 @@ class RadarStorageTest(unittest.TestCase):
 
 
 class RadarMigrationTest(unittest.TestCase):
+    def test_migration_30_removes_discoveries_and_keeps_everything_else(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "old.db"
+            old = Database(path, MIGRATIONS[:RADAR_MIGRATION])
+            try:
+                add_user(old, "alice")
+                for kind, identity, origin in (("style", "techno", "manual"), ("label", "warp", "trends"),
+                                               ("artist", "m1", "trends"), ("similar", "m2", "discovery")):
+                    old.execute("INSERT INTO release_sources (user_id, kind, identity, name, origin, created_at) "
+                                "VALUES (1, ?, ?, ?, ?, 0)", (kind, identity, identity, origin))
+                old.execute("INSERT INTO radar_releases VALUES ('r', 'T', 'A', '2026-11-27', 'Album', '[]')")
+                old.execute("INSERT INTO radar_release_sources VALUES ('r', 'similar', 'm2')")
+                old.execute("INSERT INTO radar_release_sources VALUES ('r', 'label', 'warp')")
+            finally:
+                old.close()
+            upgraded = Database(path, MIGRATIONS)
+            try:
+                self.assertEqual(sorted(r[0] for r in upgraded.query("SELECT kind FROM release_sources")),
+                                 ["artist", "label", "style"])
+                self.assertEqual(upgraded.query("SELECT source_kind FROM radar_release_sources")[0][0], "label")
+                self.assertEqual(upgraded.query("SELECT COUNT(*) FROM radar_releases")[0][0], 1)
+                self.assertEqual(upgraded.query("PRAGMA foreign_key_check"), [])
+            finally:
+                upgraded.close()
+
     def test_migration_keeps_followed_styles(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "old.db"

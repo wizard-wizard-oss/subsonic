@@ -633,4 +633,24 @@ MIGRATIONS = [
         discoveries_off INTEGER NOT NULL DEFAULT 0
     )
     """,
+    # 30 : radar, version 2. Les découvertes deviennent « Autour de… » (calculé à la demande) : plus de sources
+    # « proches ». Chaque sortie garde ses artistes crédités ; un nom d'artiste résolu dans MusicBrainz est mémorisé ;
+    # le profil dit d'où viennent les styles proposés (favoris du compte ou, sans favori, le sub).
+    """
+    DELETE FROM radar_release_sources WHERE source_kind = 'similar';
+    DELETE FROM radar_sync WHERE source_kind = 'similar';
+    DELETE FROM release_sources WHERE kind = 'similar';
+    CREATE TABLE radar_release_artists (
+        release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,
+        artist_id TEXT NOT NULL,
+        PRIMARY KEY (release_id, artist_id)
+    );
+    CREATE INDEX radar_release_artists_artist ON radar_release_artists (artist_id);
+    CREATE TABLE artist_resolutions (
+        name_key TEXT PRIMARY KEY,
+        artist_id TEXT,
+        resolved_at INTEGER NOT NULL
+    );
+    ALTER TABLE radar_profiles ADD COLUMN basis TEXT
+    """,
 ]

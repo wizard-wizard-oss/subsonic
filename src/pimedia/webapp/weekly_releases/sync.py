@@ -1,20 +1,22 @@
 """Synchronisation de fond du radar : les appels MusicBrainz se font ici (au démarrage si la dernière synchronisation
 complète date de plus de 24 h, puis chaque nuit), jamais à l'affichage de la page.
 
-Une source suivie par plusieurs comptes ne coûte qu'une requête ; les artistes sont interrogés par lots."""
+Une source suivie par plusieurs comptes ne coûte qu'une requête. Les sorties des artistes viennent de ListenBrainz :
+deux requêtes pour tout le site, puis rapprochement local par MBID (« Mes artistes », « Autour de… »)."""
 import threading
 import time
 from datetime import date, datetime, time as day_time, timedelta
 
-from ...shared.providers.musicbrainz.client import IDS_PER_QUERY, MAX_LIMIT
+from ...shared.providers.musicbrainz.client import MAX_LIMIT
 from .entities import RadarError, RadarRelease
-from .limits import (ARTIST_KINDS, ARTIST_PAGES, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN,
+from .limits import (ARTIST, FRESH, FRESH_IDENTITY, FULL_SYNC_EVERY, LABEL, NIGHT_HOUR, PURGE_AFTER, REFRESH_COOLDOWN,
                      RETRY_FAILED_AFTER, STYLE, STYLE_PAGES_PER_WEEK, SYNC_CHECK_EVERY, WINDOW_AFTER, WINDOW_BEFORE)
 from .trends import SERVICE_ERRORS
 
 
 def radar_release(album):
-    return RadarRelease(album.id, album.title, album.artist, album.released_on, album.kind, album.tags)
+    return RadarRelease(album.id, album.title, album.artist, album.released_on, album.kind, album.tags,
+                        album.artist_ids)
 
 
 def _spawn(work):
@@ -26,9 +28,9 @@ def _log(text):
 
 
 class ReleaseSync:
-    def __init__(self, musicbrainz, trends, sources, releases, profiles, users, today=date.today, clock=time.time,
-                 sleep=time.sleep, spawn=_spawn, log=_log):
-        self.musicbrainz, self.trends, self.sources = musicbrainz, trends, sources
+    def __init__(self, musicbrainz, listenbrainz, trends, sources, releases, profiles, users, today=date.today,
+                 clock=time.time, sleep=time.sleep, spawn=_spawn, log=_log):
+        self.musicbrainz, self.listenbrainz, self.trends, self.sources = musicbrainz, listenbrainz, trends, sources
         self.releases, self.profiles, self.users = releases, profiles, users
         self.today, self.clock, self.sleep, self.spawn, self.log = today, clock, sleep, spawn, log
         self._running = threading.Lock()
@@ -59,9 +61,12 @@ class ReleaseSync:
     def retry_failed(self):
         failing = self.releases.failing_since(self.clock() - RETRY_FAILED_AFTER)
         sources = [source for source in self.sources.active_union() if source[:2] in failing]
-        if not sources or not self._running.acquire(blocking=False):
+        fresh = (FRESH, FRESH_IDENTITY) in failing
+        if not (sources or fresh) or not self._running.acquire(blocking=False):
             return                                    # rien à reprendre, ou une synchronisation complète tourne
         try:
+            if fresh:
+                self.sync_fresh()
             self.sync_sources(sources)
         finally:
             self._running.release()
@@ -82,6 +87,7 @@ class ReleaseSync:
             # puis les tendances, puis les sources qu'elles viennent d'ajouter
             existing = self.releases.oldest_first(self.sources.active_union())
             self.sync_sources(existing)
+            self.sync_fresh()
             for user in self.users():
                 self._refresh_trends(user)
             known = {source[:2] for source in existing}
@@ -133,23 +139,27 @@ class ReleaseSync:
         self.profiles.request_refresh(user.id, now)
 
         def work():
+            self.sync_fresh()
             self._refresh_trends(user)
             self.sync_sources([(s.kind, s.identity, s.name) for s in self.sources.for_user(user.id)])
         self._enqueue(("user", user.id), work)
         return now + REFRESH_COOLDOWN
 
     def sync_sources(self, sources):
+        """Styles et labels : une requête MusicBrainz chacun. Un artiste n'a rien à demander : ses sorties viennent
+        de la lecture ListenBrainz commune (sync_fresh)."""
         start, end = self.window()
-        artists = [source for source in sources if source[0] in ARTIST_KINDS]
         for kind, identity, name in sources:
             if kind == STYLE:
                 self._guarded([(kind, identity)], name, lambda: self._style(identity, start, end))
             elif kind == LABEL:
                 self._guarded([(kind, identity)], name, lambda: self._label(identity, start, end))
-        for index in range(0, len(artists), IDS_PER_QUERY):
-            batch = artists[index:index + IDS_PER_QUERY]
-            chunk = [(kind, identity) for kind, identity, _ in batch]
-            self._guarded(chunk, ", ".join(name for _, _, name in batch), lambda: self._artists(chunk, start, end))
+
+    def sync_fresh(self):
+        """Toutes les sorties récentes et à venir (ListenBrainz), gardées avec leurs artistes crédités."""
+        start, end = self.window()
+        artists = [(kind, identity) for kind, identity, _ in self.sources.active_union() if kind == ARTIST]
+        self._guarded([(FRESH, FRESH_IDENTITY)] + artists, "ListenBrainz", lambda: self._fresh(start, end))
 
     def _guarded(self, keys, names, work):
         """Une panne n'efface rien : la source garde ses sorties, l'échec et sa raison sont notés, et la source est
@@ -182,14 +192,6 @@ class ReleaseSync:
         page = self.musicbrainz.label_groups(identity, start, end)
         self.releases.save(LABEL, identity, [radar_release(a) for a in page.albums], start, end)
 
-    def _artists(self, keys, start, end):
-        ids, found, offset = list(dict.fromkeys(identity for _, identity in keys)), [], 0
-        for _ in range(ARTIST_PAGES):
-            page = self.musicbrainz.groups_by_artists(ids, start, end, offset)
-            found += page.albums
-            if page.next_offset is None:
-                break
-            offset = page.next_offset
-        for kind, identity in keys:
-            mine = [radar_release(a) for a in found if identity in a.artist_ids]
-            self.releases.save(kind, identity, mine, start, end)
+    def _fresh(self, start, end):
+        releases = self.listenbrainz.fresh_releases(self.today(), start, end)
+        self.releases.save(FRESH, FRESH_IDENTITY, [radar_release(a) for a in releases], start, end)

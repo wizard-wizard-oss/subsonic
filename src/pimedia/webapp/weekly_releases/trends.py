@@ -1,27 +1,32 @@
-"""Tendances d'un compte, calculées pendant la synchronisation : artistes, labels et styles d'après ses favoris et
-ses marque-pages, puis découvertes (artistes proches selon Last.fm, absents de sa bibliothèque).
+"""Tendances d'un compte, calculées pendant la synchronisation, d'après ses favoris seulement (artistes, albums,
+morceaux) : ses artistes, les labels de ses albums favoris et ses styles dominants.
 
-Seuls des signaux propres au compte servent : la liste « plus écoutés » de Subsonic est commune au serveur.
-Chaque étape dit si elle est allée au bout : après une panne, on ajoute ce qui a été trouvé mais on ne retire rien,
-et le profil de goûts déjà calculé est gardé."""
+Styles dominants : chaque artiste apporte ses STYLES_PER_ARTIST premiers tags du catalogue ; un style porté par moins de
+MIN_STYLE_ARTISTS artistes est écarté ; les TREND_STYLES premiers sont proposés. Sans favori, les styles viennent des
+albums les plus écoutés du sub (liste commune au serveur, voulue ici) et aucun artiste n'est attribué au compte.
+
+Chaque étape dit si elle est allée au bout : après une panne, on ajoute ce qui a été trouvé mais on ne retire rien."""
 import time
 
 from ...shared.providers.metadata import ProviderUnavailable
+from ...shared.providers.musicbrainz.client import IDS_PER_QUERY
 from ...shared.providers.musicbrainz.parsing import mbid as valid_mbid
 from ...shared.text import normalize
 from ..subsonic import Credentials, SubsonicError, SubsonicUnreachable
-from .limits import (ARTIST, DISCOVERIES_PER_USER, DISCOVERY, LABEL, SIMILAR, SIMILAR_PER_ARTIST, STYLE, TRENDS,
-                     TREND_ARTISTS, TREND_LABEL_ALBUMS, TREND_RESOLVE_ATTEMPTS, TREND_STYLES)
+from .limits import (ARTIST, FAVORITES, LABEL, MIN_STYLE_ARTISTS, RESOLVE_AGAIN_AFTER, SITE, SITE_ALBUMS, STYLE,
+                     STYLES_PER_ARTIST, TREND_ARTISTS, TREND_LABEL_ALBUMS, TREND_RESOLVE_ATTEMPTS, TREND_STYLES,
+                     TRENDS)
 
 SERVICE_ERRORS = (ProviderUnavailable, OSError, ValueError, KeyError, TypeError)
+SUBSONIC_ERRORS = (SubsonicError, SubsonicUnreachable)
 
 
 class Incomplete(Exception):
     """Un service n'a pas répondu : le résultat partiel ne doit pas servir à retirer des sources."""
 
 
-def _items(starred, kind):
-    found = starred.get(kind) or []
+def _items(container, kind):
+    found = (container or {}).get(kind) or []
     return [found] if isinstance(found, dict) else [item for item in found if isinstance(item, dict)]
 
 
@@ -33,42 +38,58 @@ def _mbid_or_none(value):
 
 
 class Trends:
-    def __init__(self, subsonic, musicbrainz, lastfm, sources, album_labels, profiles, bookmarks, library_artists,
-                 clock=time.time):
-        self.subsonic, self.musicbrainz, self.lastfm = subsonic, musicbrainz, lastfm
-        self.sources, self.album_labels, self.profiles = sources, album_labels, profiles
-        self.bookmarks, self.library_artists, self.clock = bookmarks, library_artists, clock
+    def __init__(self, subsonic, musicbrainz, sources, album_labels, profiles, names, clock=time.time):
+        self.subsonic, self.musicbrainz, self.sources = subsonic, musicbrainz, sources
+        self.album_labels, self.profiles, self.names, self.clock = album_labels, profiles, names, clock
         self._attempts = 0
 
     def refresh(self, user):
         """Recalcule les sources automatiques du compte ; une source masquée par la personne le reste."""
         try:
             starred = self.subsonic.call(Credentials.of(user), "getStarred2").get("starred2") or {}
-        except (SubsonicError, SubsonicUnreachable):
+        except SUBSONIC_ERRORS:
             return                                    # sans favoris lisibles, on garde les tendances d'avant
         self._attempts = 0
-        artists, complete = self._artists(user, starred)
-        self._replace(user, TRENDS, ARTIST, [(identity, name, None) for identity, name in artists], complete)
-        labels, complete = self._labels(starred)
-        self._replace(user, TRENDS, LABEL, [(identity, name, None) for identity, name in labels], complete)
-        profile = self._profile(user, artists)
-        styles, complete = self._styles(profile)
-        self._replace(user, TRENDS, STYLE, [(name, name, None) for name in styles], complete)
-        discoveries, complete = self._discoveries(user, artists)
-        self._replace(user, DISCOVERY, SIMILAR, discoveries, complete)
+        favorites = self._names(starred)
+        if favorites:
+            artists, complete = self._resolve_all(favorites)
+            self._replace(user, ARTIST, [(identity, name) for identity, name in artists], complete)
+            labels, complete = self._labels(starred)
+            self._replace(user, LABEL, labels, complete)
+            basis = FAVORITES
+        else:
+            artists = self._site_artists(user)
+            self._replace(user, ARTIST, [], True)
+            self._replace(user, LABEL, [], True)
+            basis = SITE
+        styles, complete = self._dominant_styles([identity for identity, _ in artists])
+        self._replace(user, STYLE, [(name, name) for name in styles], complete)
+        self.profiles.set_basis(user.id, basis)
 
-    def _replace(self, user, origin, kind, found, complete):
-        for identity, name, via in found:
-            self.sources.add(user.id, kind, identity, name, origin, via)
+    def _replace(self, user, kind, found, complete):
+        for identity, name in found:
+            self.sources.add(user.id, kind, identity, name, TRENDS)
         if complete:
-            self.sources.prune(user.id, origin, kind, {identity for identity, _, _ in found})
+            self.sources.prune(user.id, TRENDS, kind, {identity for identity, _ in found})
 
     # ---------- artistes ----------
-    def _artists(self, user, starred):
-        """([(MBID, nom)], complet) : artistes favoris, puis ceux des albums et morceaux favoris, puis des marque-pages."""
-        candidates = [(a.get("name"), a.get("musicBrainzId")) for a in _items(starred, "artist")]
-        candidates += [(item.get("artist"), None) for kind in ("album", "song") for item in _items(starred, kind)]
-        candidates += [(b.title if b.kind == ARTIST else b.artist, None) for b in self.bookmarks(user)]
+    @staticmethod
+    def _names(starred):
+        """[(nom, MBID ou None)] : artistes favoris, puis artistes des albums et morceaux favoris."""
+        found = [(a.get("name"), a.get("musicBrainzId")) for a in _items(starred, "artist")]
+        return found + [(item.get("artist"), None) for kind in ("album", "song") for item in _items(starred, kind)]
+
+    def _site_artists(self, user):
+        """Artistes des albums les plus écoutés du sub (sans favori) : servent seulement aux styles génériques."""
+        try:
+            raw = self.subsonic.call(Credentials.of(user), "getAlbumList2", [("type", "frequent"),
+                                                                              ("size", SITE_ALBUMS)])
+        except SUBSONIC_ERRORS:
+            return []
+        return self._resolve_all([(album.get("artist"), None) for album in _items(raw.get("albumList2"), "album")])[0]
+
+    def _resolve_all(self, candidates):
+        """([(MBID, nom)], complet), sans doublon, TREND_ARTISTS au plus."""
         found, seen, complete = [], set(), True
         for name, identity in candidates:
             if not isinstance(name, str) or not name.strip() or normalize(name) in seen:
@@ -86,8 +107,12 @@ class Trends:
         return found, complete
 
     def _resolve(self, name):
-        """MBID de l'unique artiste MusicBrainz qui porte exactement ce nom ; None s'il y en a zéro ou plusieurs
-        (deux « Air » : on ne devine pas). Le nombre de recherches par calcul est plafonné."""
+        """MBID de l'unique artiste MusicBrainz qui porte exactement ce nom, mémorisé en base. Aucun ou plusieurs
+        (deux « Air ») : None, et le nom n'est recherché de nouveau qu'après RESOLVE_AGAIN_AFTER secondes."""
+        key = normalize(name)
+        known = self.names.get(key)
+        if known and (known[0] or self.clock() - known[1] < RESOLVE_AGAIN_AFTER):
+            return known[0]
         if self._attempts >= TREND_RESOLVE_ATTEMPTS:
             return None
         self._attempts += 1
@@ -95,8 +120,10 @@ class Trends:
             artists = self.musicbrainz.search_artists(name).value
         except SERVICE_ERRORS:
             raise Incomplete() from None
-        matches = {artist.id for artist in artists if normalize(artist.name) == normalize(name)}
-        return matches.pop() if len(matches) == 1 else None
+        matches = {artist.id for artist in artists if normalize(artist.name) == key}
+        identity = matches.pop() if len(matches) == 1 else None
+        self.names.save(key, identity, self.clock())
+        return identity
 
     # ---------- labels ----------
     def _labels(self, starred):
@@ -120,56 +147,30 @@ class Trends:
         try:
             found = self.musicbrainz.release_label(album["name"], album.get("artist") or "")
         except SERVICE_ERRORS:
-            raise Incomplete() from None              # nouvel essai la nuit suivante
+            raise Incomplete() from None              # nouvel essai à la prochaine synchronisation
         label = (found.label.id, found.label.name, found.release_id) if found else (None, None, None)
         self.album_labels.save(album["id"], *label, self.clock())
         return self.album_labels.get(album["id"])
 
-    # ---------- goûts et styles ----------
-    def _profile(self, user, artists):
-        """Tags pondérés : chaque artiste apporte 1 à son premier tag, 1/2 au deuxième, 1/3 au troisième…
-        Si MusicBrainz ne répond pas, le profil déjà enregistré est gardé tel quel."""
-        weights = {}
-        try:
-            for identity, _ in artists:
-                for index, tag in enumerate(self.musicbrainz.artist_tags(identity)):
-                    weights[tag] = weights.get(tag, 0) + 1 / (index + 1)
-        except SERVICE_ERRORS:
-            return self.profiles.get(user.id)[0]
-        profile = {tag: round(weight, 3) for tag, weight in weights.items()}
-        self.profiles.save_tags(user.id, profile, self.clock())
-        return profile
-
-    def _styles(self, profile):
+    # ---------- styles dominants ----------
+    def _dominant_styles(self, artist_ids):
+        """([style], complet) : les styles portés par le plus d'artistes (au moins MIN_STYLE_ARTISTS)."""
+        if not artist_ids:
+            return [], True
         try:
             catalog = {genre.name for genre in self.musicbrainz.release_genres()}
         except SERVICE_ERRORS:
             return [], False
-        ranked = sorted((tag for tag in profile if tag in catalog), key=lambda tag: (-profile[tag], tag))
-        return ranked[:TREND_STYLES], True
-
-    # ---------- découvertes ----------
-    def _discoveries(self, user, artists):
-        """([(MBID, nom, « proche de »)], complet) : proches absents de la bibliothèque et des artistes suivis."""
-        if not self.lastfm.enabled or not self.profiles.get(user.id)[1]:
-            return [], True
-        known = self.library_artists(user) | {normalize(name) for _, name in artists}
-        followed, found = {identity for identity, _ in artists}, {}
-        try:
-            for _, origin in artists:
-                for similar in self._similar(origin, known):
-                    identity = similar.mbid or self._resolve(similar.name)
-                    if identity and identity not in followed and identity not in found:
-                        found[identity] = (identity, similar.name, origin)
-                    if len(found) >= DISCOVERIES_PER_USER:
-                        return list(found.values()), True
-        except Incomplete:
-            return list(found.values()), False
-        return list(found.values()), True
-
-    def _similar(self, name, known):
-        try:
-            similar = self.lastfm.similar_artists(name, SIMILAR_PER_ARTIST * 2)
-        except SERVICE_ERRORS:
-            raise Incomplete() from None
-        return [artist for artist in similar if normalize(artist.name) not in known][:SIMILAR_PER_ARTIST]
+        counts, complete = {}, True
+        for index in range(0, len(artist_ids), IDS_PER_QUERY):
+            try:
+                tags = self.musicbrainz.artists_tags(artist_ids[index:index + IDS_PER_QUERY])
+            except SERVICE_ERRORS:
+                complete = False                      # les autres lots comptent quand même
+                continue
+            for artist_tags in tags.values():
+                for style in [tag for tag in artist_tags if tag in catalog][:STYLES_PER_ARTIST]:
+                    counts[style] = counts.get(style, 0) + 1
+        ranked = sorted((style for style, count in counts.items() if count >= MIN_STYLE_ARTISTS),
+                        key=lambda style: (-counts[style], style))
+        return ranked[:TREND_STYLES], complete

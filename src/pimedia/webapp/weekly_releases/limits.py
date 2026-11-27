@@ -8,27 +8,32 @@ FULL_SYNC_EVERY = 86400                   # synchronisation complète au plus ta
 NIGHT_HOUR = 4                            # heure locale de la synchronisation de nuit
 REFRESH_COOLDOWN = 600                    # « Actualiser » : une fois toutes les 10 min par compte
 STYLE_PAGES_PER_WEEK = 2                  # pages MusicBrainz lues par style et par semaine
-ARTIST_PAGES = 3                          # pages MusicBrainz lues par lot d'artistes
 SYNC_CHECK_EVERY = 900                    # la tâche de fond regarde toutes les 15 min s'il faut synchroniser
 RETRY_FAILED_AFTER = 1800                 # une source en échec est réessayée 30 min plus tard, sans attendre la nuit
 TREND_ARTISTS = 30                        # artistes des tendances par compte
 TREND_RESOLVE_ATTEMPTS = 60               # recherches MusicBrainz d'un nom d'artiste sans MBID, par compte et par calcul
 TREND_LABEL_ALBUMS = 30                   # albums dont on cherche le label, par compte et par nuit
-TREND_STYLES = 5                          # styles des tendances par compte
-SIMILAR_PER_ARTIST = 5                    # proches Last.fm gardés par artiste des tendances
-DISCOVERIES_PER_USER = 60                 # proches (découvertes) par compte
+TREND_STYLES = 5                          # styles dominants proposés par compte
+STYLES_PER_ARTIST = 3                     # styles d'un artiste pris en compte (ses 3 tags les plus votés du catalogue)
+MIN_STYLE_ARTISTS = 3                     # un style porté par moins de 3 artistes n'est pas dominant
+SITE_ALBUMS = 50                          # sans favori : albums les plus écoutés du sub pris pour les styles génériques
+RESOLVE_AGAIN_AFTER = 30 * 86400          # un nom d'artiste introuvable est recherché de nouveau après 30 jours
+AROUND_SIMILAR = 30                       # « Autour de… » : proches demandés à Last.fm pour un artiste
 
 RADAR_PAGE = 48                           # cartes par page de la semaine
 LOCAL_CACHE_SECONDS = 300                 # « Dans ta bibliothèque » gardé 5 min par compte et par sortie
 LOCAL_LOOKUPS_IN_PARALLEL = 4
 MAX_NAME = 300                            # longueur maximale d'un nom de source ou d'une recherche
 
-# Types de source : un style (nom exact du catalogue), un label, un artiste suivi, un proche (découverte).
-STYLE, LABEL, ARTIST, SIMILAR = "style", "label", "artist", "similar"
-KINDS = (STYLE, LABEL, ARTIST, SIMILAR)
-MANUAL_KINDS = (STYLE, LABEL, ARTIST)     # ce qu'on ajoute soi-même ; les proches viennent des découvertes
+# Types de source : un style (nom exact du catalogue), un label, un artiste suivi.
+STYLE, LABEL, ARTIST = "style", "label", "artist"
+KINDS = (STYLE, LABEL, ARTIST)
+MANUAL_KINDS = KINDS                      # tout se suit aussi à la main
 SEARCH_KINDS = (LABEL, ARTIST)
-ARTIST_KINDS = (ARTIST, SIMILAR)          # interrogés par lots d'identifiants d'artistes
-# Origine d'une source : ajoutée par la personne, calculée d'après ses favoris, proposée comme découverte.
-MANUAL, TRENDS, DISCOVERY = "manual", "trends", "discovery"
-ORIGINS = (MANUAL, TRENDS, DISCOVERY)
+# Sorties lues chez ListenBrainz pour tout le site (pas une source d'un compte) : « Mes artistes » et « Autour de… ».
+FRESH, FRESH_IDENTITY = "fresh", "listenbrainz"
+# Origine d'une source : ajoutée par la personne ou calculée d'après ses favoris.
+MANUAL, TRENDS = "manual", "trends"
+ORIGINS = (MANUAL, TRENDS)
+# D'où viennent les styles proposés : les favoris du compte ou, sans favori, le sub entier.
+FAVORITES, SITE = "favorites", "site"

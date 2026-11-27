@@ -171,12 +171,6 @@ class MusicBrainz(PublicMetadata):
         return WeeklyReleasePage(albums, last if rows and last < response.data["count"] else None, response.stale)
 
     # ---------- radar des sorties ----------
-    def groups_by_artists(self, artist_ids, start, end, offset=0):
-        """Sorties de plusieurs artistes en une requête (IDS_PER_QUERY au plus)."""
-        ids = [parsing.mbid(identity) for identity in artist_ids][:IDS_PER_QUERY]
-        return self._groups("(" + " OR ".join("arid:" + identity for identity in ids) + ")", start, end,
-                            offset=offset)
-
     def release_label(self, title, artist):
         """Label de l'album d'après la première édition de ce titre et de cet artiste qui en indique un."""
         query = "release:%s AND artist:%s" % (parsing.search_phrase(title), parsing.search_phrase(artist))

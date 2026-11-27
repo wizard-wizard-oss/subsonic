@@ -46,28 +46,16 @@ class MusicBrainzRadarTest(unittest.TestCase):
     def query(self, index=-1):
         return parse_qs(urlsplit(self.urls[index]).query)["query"][0]
 
-    def test_artists_are_grouped_in_one_query(self):
-        ids = tuple(mbid(n) for n in range(20))
-        self.responses[("release-group", "arid:")] = {"count": 1, "release-groups": [
-            group(1, "Nouveau", "Moderat", "2026-11-27", tags=("techno", "electronic"))]}
-        page = self.client.groups_by_artists(ids, START, END)
-        self.assertEqual(len(self.urls), 1)
-        for identity in ids:
-            self.assertIn("arid:" + identity, self.query())
-        self.assertIn("firstreleasedate:[2026-11-13 TO 2027-01-26]", self.query())
-        self.assertIn("(primarytype:album OR primarytype:ep)", self.query())
-        self.assertEqual([(a.title, a.released_on) for a in page.albums], [("Nouveau", date(2026, 11, 27))])
-
     def test_tags_are_parsed_most_voted_first(self):
-        self.responses[("release-group", "arid:")] = {"count": 1, "release-groups": [
+        self.responses[("release-group", "tag:")] = {"count": 1, "release-groups": [
             group(1, "Nouveau", "Moderat", "2026-11-27", tags=("techno", "electronic"))]}
-        album = self.client.groups_by_artists((mbid(1),), START, END).albums[0]
+        album = self.client.weekly_groups("techno", START, END, 100, 0).albums[0]
         self.assertEqual(album.tags, ("techno", "electronic"))
 
     def test_credited_artist_ids_are_kept(self):
-        self.responses[("release-group", "arid:")] = {"count": 1, "release-groups": [
+        self.responses[("release-group", "tag:")] = {"count": 1, "release-groups": [
             group(1, "Nouveau", "Moderat", "2026-11-27")]}
-        album = self.client.groups_by_artists((mbid(901),), START, END).albums[0]
+        album = self.client.weekly_groups("techno", START, END, 100, 0).albums[0]
         self.assertEqual(album.artist_ids, (mbid(901),))
 
     def test_label_keeps_only_new_groups(self):

@@ -1,4 +1,5 @@
-"""Radar lu en base : semaine, filtres, raisons, tri, bibliothèque, sources, découvertes et actualisation."""
+"""Radar lu en base, version 2 : semaine, filtres, « Mes artistes » par MBID, « Autour de… » (proches Last.fm parmi les
+sorties ListenBrainz gardées), ordre par date, bibliothèque, sources, origine des styles et actualisation."""
 import json
 import tempfile
 import unittest
@@ -8,7 +9,9 @@ from types import SimpleNamespace
 
 from pimedia.shared.providers.musicbrainz.entities import MusicArtist, MusicLabel, ReleaseGenre, Result
 from pimedia.storage.database import Database
+from pimedia.webapp.controllers.replies import error_reply
 from pimedia.webapp.controllers.weekly_releases import WeeklyReleasesController
+from pimedia.webapp.providers.lastfm import SimilarArtist
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.release_radar import RadarProfiles, RadarReleases, ReleaseSources
 from pimedia.webapp.storage.weekly_releases import ReleaseSubscriptions
@@ -44,6 +47,17 @@ class FakeMusicBrainz:
         return Result((MusicArtist(MODERAT, "Moderat"),))
 
 
+class FakeLastFm:
+    enabled = True
+
+    def __init__(self):
+        self.calls = []
+
+    def similar_artists(self, name, limit):
+        self.calls.append(name)
+        return (SimilarArtist("Apparat", APPARAT, 0.9), SimilarArtist("Sans Identité", None, 0.5))
+
+
 class FakeSync:
     def __init__(self):
         self.new, self.refreshed = [], []
@@ -56,6 +70,10 @@ class FakeSync:
         return 1000 + REFRESH_COOLDOWN
 
 
+def release(number, day=27, artist="Artiste", artists=()):
+    return RadarRelease(mbid(number), "Album %d" % number, artist, date(2026, 11, day), "Album", (), artists)
+
+
 class RadarServiceTest(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -66,22 +84,20 @@ class RadarServiceTest(unittest.TestCase):
             db.execute("INSERT INTO users(username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
                        "VALUES (?, '', '', 0, 0)", (name,))
         self.alice, self.bob = SimpleNamespace(id=1), SimpleNamespace(id=2)
-        self.musicbrainz, self.sync = FakeMusicBrainz(), FakeSync()
-        self.lastfm = SimpleNamespace(enabled=True)
+        self.musicbrainz, self.lastfm, self.sync = FakeMusicBrainz(), FakeLastFm(), FakeSync()
         self.sources, self.releases, self.profiles = ReleaseSources(db), RadarReleases(db), RadarProfiles(db)
         self.local_calls = []
         styles = WeeklyReleases(self.musicbrainz, ReleaseSubscriptions(db), today=lambda: TODAY)
         self.radar = RadarService(self.musicbrainz, self.lastfm, self.sources, self.releases, self.profiles,
                                   self.sync, styles, local=self.local, today=lambda: TODAY, clock=lambda: 1000)
         self.controller = WeeklyReleasesController(styles, self.radar)
-        self.releases.save("label", WARP, [self.release(1, ("techno",)), self.release(2, ("folk",))], *WEEK)
-        self.releases.save("style", "techno", [self.release(1, ("techno",)), self.release(3, ("techno",))], *WEEK)
-        self.releases.save("similar", APPARAT, [self.release(4, ("techno",))], *WEEK)
+        self.releases.save("label", WARP, [release(1), release(2, day=24)], *WEEK)
+        self.releases.save("style", "techno", [release(1), release(3)], *WEEK)
+        self.releases.save("fresh", "listenbrainz", [release(4, artist="Moderat", artists=(MODERAT,)),
+                                                     release(5, artist="Apparat", artists=(APPARAT,)),
+                                                     release(6, artist="Sans identité"),
+                                                     release(7, artist="Autre", artists=(mbid(999),))], *WEEK)
         self.releases.mark_synced("label", WARP, 900)
-
-    @staticmethod
-    def release(number, tags):
-        return RadarRelease(mbid(number), "Album %d" % number, "Artiste %d" % number, date(2026, 11, 27), "Album", tags)
 
     def local(self, user, title, artist):
         self.local_calls.append(title)
@@ -91,18 +107,22 @@ class RadarServiceTest(unittest.TestCase):
     def follow_all(self, user_id=1):
         self.sources.add(user_id, "label", WARP, "Warp", "manual")
         self.sources.add(user_id, "style", "techno", "techno", "trends")
-        self.sources.add(user_id, "similar", APPARAT, "Apparat", "discovery", "Moderat")
-        self.profiles.save_tags(user_id, {"techno": 2}, 0)
+        self.sources.add(user_id, "artist", MODERAT, "Moderat", "trends")
+
+    @staticmethod
+    def request(**params):
+        return SimpleNamespace(param=lambda name, default=None: params.get(name, default))
 
     def week(self, user, filter_key="all", monday=MONDAY):
-        params = {"monday": monday, "filter": filter_key}
-        request = SimpleNamespace(param=lambda name, default=None: params.get(name, default))
-        return json.loads(self.controller.radar(request, user).body)
+        return json.loads(self.controller.radar(self.request(monday=monday, filter=filter_key), user).body)
+
+    def around(self, user, **params):
+        return json.loads(self.controller.around(self.request(monday=MONDAY, **params), user).body)
 
     def test_radar_reads_database_without_external_call(self):
         self.follow_all()
         page = self.week(self.alice)
-        self.assertEqual(self.musicbrainz.calls, [])
+        self.assertEqual((self.musicbrainz.calls, self.lastfm.calls), ([], []))
         self.assertEqual({card["id"] for card in page["cards"]}, {mbid(1), mbid(2), mbid(3), mbid(4)})
         self.assertEqual(page["updatedAt"], 900)
 
@@ -110,44 +130,43 @@ class RadarServiceTest(unittest.TestCase):
         self.follow_all()
         page = self.week(self.alice)
         self.assertEqual({f["key"]: f["count"] for f in page["filters"]},
-                         {"all": 4, "style:techno": 2, "labels": 2, "artists": 0, "discoveries": 1})
+                         {"all": 4, "style:techno": 2, "labels": 2, "artists": 1})
         self.assertEqual({c["id"] for c in self.week(self.alice, "labels")["cards"]}, {mbid(1), mbid(2)})
-        self.assertEqual({c["id"] for c in self.week(self.alice, "discoveries")["cards"]}, {mbid(4)})
+        self.assertEqual([c["id"] for c in self.week(self.alice, "artists")["cards"]], [mbid(4)])
         with self.assertRaises(ValueError):
-            self.week(self.alice, "style:folk")
+            self.week(self.alice, "discoveries")
 
-    def test_radar_card_reasons_order_and_local_match(self):
+    def test_cards_by_date_with_reasons_and_local_match(self):
         self.follow_all()
         cards = self.week(self.alice)["cards"]
-        self.assertEqual(cards[-1]["id"], mbid(2))                       # folk : le moins proche des goûts
+        self.assertEqual([c["id"] for c in cards], [mbid(2), mbid(1), mbid(3), mbid(4)])
         first = next(card for card in cards if card["id"] == mbid(1))
         self.assertEqual({(r["kind"], r["name"]) for r in first["reasons"]}, {("label", "Warp"), ("style", "techno")})
+        self.assertEqual(cards[-1]["reasons"][0]["name"], "Moderat")
         local = next(card for card in cards if card["id"] == mbid(3))["local"]
         self.assertEqual(local, {"id": "al9", "coverId": "c9", "folderId": "f9"})
         self.week(self.alice)
         self.assertEqual(len(self.local_calls), 4)                       # gardé quelques minutes
 
+    def test_around_an_artist_finds_its_neighbours_by_mbid_or_name(self):
+        page = self.around(self.alice, name="Moderat", mbid=MODERAT)
+        self.assertEqual(self.lastfm.calls, ["Moderat"])
+        self.assertEqual({c["id"] for c in page["cards"]}, {mbid(5), mbid(6)})
+        self.assertEqual({r["via"] for c in page["cards"] for r in c["reasons"]}, {"Moderat"})
+        self.assertEqual(page["around"], "Moderat")
+
+    def test_around_needs_a_name_and_lastfm(self):
+        with self.assertRaises(ValueError):
+            self.around(self.alice, name="")
+        self.lastfm.enabled = False
+        with self.assertRaises(RadarError) as raised:
+            self.around(self.alice, name="Moderat")
+        self.assertEqual(error_reply(raised.exception).status, 503)
+
     def test_a_card_whose_folder_is_missing_does_not_break_the_week(self):
         self.follow_all()
-        self.local = lambda user, title, artist: (_ for _ in ()).throw(LookupError("dossier"))
-        self.radar.local = self.local
-        cards = self.week(self.alice)["cards"]
-        self.assertEqual({card["local"] for card in cards}, {None})
-
-    def test_settings_send_the_kinds_to_the_page(self):
-        body = json.loads(self.controller.sources(None, self.alice).body)
-        self.assertEqual((body["kinds"], body["addable"]), (["style", "label", "artist", "similar"],
-                                                             ["style", "label", "artist"]))
-
-    def test_discoveries_hidden_when_turned_off_or_without_lastfm(self):
-        self.follow_all()
-        self.controller.discoveries(None, self.alice, {"enabled": False})
-        page = self.week(self.alice)
-        self.assertNotIn("discoveries", {f["key"] for f in page["filters"]})
-        self.assertNotIn(mbid(4), {c["id"] for c in page["cards"]})
-        self.controller.discoveries(None, self.alice, {"enabled": True})
-        self.lastfm.enabled = False
-        self.assertNotIn("discoveries", {f["key"] for f in self.week(self.alice)["filters"]})
+        self.radar.local = lambda user, title, artist: (_ for _ in ()).throw(LookupError("dossier"))
+        self.assertEqual({card["local"] for card in self.week(self.alice)["cards"]}, {None})
 
     def test_out_of_window_week(self):
         self.follow_all()
@@ -162,20 +181,26 @@ class RadarServiceTest(unittest.TestCase):
         self.assertEqual((page["empty"], page["cards"]), ("no-sources", []))
         self.assertEqual(page["defaultStyle"], "noise rock")
 
-    def test_sources_are_isolated_between_accounts(self):
+    def test_the_page_says_when_styles_come_from_the_whole_sub(self):
         self.follow_all()
-        body = json.loads(self.controller.sources(None, self.bob).body)
-        self.assertEqual(body["sources"], [])
+        self.assertIsNone(self.week(self.alice)["basis"])
+        self.profiles.set_basis(1, "site")
+        self.assertEqual(self.week(self.alice)["basis"], "site")
+
+    def test_settings(self):
+        self.follow_all()
+        self.assertEqual(json.loads(self.controller.sources(None, self.bob).body)["sources"], [])
         mine = json.loads(self.controller.sources(None, self.alice).body)
         self.assertEqual({(s["kind"], s["origin"]) for s in mine["sources"]},
-                         {("label", "manual"), ("style", "trends"), ("similar", "discovery")})
-        self.assertTrue(mine["discoveriesAvailable"])
-        self.assertEqual(mine["refreshCooldown"], REFRESH_COOLDOWN)
+                         {("label", "manual"), ("style", "trends"), ("artist", "trends")})
+        self.assertEqual((mine["kinds"], mine["addable"], mine["aroundAvailable"], mine["refreshCooldown"]),
+                         (["style", "label", "artist"], ["style", "label", "artist"], True, REFRESH_COOLDOWN))
 
     def test_add_source_validates_and_syncs_at_once(self):
         self.controller.add_source(None, self.alice, {"kind": "label", "identity": WARP, "name": "Warp"})
         self.controller.add_source(None, self.alice, {"kind": "style", "identity": "techno", "name": "techno"})
-        self.assertEqual(self.sync.new, [WARP, "techno"])
+        self.controller.add_source(None, self.alice, {"kind": "artist", "identity": MODERAT, "name": "Moderat"})
+        self.assertEqual(self.sync.new, [WARP, "techno", MODERAT])
         for bad in ({"kind": "style", "identity": "inconnu", "name": "x"}, {"kind": "label", "identity": "x"},
                     {"kind": "similar", "identity": APPARAT, "name": "Apparat"}, {"kind": "label", "identity": WARP}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
@@ -191,9 +216,7 @@ class RadarServiceTest(unittest.TestCase):
 
     def test_search(self):
         def search(kind, query):
-            params = {"kind": kind, "q": query}
-            request = SimpleNamespace(param=lambda name, default=None: params.get(name, default))
-            return json.loads(self.controller.search(request, self.alice).body)["results"]
+            return json.loads(self.controller.search(self.request(kind=kind, q=query), self.alice).body)["results"]
         self.assertEqual(search("label", "Warp")[0]["id"], WARP)
         self.assertEqual(search("artist", "Moderat")[0]["id"], MODERAT)
         for kind, query in (("style", "x"), ("label", ""), ("label", "x" * 301)):
@@ -213,7 +236,6 @@ class RadarServiceTest(unittest.TestCase):
 
     def test_refresh_too_soon_is_a_429(self):
         self.sync.refresh_user = lambda user: (_ for _ in ()).throw(RadarError("weekly.refresh_too_soon", 429))
-        from pimedia.webapp.controllers.replies import error_reply
         with self.assertRaises(RadarError) as raised:
             self.controller.refresh(None, self.alice, {})
         self.assertEqual(error_reply(raised.exception).status, 429)

@@ -1,20 +1,17 @@
-"""Tendances (favoris et marque-pages), labels des albums, styles du profil, découvertes Last.fm, tri selon les goûts."""
+"""Tendances, version 2 : favoris seulement, styles dominants (lus par lots), styles génériques du sub sans favori,
+labels des albums favoris, noms d'artistes résolus une fois, pannes qui ne retirent rien."""
 import tempfile
 import unittest
-from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
+from pimedia.shared.providers.metadata import ProviderUnavailable
 from pimedia.shared.providers.musicbrainz.entities import (AlbumLabel, MusicArtist, MusicLabel, ReleaseGenre,
                                                            Result)
-from pimedia.shared.providers.metadata import ProviderUnavailable
 from pimedia.shared.text import normalize
 from pimedia.storage.database import Database
-from pimedia.webapp.providers.lastfm import SimilarArtist
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.storage.release_radar import AlbumLabels, RadarProfiles, ReleaseSources
-from pimedia.webapp.weekly_releases import taste
-from pimedia.webapp.weekly_releases.entities import RadarCard, RadarRelease
+from pimedia.webapp.storage.release_radar import AlbumLabels, ArtistResolutions, RadarProfiles, ReleaseSources
 from pimedia.webapp.weekly_releases.limits import TREND_RESOLVE_ATTEMPTS
 from pimedia.webapp.weekly_releases.trends import Trends
 
@@ -23,62 +20,55 @@ def mbid(number):
     return "00000000-0000-4000-8000-%012d" % number
 
 
-MODERAT, BURIAL, BOOKMARKED, APPARAT, DAFT, WARP = (mbid(n) for n in range(1, 7))
-KNOWN = {"Moderat": MODERAT, "Burial": BURIAL, "Bookmarked": BOOKMARKED, "Apparat": APPARAT, "Daft Punk": DAFT}
+ARTISTS = {"A%d" % n: mbid(n) for n in range(1, 8)}
+WARP = mbid(700)
+TAGS = {mbid(1): ("techno", "electronic", "german"), mbid(2): ("techno", "electronic"),
+        mbid(3): ("techno", "ambient", "electronic"), mbid(4): ("rock", "techno"), mbid(5): ("folk",),
+        mbid(6): ("rock", "noise rock"), mbid(7): ("rock",)}
+CATALOG = ("techno", "electronic", "ambient", "rock", "folk", "noise rock")
 
 
 class FakeSubsonic:
     def __init__(self):
         self.endpoints = []
-        self.starred = {"artist": [{"id": "ar1", "name": "Moderat", "musicBrainzId": MODERAT}],
-                        "album": [{"id": "al1", "name": "III", "artist": "Moderat"}],
-                        "song": [{"title": "Archangel", "artist": "Burial"}]}
+        self.starred = {"artist": [{"id": "ar1", "name": "A1", "musicBrainzId": mbid(1)}],
+                        "album": [{"id": "al1", "name": "Disque", "artist": "A2"}],
+                        "song": [{"title": "Morceau", "artist": "A3"}, {"title": "Autre", "artist": "A4"}]}
+        self.frequent = [{"artist": "A6"}, {"artist": "A7"}, {"artist": "A4"}]
 
     def call(self, credentials, endpoint, params=()):
         self.endpoints.append(endpoint)
-        return {"starred2": self.starred}
+        if endpoint == "getStarred2":
+            return {"starred2": self.starred}
+        return {"albumList2": {"album": self.frequent}}
 
 
 class FakeMusicBrainz:
     def __init__(self):
-        self.searches, self.label_lookups, self.down = [], [], set()
+        self.searches, self.tag_calls, self.label_lookups, self.down = [], [], [], set()
         self.homonyms = {}
 
     def search_artists(self, name):
         self.searches.append(name)
-        if name in self.homonyms:
-            return Result(tuple(MusicArtist(identity, name) for identity in self.homonyms[name]))
-        return Result(tuple(MusicArtist(KNOWN[name], name) for _ in [0] if name in KNOWN))
+        if "search" in self.down:
+            raise ProviderUnavailable("explore.unavailable")
+        ids = self.homonyms.get(name) or ([ARTISTS[name]] if name in ARTISTS else [])
+        return Result(tuple(MusicArtist(identity, name) for identity in ids))
+
+    def artists_tags(self, ids):
+        self.tag_calls.append(tuple(ids))
+        if "tags" in self.down:
+            raise ProviderUnavailable("explore.unavailable")
+        return {identity: TAGS.get(identity, ()) for identity in ids}
 
     def release_label(self, title, artist):
         self.label_lookups.append((title, artist))
-        return AlbumLabel(MusicLabel(WARP, "Monkeytown"), mbid(99))
-
-    def artist_tags(self, artist_id):
-        if "tags" in self.down:
-            raise ProviderUnavailable("explore.unavailable")
-        return {MODERAT: ("techno", "electronic", "german"), BURIAL: ("dubstep", "electronic")}.get(artist_id, ())
+        return AlbumLabel(MusicLabel(WARP, "Warp"), mbid(99))
 
     def release_genres(self):
         if "genres" in self.down:
             raise ProviderUnavailable("explore.unavailable")
-        return (ReleaseGenre("techno"), ReleaseGenre("electronic"), ReleaseGenre("dubstep"))
-
-
-class FakeLastFm:
-    enabled = True
-
-    def __init__(self):
-        self.calls, self.down = [], False
-
-    def similar_artists(self, name, limit):
-        self.calls.append(name)
-        if self.down:
-            raise OSError("Last.fm")
-        if name != "Moderat":
-            return ()
-        return (SimilarArtist("Daft Punk", DAFT, 0.9), SimilarArtist("Apparat", None, 0.8),
-                SimilarArtist("Inconnu", None, 0.7), SimilarArtist("Burial", BURIAL, 0.6))
+        return tuple(ReleaseGenre(name) for name in CATALOG)
 
 
 class TrendsTest(unittest.TestCase):
@@ -90,102 +80,101 @@ class TrendsTest(unittest.TestCase):
         db.execute("INSERT INTO users(username, subsonic_salt, subsonic_token, created_at, last_seen_at) "
                    "VALUES ('alice', 's', 't', 0, 0)")
         self.user = SimpleNamespace(id=1, username="alice", subsonic_salt="s", subsonic_token="t")
-        self.subsonic, self.musicbrainz, self.lastfm = FakeSubsonic(), FakeMusicBrainz(), FakeLastFm()
-        self.sources, self.profiles, self.labels = ReleaseSources(db), RadarProfiles(db), AlbumLabels(db)
-        self.bookmarks = [SimpleNamespace(kind="artist", title="Bookmarked", artist="")]
-        self.trends = Trends(self.subsonic, self.musicbrainz, self.lastfm, self.sources, self.labels, self.profiles,
-                             bookmarks=lambda user: self.bookmarks, library_artists=lambda user: {normalize("Daft Punk")},
-                             clock=lambda: 1000)
+        self.now = 1000
+        self.subsonic, self.musicbrainz = FakeSubsonic(), FakeMusicBrainz()
+        self.sources, self.profiles = ReleaseSources(db), RadarProfiles(db)
+        self.labels, self.names = AlbumLabels(db), ArtistResolutions(db)
+        self.trends = Trends(self.subsonic, self.musicbrainz, self.sources, self.labels, self.profiles, self.names,
+                             clock=lambda: self.now)
 
     def kinds(self, kind):
-        return {(s.identity, s.name, s.origin, s.via) for s in self.sources.for_user(1) if s.kind == kind}
+        return {(s.identity, s.origin) for s in self.sources.for_user(1) if s.kind == kind}
 
-    def test_trends_use_only_personal_signals(self):
+    def test_only_favorites_are_read_and_become_artists(self):
         self.trends.refresh(self.user)
-        self.assertEqual(set(self.subsonic.endpoints), {"getStarred2"})
-        self.assertEqual({identity for identity, *_ in self.kinds("artist")}, {MODERAT, BURIAL, BOOKMARKED})
-        self.assertNotIn("Moderat", self.musicbrainz.searches)    # son MBID vient déjà de Subsonic
+        self.assertEqual(self.subsonic.endpoints, ["getStarred2"])
+        self.assertEqual(self.kinds("artist"), {(mbid(n), "trends") for n in (1, 2, 3, 4)})
+        self.assertNotIn("A1", self.musicbrainz.searches)                 # son MBID vient de Subsonic
+        self.assertEqual(self.profiles.basis(1), "favorites")
 
-    def test_hidden_trend_stays_hidden_after_refresh(self):
+    def test_dominant_styles_need_three_artists_and_are_read_in_one_request(self):
         self.trends.refresh(self.user)
-        burial = self.sources.get(1, "artist", BURIAL)
-        self.sources.hide(1, burial.id)
+        self.assertEqual(len(self.musicbrainz.tag_calls), 1)
+        # techno : 4 artistes ; electronic : 3 ; ambient, german, rock : moins de 3
+        self.assertEqual(self.kinds("style"), {("techno", "trends"), ("electronic", "trends")})
+
+    def test_at_most_five_dominant_styles_ranked_by_artists(self):
+        for name, identity in ARTISTS.items():
+            TAGS[identity] = ("a", "b", "c") if identity != mbid(7) else ("d",)
+        try:
+            self.subsonic.starred = {"artist": [{"name": n, "musicBrainzId": i} for n, i in ARTISTS.items()]}
+            self.musicbrainz.release_genres = lambda: tuple(ReleaseGenre(x) for x in "abcd")
+            self.trends.refresh(self.user)
+            self.assertEqual({identity for identity, _ in self.kinds("style")}, {"a", "b", "c"})
+        finally:
+            TAGS.update({mbid(1): ("techno", "electronic", "german"), mbid(2): ("techno", "electronic"),
+                         mbid(3): ("techno", "ambient", "electronic"), mbid(4): ("rock", "techno"),
+                         mbid(5): ("folk",), mbid(6): ("rock", "noise rock"), mbid(7): ("rock",)})
+
+    def test_without_favorites_styles_come_from_the_whole_sub(self):
+        self.subsonic.starred = {}
         self.trends.refresh(self.user)
-        self.assertTrue(self.sources.get(1, "artist", BURIAL).hidden)
+        self.assertIn("getAlbumList2", self.subsonic.endpoints)
+        self.assertEqual(self.kinds("style"), {("rock", "trends")})          # A6, A7, A4
+        self.assertEqual(self.kinds("artist"), set())                       # les artistes du sub ne sont pas « les siens »
+        self.assertEqual(self.profiles.basis(1), "site")
 
     def test_album_label_is_looked_up_once(self):
         self.trends.refresh(self.user)
         self.trends.refresh(self.user)
-        self.assertEqual(self.musicbrainz.label_lookups, [("III", "Moderat")])
-        self.assertEqual(self.kinds("label"), {(WARP, "Monkeytown", "trends", None)})
-        self.assertEqual(self.labels.get("al1")["label_id"], WARP)
+        self.assertEqual(self.musicbrainz.label_lookups, [("Disque", "A2")])
+        self.assertEqual(self.kinds("label"), {(WARP, "trends")})
 
-    def test_styles_come_from_the_profile_and_the_catalog(self):
+    def test_a_resolved_name_is_remembered(self):
         self.trends.refresh(self.user)
-        tags, _ = self.profiles.get(1)
-        self.assertGreater(tags["electronic"], tags["german"])
-        self.assertEqual({identity for identity, *_ in self.kinds("style")}, {"techno", "electronic", "dubstep"})
+        searches = len(self.musicbrainz.searches)
+        self.trends.refresh(self.user)
+        self.assertEqual(len(self.musicbrainz.searches), searches)
 
-    def test_discoveries_skip_library_and_followed_artists_and_keep_via(self):
+    def test_an_unknown_name_is_searched_again_after_a_month(self):
+        self.subsonic.starred = {"song": [{"artist": "Inconnu"}]}
         self.trends.refresh(self.user)
-        self.assertEqual(self.kinds("similar"), {(APPARAT, "Apparat", "discovery", "Moderat")})
+        self.trends.refresh(self.user)
+        self.assertEqual(self.musicbrainz.searches.count("Inconnu"), 1)
+        self.now += 31 * 86400
+        self.trends.refresh(self.user)
+        self.assertEqual(self.musicbrainz.searches.count("Inconnu"), 2)
 
-    def test_discoveries_off_makes_no_lastfm_call(self):
-        self.profiles.set_discoveries(1, False)
+    def test_homonyms_without_mbid_are_ignored(self):
+        self.subsonic.starred = {"song": [{"artist": "Air"}]}
+        self.musicbrainz.homonyms["Air"] = [mbid(40), mbid(41)]
         self.trends.refresh(self.user)
-        self.assertEqual(self.lastfm.calls, [])
-        self.assertEqual(self.kinds("similar"), set())
+        self.assertEqual(self.kinds("artist"), set())
+
+    def test_hidden_trend_stays_hidden_after_refresh(self):
+        self.trends.refresh(self.user)
+        self.sources.hide(1, self.sources.get(1, "style", "techno").id)
+        self.trends.refresh(self.user)
+        self.assertTrue(self.sources.get(1, "style", "techno").hidden)
 
     def test_unstarred_artist_leaves_the_trends(self):
         self.trends.refresh(self.user)
-        self.subsonic.starred["song"] = []
+        self.subsonic.starred["song"] = [{"artist": "A3"}]
         self.trends.refresh(self.user)
-        self.assertNotIn(BURIAL, {identity for identity, *_ in self.kinds("artist")})
+        self.assertNotIn((mbid(4), "trends"), self.kinds("artist"))
 
-    def test_manual_source_is_not_duplicated_by_trends(self):
-        self.sources.add(1, "artist", MODERAT, "Moderat", "manual")
+    def test_a_service_failure_removes_nothing(self):
         self.trends.refresh(self.user)
-        self.assertEqual(self.sources.get(1, "artist", MODERAT).origin, "manual")
-
-
-    def test_homonyms_without_mbid_are_ignored(self):
-        self.subsonic.starred["song"] = [{"artist": "Air"}]
-        self.musicbrainz.homonyms["Air"] = (mbid(40), mbid(41))
+        before = {kind: self.kinds(kind) for kind in ("artist", "style")}
+        self.musicbrainz.down = {"tags", "genres", "search"}
+        self.names.save(normalize("A3"), None, self.now - 31 * 86400)        # nom à rechercher de nouveau
         self.trends.refresh(self.user)
-        self.assertFalse({mbid(40), mbid(41)} & {identity for identity, *_ in self.kinds("artist")})
-
-    def test_a_service_failure_keeps_what_was_computed_before(self):
-        self.trends.refresh(self.user)
-        before = {kind: self.kinds(kind) for kind in ("style", "similar")}
-        profile = self.profiles.get(1)[0]
-        self.musicbrainz.down = {"genres", "tags"}
-        self.lastfm.down = True
-        self.trends.refresh(self.user)
-        self.assertEqual({kind: self.kinds(kind) for kind in ("style", "similar")}, before)
-        self.assertEqual(self.profiles.get(1)[0], profile)
+        self.assertEqual({kind: self.kinds(kind) for kind in ("artist", "style")}, before)
 
     def test_name_resolution_attempts_are_bounded(self):
         self.subsonic.starred = {"song": [{"artist": "Inconnu %d" % n} for n in range(200)]}
-        self.bookmarks = []
         self.trends.refresh(self.user)
         self.assertEqual(len(self.musicbrainz.searches), TREND_RESOLVE_ATTEMPTS)
-
-
-class TasteTest(unittest.TestCase):
-    def card(self, identity, tags, day=27, score=None):
-        release = RadarRelease(identity, identity, "Artiste", date(2026, 11, day), "Album", tags)
-        return RadarCard(release, (), taste.score(tags, {"techno": 3, "electronic": 1}) if score is None else score)
-
-    def test_score_prefers_matching_tags(self):
-        profile = {"techno": 3}
-        self.assertGreater(taste.score(("techno",), profile), taste.score(("folk",), profile))
-        self.assertEqual(taste.score((), profile), 0)
-        self.assertEqual(taste.score(("techno",), {}), 0)
-
-    def test_rank_by_score_then_date_then_title(self):
-        cards = [self.card("b", ("folk",), 25), self.card("a", ("folk",), 25), self.card("c", ("techno",), 28),
-                 self.card("d", ("folk",), 24)]
-        self.assertEqual([c.release.id for c in taste.rank(cards)], ["c", "d", "a", "b"])
 
 
 if __name__ == "__main__":

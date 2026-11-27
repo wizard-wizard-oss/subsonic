@@ -80,6 +80,9 @@ class RadarReleases:
                      json.dumps(sorted(release.tags))))
                 connection.execute("INSERT OR IGNORE INTO radar_release_sources VALUES (?, ?, ?)",
                                    (release.id, kind, identity))
+                for artist_id in release.artist_ids:
+                    connection.execute("INSERT OR IGNORE INTO radar_release_artists VALUES (?, ?)",
+                                       (release.id, artist_id))
 
     def for_sources(self, sources, start, end):
         """[(sortie, type de source, identité de source)] des sources données, sorties entre start et end."""
@@ -89,6 +92,15 @@ class RadarReleases:
             "ORDER BY r.released_on, r.id", (start.isoformat(), end.isoformat()))
         return [(RadarRelease.from_row(row), row["source_kind"], row["source_identity"]) for row in rows
                 if (row["source_kind"], row["source_identity"]) in sources]
+
+    def window(self, start, end):
+        """Toutes les sorties gardées entre start et end, avec leurs artistes crédités (une semaine : quelques
+        centaines de lignes)."""
+        rows = self.db.query(
+            "SELECT r.*, GROUP_CONCAT(a.artist_id) AS artist_ids FROM radar_releases r "
+            "LEFT JOIN radar_release_artists a ON a.release_id = r.id WHERE r.released_on BETWEEN ? AND ? "
+            "GROUP BY r.id ORDER BY r.released_on, r.id", (start.isoformat(), end.isoformat()))
+        return [RadarRelease.from_row(row) for row in rows]
 
     def purge(self, before):
         self.db.execute("DELETE FROM radar_releases WHERE released_on < ?", (before.isoformat(),))
@@ -135,26 +147,20 @@ class RadarReleases:
 
 
 class RadarProfiles:
-    """Goûts d'un compte (tags pondérés), choix des découvertes et dernière demande d'actualisation."""
+    """Réglages d'un compte : d'où viennent ses styles proposés et dernière demande d'actualisation."""
     def __init__(self, db):
         self.db = db
 
     def _ensure(self, user_id):
         self.db.execute("INSERT OR IGNORE INTO radar_profiles (user_id) VALUES (?)", (user_id,))
 
-    def get(self, user_id):
-        """(tags pondérés, découvertes activées)."""
-        row = self.db.one("SELECT tags, discoveries_off FROM radar_profiles WHERE user_id = ?", (user_id,))
-        return (json.loads(row["tags"]), not row["discoveries_off"]) if row else ({}, True)
+    def basis(self, user_id):
+        row = self.db.one("SELECT basis FROM radar_profiles WHERE user_id = ?", (user_id,))
+        return row["basis"] if row else None
 
-    def save_tags(self, user_id, tags, at):
+    def set_basis(self, user_id, basis):
         self._ensure(user_id)
-        self.db.execute("UPDATE radar_profiles SET tags = ?, computed_at = ? WHERE user_id = ?",
-                        (json.dumps(tags, sort_keys=True), int(at), user_id))
-
-    def set_discoveries(self, user_id, enabled):
-        self._ensure(user_id)
-        self.db.execute("UPDATE radar_profiles SET discoveries_off = ? WHERE user_id = ?", (int(not enabled), user_id))
+        self.db.execute("UPDATE radar_profiles SET basis = ? WHERE user_id = ?", (basis, user_id))
 
     def refresh_requested_at(self, user_id):
         row = self.db.one("SELECT refresh_requested_at FROM radar_profiles WHERE user_id = ?", (user_id,))
@@ -163,6 +169,21 @@ class RadarProfiles:
     def request_refresh(self, user_id, at):
         self._ensure(user_id)
         self.db.execute("UPDATE radar_profiles SET refresh_requested_at = ? WHERE user_id = ?", (int(at), user_id))
+
+
+class ArtistResolutions:
+    """MBID trouvé pour un nom d'artiste normalisé (artist_id vide : aucun ou plusieurs artistes de ce nom)."""
+    def __init__(self, db):
+        self.db = db
+
+    def get(self, name_key):
+        row = self.db.one("SELECT artist_id, resolved_at FROM artist_resolutions WHERE name_key = ?", (name_key,))
+        return (row["artist_id"], row["resolved_at"]) if row else None
+
+    def save(self, name_key, artist_id, at):
+        self.db.execute("INSERT INTO artist_resolutions VALUES (?, ?, ?) ON CONFLICT (name_key) DO UPDATE SET "
+                        "artist_id = excluded.artist_id, resolved_at = excluded.resolved_at",
+                        (name_key, artist_id, int(at)))
 
 
 class AlbumLabels:

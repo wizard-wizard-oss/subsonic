@@ -47,9 +47,9 @@ class FakeMusicBrainz:
         self._call("label", label_id, start, end)
         return WeeklyReleasePage(self.by_label.get(label_id, ()), None, False)
 
-    def groups_by_artists(self, ids, start, end, offset=0):
-        self._call("artists", tuple(ids), offset)
-        return WeeklyReleasePage(tuple(a for a in self.by_artist if set(a.artist_ids) & set(ids)), None, False)
+    def fresh_releases(self, today, start, end):          # ListenBrainz : le même faux service tient le journal
+        self._call("fresh", today, start, end)
+        return self.by_artist
 
 
 class FakeTrends:
@@ -80,7 +80,8 @@ class ReleaseSyncTest(unittest.TestCase):
         self.musicbrainz, self.trends = FakeMusicBrainz(), FakeTrends()
         self.sources, self.releases = ReleaseSources(self.db), RadarReleases(self.db)
         self.profiles = RadarProfiles(self.db)
-        self.sync = ReleaseSync(self.musicbrainz, self.trends, self.sources, self.releases, self.profiles,
+        self.sync = ReleaseSync(self.musicbrainz, self.musicbrainz, self.trends, self.sources, self.releases,
+                                self.profiles,
                                 users=lambda: [self.alice, self.bob], today=lambda: TODAY, clock=lambda: self.now,
                                 spawn=lambda work: work())
 
@@ -121,13 +122,14 @@ class ReleaseSyncTest(unittest.TestCase):
         self.assertEqual(len(mondays), 12)            # 74 jours à cheval sur 12 semaines du calendrier
         self.assertTrue(self.found("style", "techno"))
 
-    def test_artists_are_grouped_and_results_go_to_the_right_source(self):
+    def test_fresh_releases_are_read_once_for_everyone(self):
         self.sources.add(1, "artist", mbid(800), "Moderat", "trends")
-        self.sources.add(2, "similar", mbid(801), "Apparat", "discovery", "Moderat")
+        self.sources.add(2, "artist", mbid(801), "Apparat", "manual")
         self.sync.sync_all()
-        self.assertEqual(len([c for c in self.musicbrainz.calls if c[0] == "artists"]), 1)
-        self.assertEqual(self.found("artist", mbid(800)), {mbid(2)})
-        self.assertEqual(self.found("similar", mbid(801)), {mbid(3)})
+        self.assertEqual([c for c in self.musicbrainz.calls if c[0] == "fresh"], [("fresh", TODAY, START, END)])
+        found = {r.id: r.artist_ids for r in self.releases.window(START, END)}
+        self.assertEqual(found, {mbid(2): (mbid(800),), mbid(3): (mbid(801),)})
+        self.assertIsNotNone(self.releases.synced_at("artist", mbid(800)))
 
     def test_failure_keeps_previous_releases(self):
         self.sources.add(1, "label", mbid(700), "Warp", "manual")
@@ -185,10 +187,11 @@ class ReleaseSyncTest(unittest.TestCase):
         self.musicbrainz._call = lambda *args: log.append(args[0])
         self.trends.log = log
         self.sources.add(1, "label", mbid(700), "Warp", "manual")
-        self.trends.adds = [lambda: self.sources.add(1, "artist", mbid(800), "Moderat", "trends")]
+        self.trends.adds = [lambda: self.sources.add(1, "style", "techno", "techno", "trends")]
         self.sync.sync_all()
-        self.assertEqual(log, ["label", "trends", "trends", "artists"])
-        self.assertEqual(self.found("artist", mbid(800)), {mbid(2)})
+        self.assertEqual(log[:4], ["label", "fresh", "trends", "trends"])
+        self.assertEqual(set(log[4:]), {"style"})            # le style ajouté par les tendances, le même soir
+        self.assertTrue(self.found("style", "techno"))
 
     def test_requests_share_one_worker_and_are_deduplicated(self):
         spawned = []

@@ -6,6 +6,7 @@ index | news_articles_by_date | CREATE INDEX news_articles_by_date ON news_artic
 index | notifications_by_recipient | CREATE INDEX notifications_by_recipient ON notifications (recipient_id, id DESC)
 index | notifications_unread_by_recipient | CREATE INDEX notifications_unread_by_recipient ON notifications (recipient_id) WHERE read_at IS NULL
 index | playlist_ext_tracks_by_place | CREATE INDEX playlist_ext_tracks_by_place ON playlist_ext_tracks (playlist_id, after_songs, place, id)
+index | radar_release_artists_artist | CREATE INDEX radar_release_artists_artist ON radar_release_artists (artist_id)
 index | radar_release_sources_source | CREATE INDEX radar_release_sources_source ON radar_release_sources (source_kind, source_identity)
 index | radar_releases_date | CREATE INDEX radar_releases_date ON radar_releases (released_on)
 index | recommendation_comments_by_thread | CREATE INDEX recommendation_comments_by_thread ON recommendation_comments (recommendation_id, id)
@@ -45,6 +46,11 @@ table | artist_indexes | CREATE TABLE artist_indexes (
         artists TEXT NOT NULL,                           -- JSON
         since INTEGER NOT NULL,                          -- date Subsonic (ms) pour getIndexes ifModifiedSince
         built_at INTEGER NOT NULL
+    )
+table | artist_resolutions | CREATE TABLE artist_resolutions (
+        name_key TEXT PRIMARY KEY,
+        artist_id TEXT,
+        resolved_at INTEGER NOT NULL
     )
 table | chat_messages | CREATE TABLE chat_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -183,6 +189,11 @@ table | radar_profiles | CREATE TABLE radar_profiles (
         computed_at INTEGER,
         refresh_requested_at INTEGER,
         discoveries_off INTEGER NOT NULL DEFAULT 0
+    , basis TEXT)
+table | radar_release_artists | CREATE TABLE radar_release_artists (
+        release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,
+        artist_id TEXT NOT NULL,
+        PRIMARY KEY (release_id, artist_id)
     )
 table | radar_release_sources | CREATE TABLE radar_release_sources (
         release_id TEXT NOT NULL REFERENCES radar_releases (id) ON DELETE CASCADE,

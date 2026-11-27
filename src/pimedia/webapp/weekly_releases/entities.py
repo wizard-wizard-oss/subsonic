@@ -47,11 +47,13 @@ class RadarRelease:
     released_on: date
     kind: str
     tags: tuple = ()
+    artist_ids: tuple = ()                 # MBID des artistes crédités
 
     @classmethod
     def from_row(cls, row):
+        artists = row["artist_ids"] if "artist_ids" in row.keys() else None
         return cls(row["id"], row["title"], row["artist"], date.fromisoformat(row["released_on"]), row["kind"],
-                   tuple(json.loads(row["tags"])))
+                   tuple(json.loads(row["tags"])), tuple(sorted(artists.split(","))) if artists else ())
 
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,
@@ -63,12 +65,10 @@ class RadarCard:
     """Une sortie telle qu'un compte la voit : pourquoi elle est là, sa ressemblance avec ses goûts, sa copie locale."""
     release: RadarRelease
     reasons: tuple
-    score: float = 0.0
     local: Optional[dict] = None
 
     def to_api(self):
-        return dict(self.release.to_api(), reasons=[reason.to_api() for reason in self.reasons],
-                    score=round(self.score, 3), local=self.local)
+        return dict(self.release.to_api(), reasons=[reason.to_api() for reason in self.reasons], local=self.local)
 
 
 @dataclass(frozen=True)
@@ -94,29 +94,31 @@ class RadarWeek:
     out_of_window: bool = False
     empty: Optional[str] = None
     default_style: str = ""
+    basis: Optional[str] = None            # styles proposés d'après les favoris ou, sans favori, d'après le sub
+    around: Optional[str] = None           # « Autour de… » : l'artiste choisi
 
     def to_api(self):
         return {"monday": self.monday.isoformat(), "cards": [card.to_api() for card in self.cards],
                 "filters": [f.to_api() for f in self.filters], "filter": self.selected, "next": self.next_offset,
                 "updatedAt": self.updated_at, "refreshAfter": self.refresh_after, "outOfWindow": self.out_of_window,
-                "empty": self.empty, "defaultStyle": self.default_style}
+                "empty": self.empty, "defaultStyle": self.default_style, "basis": self.basis, "around": self.around}
 
 
 @dataclass(frozen=True)
 class RadarSettings:
     """Sources visibles d'un compte et réglages du panneau « Mes sources »."""
     sources: tuple
-    discoveries_enabled: bool
-    discoveries_available: bool
+    around_available: bool
     refresh_cooldown: int
     kinds: tuple = ()
     addable: tuple = ()
+    basis: Optional[str] = None
     refresh_after: Optional[int] = None
 
     def to_api(self):
-        return {"sources": [s.to_api() for s in self.sources], "discoveriesEnabled": self.discoveries_enabled,
-                "discoveriesAvailable": self.discoveries_available, "refreshCooldown": self.refresh_cooldown,
-                "kinds": list(self.kinds), "addable": list(self.addable), "refreshAfter": self.refresh_after}
+        return {"sources": [s.to_api() for s in self.sources], "aroundAvailable": self.around_available,
+                "refreshCooldown": self.refresh_cooldown, "kinds": list(self.kinds), "addable": list(self.addable),
+                "basis": self.basis, "refreshAfter": self.refresh_after}
 
 
 @dataclass(frozen=True)
