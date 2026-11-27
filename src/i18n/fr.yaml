@@ -922,7 +922,7 @@ webapp:
   whatsnew:
     title: "Bienvenue dans le sub"
     eyebrow: "Help"
-    intro: "La discothèque de la bande. On y écoute ce qu’il y a sur le serveur, mais pas que : on y découvre des trucs, on suit ce qui sort et on s’envoie des disques. Fais comme chez toi."
+    intro: "Le sub a changé. Toujours notre bibliothèque, mais maintenant aussi un endroit pour découvrir, suivre les sorties et s’envoyer des disques entre personnes distinguées. Fais le tour."
     journey_button: "Le parcours en 2 minutes"
     search_label: "Chercher dans l’aide"
     search_placeholder: "Un mot, une fonction : RSS, playlist, paroles…"

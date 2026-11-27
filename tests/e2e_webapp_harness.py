@@ -7,6 +7,7 @@ import threading
 import time
 import urllib.error
 
+from pimedia.webapp import preferences
 from pimedia.webapp.app import WebApplication
 from pimedia.server.transport import ThreadedServer
 from tests.fake_subsonic import FakeSubsonicFull
@@ -36,6 +37,9 @@ def slow_then_failing_once(answer):
 
 
 def main():
+    if not os.environ.get("E2E_HELP_UNSEEN"):
+        # Les parcours existants partent d'un compte qui a déjà vu Help ; sinon ils atterriraient tous sur cette page.
+        preferences.DEFAULTS["help_seen"] = True
     # Let jsdom load all application scripts without overflowing the local TCP backlog.
     ThreadedServer.request_queue_size = 128
     fake = FakeSubsonicFull().start()

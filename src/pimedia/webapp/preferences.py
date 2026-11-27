@@ -17,10 +17,11 @@ CHOICES = {
     "chat_panel": ("open", "closed"),               # salon à droite
     "album_grid": ("large", "small"),
     "notify_mentions": (True, False),               # notification du navigateur quand on me mentionne
+    "help_seen": (True, False),                     # la page Help a déjà été ouverte : le site ne la montre plus d'office
     **{key: (True, False) for key in SONG_DEFAULTS},
 }
 DEFAULTS = {"sidebar": "pinned", "sidebar_width": 240, "density": "comfortable", "chat_panel": "open",
-            "album_grid": "large", "notify_mentions": True,
+            "album_grid": "large", "notify_mentions": True, "help_seen": False,
             "sidebar_tab": "artists", **SONG_DEFAULTS}
 
 

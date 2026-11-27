@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.23.1"
+  date: 2026-11-27
+  title: "Help s'ouvre à la première visite"
+  changes:
+    - "La première fois que tu te connectes, la page Help s'ouvre avant les autres pour te présenter le sub. Ensuite, le site se souvient que tu l'as vue et t'emmène sur l'accueil comme d'habitude."
+    - "Si tu arrives par un lien direct (un album partagé dans le salon, par exemple), on ne t'envoie pas sur Help : la page demandée s'ouvre."
+
 - version: "1.23"
   date: 2026-11-27
   title: "Help : une pochette pour « Voyage, voyage »"
