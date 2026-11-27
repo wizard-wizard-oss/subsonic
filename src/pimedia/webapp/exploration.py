@@ -58,7 +58,9 @@ class Exploration:
         # Recherche limitée aux résultats autorisés pour cette personne. Pas de cache public de disponibilité.
         found = self.library.search(user, title)
         title_key, artist_key = normalize(title), normalize(artist)
-        return {"albums": [a for a in found["albums"] if normalize(a["name"]) == title_key
-                           and (not artist or normalize(a["artist"]) == artist_key)],
+        albums = [a for a in found["albums"] if normalize(a["name"]) == title_key
+                  and (not artist or normalize(a["artist"]) == artist_key)]
+        # « À écouter » range un album sous son dossier : la carte doit porter la même identité.
+        return {"albums": [dict(a, folderId=self.folders.folder_id(user, a["id"])) for a in albums],
                 "songs": [s for s in found["songs"] if normalize(s["title"]) == title_key
                           and (not artist or normalize(s["artist"]) == artist_key)]}

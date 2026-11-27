@@ -129,6 +129,27 @@ class AudioTagsTest(unittest.TestCase):
         snapshot = self.writer.inspect(relative)
         return AudioFileEdit(relative, snapshot.revision, changes)
 
+    def test_conflict_on_unpublished_file_does_not_block_editor(self):
+        first, second = self.file(), self.file("Artist/Album/02.mp3")
+        edits = self.edit(title="One"), self.edit("Artist/Album/02.mp3", title="Two")
+        before = first.read_bytes()
+
+        def change_second_after_first(stage, done, total):
+            if stage == "publishing" and done == 1:
+                second.write_bytes(second.read_bytes() + b"changed elsewhere")
+        with self.assertRaisesRegex(AudioTagError, "tags.conflict"):
+            self.writer.apply(edits, change_second_after_first)
+        self.assertEqual(first.read_bytes(), before)                       # le premier a bien été restauré
+        self.assertTrue(second.read_bytes().endswith(b"changed elsewhere"))  # le second n'a pas été touché
+        self.writer.recover()                                              # aucune reprise bloquée
+        self.writer.apply((self.edit(title="Encore"),))
+
+    def test_foreign_owner_file_is_not_editable(self):
+        path = self.file()
+        with patch("pimedia.webapp.tags.audio.os.geteuid", return_value=path.stat().st_uid + 1):
+            snapshot = self.writer.inspect("Artist/Album/01.mp3")
+        self.assertEqual((snapshot.editable, snapshot.reason), (False, "tags.not_writable"))
+
     def test_mp3_preserves_audio_unknown_fields_picture_multivalues_and_totals(self):
         path = self.file()
         snapshot = self.writer.inspect("Artist/Album/01.mp3")

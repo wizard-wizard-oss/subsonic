@@ -9,11 +9,10 @@ import os
 import re
 import shutil
 import time
-import threading
 import uuid
 import zipfile
 
-from .library.files import EXTENSIONS, extension_of, find_albums
+from .library.files import is_disc, EXTENSIONS, extension_of, find_albums
 from .library_scan import LibraryScan
 
 IMAGES = ("jpg", "jpeg", "png")                  # pochettes gardées à côté des titres d'un zip
@@ -54,7 +53,6 @@ def incoming_dir(music_dir, incoming_name):
 
 class Uploads:
     def __init__(self, subsonic, users, library, history, scanner=None):
-        self._placement_lock = threading.Lock()
         self.history = history
         self.subsonic = subsonic
         self.users = users
@@ -126,7 +124,7 @@ class Uploads:
                 raise UploadError("upload.empty_zip")
             if any(len(os.path.relpath(album, unpacked).split(os.sep)) < 2 for album in find_albums(unpacked)):
                 raise UploadError("upload.album_required")
-            with self._placement_lock:
+            with self.library.lock:
                 placed = self._place_albums(unpacked)
                 self._remove_empty_dirs(unpacked)
                 waiting = self._merge(unpacked, self.directory)
@@ -192,6 +190,8 @@ class Uploads:
             with zipfile.ZipFile(archive) as source:
                 members = [m for m in source.infolist() if not m.is_dir()]
                 wanted = [m for m in members if self._wanted(m)]
+                if not all(self._in_album(m) for m in wanted if extension_of(zip_name(m)) in EXTENSIONS):
+                    raise UploadError("upload.album_required")      # refusé sur les noms, avant toute écriture
                 if sum(m.file_size for m in wanted) > MAX_UNZIPPED_BYTES or \
                         any(m.file_size > MAX_FILE_BYTES for m in wanted):
                     raise UploadError("upload.bad_size")
@@ -201,6 +201,14 @@ class Uploads:
         except (zipfile.BadZipFile, zipfile.LargeZipFile, NotImplementedError, RuntimeError, EOFError):
             raise UploadError("upload.bad_zip")                  # zip abîmé, chiffré ou compression inconnue
         return len(wanted), len(members) - len(wanted)
+
+    @staticmethod
+    def _in_album(member):
+        """Le titre est dans un dossier artiste/album (un dossier de disque final ne compte pas comme niveau)."""
+        folders = [p for p in zip_name(member).replace("\\", "/").split("/")[:-1] if p not in ("", ".", "..")]
+        if folders and is_disc(folders[-1]):
+            folders = folders[:-1]
+        return len(folders) >= 2
 
     @staticmethod
     def _wanted(member):

@@ -46,7 +46,7 @@ class AudioTags:
             kind, document = formats.load(path)
             tags = formats.read(kind, document)
             editable = os.access(path, os.W_OK) and os.access(os.path.dirname(path), os.W_OK | os.X_OK)
-            editable = editable and formats.is_supported_id3(kind, document)
+            editable = editable and formats.is_supported_id3(kind, document) and self._owned(path)
             if files.revision(path) != revision:
                 raise AudioTagError("tags.conflict")
             return AudioFileSnapshot(relative_path, revision, kind, editable, "" if editable else "tags.not_writable", tags)
@@ -56,6 +56,11 @@ class AudioTags:
             return self._unreadable(relative_path, path, str(error))
         except (mutagen.MutagenError, ValueError, OSError):
             return self._unreadable(relative_path, path, "tags.unreadable_file")
+
+    @staticmethod
+    def _owned(path):
+        """La copie publiée garde le propriétaire du fichier : sans être root, seul son propriétaire peut l'écrire."""
+        return os.geteuid() == 0 or os.stat(path).st_uid == os.geteuid()
 
     @staticmethod
     def _unreadable(relative_path, path, reason):

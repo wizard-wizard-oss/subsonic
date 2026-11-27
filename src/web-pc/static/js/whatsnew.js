@@ -122,7 +122,7 @@ Views.whatsnew = (() => {
           el("img", {src: "/static/help/" + capture + ".png", alt: t(key + ".title"), loading: "lazy", decoding: "async"}),
           el("figcaption", {text: t("whatsnew.illustration_label")})));
       }
-      const note = t(key + ".note");
+      const note = App.texts[key + ".note"] !== undefined ? t(key + ".note") : "";   // App.t rend la clé si le texte manque
       App.append(App.clear(lesson), [el("p.kicker", {text: t("whatsnew.steps_label")}),
         el("h4", {id: "help-guide-title", tabIndex: -1, "aria-live": "polite", text: t(key + ".title")}),
         body, el("p.help-note", {text: note, hidden: !note}), actions(theme, guide)]);

@@ -83,6 +83,8 @@ class Journal:
             path = self.resolve(entry["relative"])
             if files.revision(path) == entry["original_revision"] or entry.get("restored"):
                 return True
+            if self._never_published(path, entry):
+                return True               # jamais remplacé par ce lot : un changement venu d'ailleurs n'est pas à défaire
             if entry.get("original_digest") and files.digest(path) == entry["original_digest"]:
                 entry["restored"] = True       # Une panne peut avoir précédé l'écriture de l'accusé de restauration.
                 return True
@@ -104,6 +106,13 @@ class Journal:
         finally:
             if temporary and os.path.exists(temporary):
                 os.unlink(temporary)
+
+    @staticmethod
+    def _never_published(path, entry):
+        """La copie préparée attend encore à côté du fichier : la publication de cette entrée n'a pas eu lieu."""
+        name = entry.get("temporary", "")
+        return not entry.get("published_revision") and bool(name) and \
+            os.path.isfile(os.path.join(os.path.dirname(path), name))
 
     def _operations(self):
         return [operation for operation in Path(self.backup_dir).iterdir()

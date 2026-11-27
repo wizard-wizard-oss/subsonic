@@ -30,7 +30,8 @@ class MetadataTest(unittest.TestCase):
         self.sleeps = []
         self.metadata = MusicBrainz(self.repository, self.http, clock=lambda: self.now, sleep=self.sleeps.append,
                                     pacer=Pacer(0))
-        self.folders = SimpleNamespace(album=lambda user, album_id: {"name": "Arrival", "artist": "ABBA"})
+        self.folders = SimpleNamespace(album=lambda user, album_id: {"name": "Arrival", "artist": "ABBA"},
+                                       folder_id=lambda user, album_id: "fdir-" + album_id)
         self.service = Exploration(self.metadata, self.folders, None)
 
     def test_editions_require_an_explicit_choice(self):
@@ -102,6 +103,13 @@ class MetadataTest(unittest.TestCase):
         self.service.library = SimpleNamespace(search=lambda user, query: {
             "albums": [{"id": "local", "name": "Dissidaence Episode 2", "artist": "Vitalic"}], "songs": []})
         self.assertEqual(self.service.local(None, "Dissidænce Episode 2", "Vitalic")["albums"][0]["id"], "local")
+
+    def test_local_albums_carry_the_folder_id_used_by_listen_later(self):
+        library = SimpleNamespace(search=lambda user, title: {"albums": [{"id": "al1", "name": "Arrival", "artist": "ABBA"}],
+                                                              "songs": []})
+        folders = SimpleNamespace(folder_id=lambda user, album_id: "fdir-al1")
+        found = Exploration(self.metadata, folders, library).local("bob", "Arrival", "ABBA")
+        self.assertEqual(found["albums"][0]["folderId"], "fdir-al1")
 
     def test_cannot_choose_a_release_outside_candidates(self):
         with self.assertRaises(ValueError):

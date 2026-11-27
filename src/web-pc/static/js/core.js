@@ -186,7 +186,7 @@ App.bus = {
 App.savePreference = (() => {
   let pending = Promise.resolve();
   return function (key, value) {
-    const userId = App.user && App.user.id, preferences = App.preferences;
+    const userId = App.user && App.user.id, preferences = App.preferences, previous = preferences[key];
     preferences[key] = value;
     App.bus.emit("preferences", preferences);
     const current = () => App.user && App.user.id === userId && App.preferences === preferences;
@@ -197,7 +197,12 @@ App.savePreference = (() => {
       try {
         await App.api.post("/api/preferences", {changes: {[key]: value}});
       } catch (error) {
-        if (current()) App.toast(App.errorText(error), "error");
+        if (!current()) return;
+        if (preferences[key] === value) {           // refusé : l'écran revient au choix enregistré
+          preferences[key] = previous;
+          App.bus.emit("preferences", preferences);
+        }
+        App.toast(App.errorText(error), "error");
       }
     });
     return pending;

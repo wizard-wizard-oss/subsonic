@@ -98,6 +98,10 @@ class Folders:
         children = visible(self._directory(user, self._album_folder(user, album_id)).get("child"))
         return album_folder(text(c.get("path")) for c in children)
 
+    def folder_id(self, user, album_id):
+        """Identité de dossier d'un album (« f… »), quelle que soit la référence reçue (dossier ou ID3)."""
+        return folder_ref(self._album_folder(user, album_id))
+
     def album(self, user, album_id):
         folder = self._album_folder(user, album_id)
         directory = self._directory(user, folder)

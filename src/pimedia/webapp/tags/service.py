@@ -211,7 +211,7 @@ class AlbumTags:
             self.audio.apply(edits, progress=lambda phase, done, total: self._progress(operation, phase, done, total))
         except Exception as error:
             code = str(error.args[0]) if isinstance(error, AudioTagError) and error.args else "tags.write_failed"
-            LOG.warning("Album tag edit failed: %s", type(error).__name__)
+            LOG.exception("Album tag edit failed: %s", type(error).__name__)
             with self._lock:
                 operation.state, operation.error, operation.scan = "failed", code, "failed"
                 if code == "tags.recovery_required":
@@ -235,7 +235,7 @@ class AlbumTags:
                 else:
                     self._scan_result(operation, "updated")
         except Exception as error:
-            LOG.warning("Tags saved; Subsonic refresh could not be confirmed: %s", type(error).__name__)
+            LOG.exception("Tags saved; Subsonic refresh could not be confirmed: %s", type(error).__name__)
             self._scan_result(operation, "failed", "tags.scan_unconfirmed")
         finally:
             with self._lock:

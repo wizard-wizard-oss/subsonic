@@ -4,6 +4,7 @@ import io
 import os
 import stat
 import unittest
+from unittest.mock import patch
 import zipfile
 from urllib.parse import quote
 
@@ -75,6 +76,11 @@ class UploadHttpTest(WebAppTestCase):
         self.assertEqual(self.send("a.mp3").status, 400)
         with open(path, "rb") as target:
             self.assertEqual(target.read(), b"original")
+
+    def test_zip_without_album_is_refused_before_extraction(self):
+        archive = make_zip({"Artiste/01.mp3": AUDIO, "Artiste/Album/02.mp3": AUDIO})
+        with patch.object(self.app.uploads, "_extract", side_effect=AssertionError("extraction inutile")):
+            self.assertEqual(self.send("lot.zip", archive).json()["error"], "upload.album_required")
 
     def test_rejected_audio_name_does_not_leave_a_file(self):
         name = "Nán Fiero & Mon$rock [Live] !.flac"

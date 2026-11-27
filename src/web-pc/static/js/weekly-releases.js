@@ -160,7 +160,7 @@ const WeeklyReleaseView = (() => {
           cover.removeAttribute("target");
           if (local.coverId) cover.replaceChildren(App.cover(local.coverId, 180, album.title));
           actions.replaceChildren(el("a.chip", {href, text: t("local")}),
-            ListenLaterUI.actions({kind: "album", source: "subsonic", sourceId: local.id}));
+            ListenLaterUI.actions({kind: "album", source: "subsonic", sourceId: local.folderId}));
         } catch (error) { /* La carte conserve sa recherche même si la bibliothèque est indisponible. */ }
       }));
     }
