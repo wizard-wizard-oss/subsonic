@@ -107,9 +107,21 @@ webapp:
   listen_later:
     unread_label: "À écouter : nouveaux conseils ou commentaires"
     title: "À écouter"
-    intro: "Gardez les artistes, albums et morceaux à découvrir, retrouvez vos conseils reçus et envoyés, et échangez vos impressions."
+    intro: "Retrouvez les conseils reçus, vos marque-pages et vos envois, et échangez vos impressions sous chaque pochette."
     bookmarks: "Mes marque-pages"
     recommendations: "Les recommandations reçues"
+    tabs:
+      received: "Reçues"
+      bookmarks: "Marque-pages"
+      sent: "Envoyées"
+    tabs_label: "Sections de À écouter"
+    unread_count: "{count} non lus"
+    new_badge: "Nouveau"
+    play_album: "Écouter l’album"
+    play_artist: "Radio de l’artiste"
+    hide_comments: "Masquer les commentaires"
+    all_advisers: "Voir tous les conseillers ({count})"
+    fewer_advisers: "Masquer les autres conseillers"
     add_bookmark: "Garder dans À écouter"
     remove_bookmark: "Retirer de mes marque-pages"
     bookmark_added: "Ajouté à À écouter"
@@ -1024,15 +1036,15 @@ webapp:
             steps:
               - "Sur un artiste, un album ou un morceau de la bibliothèque, choisissez Conseiller à quelqu’un. Le conseil est aussi proposé sur les fiches Discogs d’artistes et d’albums."
               - "Choisissez un membre qui s’est déjà connecté au site et ajoutez un commentaire si vous le souhaitez."
-              - "Retrouvez le conseil dans À écouter et poursuivez l’échange privé avec cette personne."
-            note: "La discussion reste liée à cette recommandation : elle n’est publiée ni dans le salon ni sous l’album. Si plusieurs personnes conseillent la même référence, leurs noms sont regroupés, avec un fil privé par conseiller."
+              - "Retrouvez le conseil dans À écouter, onglet Envoyées, et poursuivez l’échange privé avec cette personne."
+            note: "La discussion reste liée à cette recommandation : elle n’est publiée ni dans le salon ni sous l’album. Si plusieurs personnes conseillent la même référence, leurs noms sont regroupés sur une même pochette, avec un fil privé par conseiller. Le fil du conseiller le plus récent s’affiche d’abord ; « Voir tous les conseillers » ouvre les autres."
           g6:
             title: "Retrouver ses conseils et archives"
             steps:
-              - "Ouvrez À écouter et consultez les recommandations reçues, avec le filtre artistes, albums ou morceaux."
-              - "Lancez les morceaux avec Tout écouter, ou commencez par une ligne ; gardez vos découvertes en marque-pages."
-              - "Retirez les conseils déjà traités, puis retrouvez-les dans les archives ; vos envois sont aussi consultables."
-            note: "Retirer une recommandation l’archive sans effacer les échanges. Les nouveaux commentaires restent accessibles, même dans les archives. Le marque-page personnel se retire indépendamment du conseil."
+              - "Ouvrez À écouter : l’onglet Reçues s’ouvre en premier, avec une pastille rouge quand un conseil ou un commentaire est nouveau. Le filtre sépare artistes, albums et morceaux."
+              - "Chaque pochette a sa flèche de lecture (album, radio de l’artiste ou morceau). Les morceaux forment une liste avec leur petite pochette : Tout écouter les enchaîne, ou commencez par une ligne."
+              - "Sous une pochette, le dernier commentaire s’affiche ; la bulle ou « Voir les commentaires » déplie l’échange en place, avec le champ de réponse. L’onglet Envoyées garde vos envois et les archives."
+            note: "Retirer une recommandation l’archive sans effacer les échanges. Les nouveaux commentaires restent accessibles, même dans les archives. Le marque-page personnel se retire indépendamment du conseil. Les titres YouTube ne peuvent pas être conseillés : seuls les artistes, albums et morceaux de la bibliothèque, et les artistes et albums Discogs."
       explore:
         title: "Explorer de nouvelles musiques"
         summary: "Mix, artistes et labels"
@@ -1103,8 +1115,8 @@ webapp:
             title: "Retrouver ses envies dans À écouter"
             steps:
               - "Ajoutez un marque-page depuis une fiche musicale."
-              - "Ouvrez À écouter et filtrez artistes, albums ou morceaux."
-              - "Recherchez pour écouter, puis retirez l’envie quand vous le souhaitez."
+              - "Ouvrez À écouter, onglet Marque-pages, et filtrez artistes, albums ou morceaux."
+              - "Lancez la lecture depuis la pochette, puis retirez l’envie quand vous le souhaitez."
             note: "Les marque-pages d’artistes, d’albums et de morceaux sont personnels. Une recommandation reçue peut aussi devenir un marque-page ; supprimer l’un ne supprime pas l’autre."
           g3:
             title: "Créer et organiser une playlist"

@@ -111,8 +111,9 @@ function client() {
   };
   try {
     await until(() => $(".bookmark-list") && !$("#app").hidden, "listening page");
-    assert.match($("#main").textContent, /Mes marque-pages/);
-    assert.match($("#main").textContent, /recommandations reçues/);
+    assert.deepEqual($$(".listen-later-tab").map(tab => tab.dataset.tab), ["received", "bookmarks", "sent"], "Reçues est le premier onglet");
+    assert.equal($(".listen-later-tab.on").dataset.tab, "received");
+    assert.match($(".listen-later-tabs").textContent, /Reçues.*Marque-pages.*Envoyées/);
     $("#open-settings").click();
     assert.equal($(".settings-listen-later").hash, "#/listen-later");
     $(".settings-listen-later").click();
@@ -217,7 +218,9 @@ function client() {
     app.user.roles = roles;
     await listeningPage.render($("#main"), app.music.route);
 
-    $('.recommendation-songs-table tr[data-id="s2"] .listen-later-toggle').click();
+    const keepSong = '.recommendation-songs-table tr[data-id="s2"] .listen-later-toggle';
+    await until(() => !$(keepSong).disabled, "keep button ready");
+    $(keepSong).click();
     await until(() => $$(".bookmark-list .listen-later-card").length === 3, "keep received song as bookmark");
     $('.recommendation-songs-table tr[data-id="s2"] .recommendation-remove').click();
     await until(() => $$(".recommendation-songs-table tr.song").length === 1, "remove one recommended track");
@@ -420,7 +423,6 @@ function client() {
     assert.equal(history.comments.filter(comment => comment.body.startsWith("Une réponse à conserver")).length, 1);
     console.log("OK hidden thread stays unread and network retry keeps exactly one comment");
 
-    $(".dialog-head button").click();
     await until(() => $('.recommendation-list .recommendation-remove'), "received list after discussion");
     $('.recommendation-list .recommendation-remove').click();
     await until(() => !$(".recommendation-list .listen-later-card"), "archive recommendation with conversation");
@@ -448,15 +450,52 @@ function client() {
     }
     live({discussionId: sentArtist.id});
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6, "catch up more than one page of new comments");
-    $(".dialog-head button").click();
-    await until(() => $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]'), "sent thread updated");
-    $('.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]').click();
+    const sentToggle = '.listen-later-sent .recommendation-comments-open[data-recommendation-id="' + sentArtist.id + '"]';
+    $(sentToggle).click();   // referme le fil déplié
+    assert(!$(".recommendation-comment"), "collapsing removes the inline thread");
+    $(sentToggle).click();
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize && !$(".recommendation-comments-older").hidden
       && !$(".recommendation-comments-older").disabled, "bounded initial comment page");
     $(".recommendation-comments-older").click();
     await until(() => $$(".recommendation-comment").length === threadPage.pageSize + 6 && $(".recommendation-comments-older").hidden, "older comments prepend without duplicates");
     assert.equal(new Set($$(".recommendation-comment").map(node => node.dataset.id)).size, threadPage.pageSize + 6);
     console.log("OK paginated history, multiple-page live catch-up and unique comment nodes");
+
+    // Onglets, pastille, aperçu du dernier commentaire et fil déplié en place sous la pochette.
+    for (const [sender, comment] of [[alice, "Premier avis d’Alice."], [charlie, "Et celui de Charlie."]]) {
+      const sentGroup = await sender.post("/api/recommendation/send", {recipient: "bob", kind: "album", source: "discogs",
+        sourceId: "102", comment});
+      assert.equal(sentGroup.status, 200);
+    }
+    await listeningPage.render($("#main"), app.music.route);
+    await until(() => $$(".recommendation-list .listen-later-tile").some(tile =>
+      tile.querySelector(".recommendation-comments-all")), "grouped advisers");
+    const grouped = $$(".recommendation-list .listen-later-tile").find(tile => tile.querySelector(".recommendation-comments-all"));
+    assert.match(grouped.querySelector(".recommendation-comment-preview").textContent, /avis d’Alice|celui de Charlie/);
+    assert.equal(grouped.querySelectorAll(".recommendation-comment-others .recommendation-comment-summary").length, 1);
+    assert(grouped.querySelector(".recommendation-comment-others").hidden, "les autres conseillers sont repliés");
+    grouped.querySelector(".recommendation-comments-all").click();
+    assert(!grouped.querySelector(".recommendation-comment-others").hidden, "Voir tout ouvre les autres conseillers");
+    assert(grouped.querySelector(".listen-later-new"), "pastille de nouveauté sur la pochette");
+    assert(!grouped.querySelector(".recommendation-thread:not([hidden])"), "aucun fil ouvert au départ");
+    grouped.querySelector(".recommendation-bubble").click();
+    await until(() => grouped.querySelector(".recommendation-thread:not([hidden]) .recommendation-comment-form"), "thread opens in place");
+    assert(grouped.classList.contains("expanded"), "la carte s’élargit quand le fil est ouvert");
+    assert(!$(".dialog"), "aucune fenêtre superposée");
+    grouped.querySelector(".recommendation-bubble").click();
+    assert(!grouped.classList.contains("expanded"));
+
+    const tabs = Object.fromEntries($$(".listen-later-tab").map(tab => [tab.dataset.tab, tab]));
+    tabs.bookmarks.click();
+    assert(!$("#listen-later-panel-bookmarks").hidden && $("#listen-later-panel-received").hidden);
+    assert.equal(tabs.bookmarks.getAttribute("aria-selected"), "true");
+    assert(!$(".listen-later-tab-badge").hidden, "pastille rouge sur Reçues quand un autre onglet est ouvert");
+    tabs.sent.click();
+    assert(!$("#listen-later-panel-sent").hidden);
+    tabs.received.click();
+    assert($("#listen-later-panel-bookmarks").hidden && !$("#listen-later-panel-received").hidden);
+    assert($(".listen-later-tab-badge").hidden);
+    console.log("OK tabs with unread badge, grouped advisers and thread unfolding in place");
 
     // Changing account closes the private thread and discards late results for its previous owner.
     bob.jar.cookie = alice.jar.cookie;

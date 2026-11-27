@@ -6,6 +6,15 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.20"
+  date: 2026-11-27
+  title: "À écouter, version pochettes"
+  changes:
+    - "La page À écouter s'organise en trois onglets : Reçues (ouvert en premier, avec une pastille rouge quand un conseil ou un commentaire est nouveau), Marque-pages et Envoyées."
+    - "Les artistes et albums s'affichent en pochettes, avec une flèche pour les écouter directement, sans passer par la recherche. Les morceaux forment une liste avec leur petite pochette."
+    - "Le dernier commentaire s'affiche sous chaque pochette. Un clic sur la bulle déplie l'échange en place, sans fenêtre, et « Voir tous les conseillers » ouvre les fils des autres personnes."
+    - "Le mode d'emploi de Help décrit cette nouvelle page."
+
 - version: "1.19.2"
   date: 2026-11-27
   title: "Corrections et fiabilité"
