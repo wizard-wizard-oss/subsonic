@@ -2,8 +2,8 @@
 
 ## Fonctionnement
 
-- Page #/listen-later dans la navigation et les réglages rapides : deux sections indépendantes,
-  « Mes marque-pages » et « Les recommandations reçues », filtre artistes/albums/morceaux.
+- Page #/listen-later dans la navigation et les réglages rapides : trois onglets (Reçues, Marque-pages,
+  Envoyées), filtre artistes/albums/morceaux ; voir « Refonte pochettes (1.20) » plus bas.
 - Bouton marque-page sur les fiches artiste/album Subsonic, la fiche artiste Discogs et les cartes des catalogues
   Discogs existants. Le bouton indique son état ; un second clic retire l'entrée personnelle.
 - « Conseiller à quelqu’un » aux mêmes endroits et dans la liste personnelle : choix d'un autre compte déjà
@@ -29,6 +29,26 @@
   et recherche YouTube sur demande. Lecteur, favoris et playlists existants prennent ensuite le relais.
 - Ajouter ou retirer un marque-page ne modifie aucun favori Subsonic ou YouTube.
 - Images manquantes : icône de remplacement. Textes français dans i18n/fr.yaml et nomenclature anglaise.
+
+## Refonte « pochettes » (1.20)
+
+- Trois onglets (`listen-later-tabs.js`) : Reçues (par défaut), Marque-pages, Envoyées (+ archivées). L'onglet choisi
+  est gardé tant que l'on reste sur la page ; une nouvelle visite rouvre Reçues. La pastille rouge de l'onglet
+  Reçues compte les conseils nouveaux ou à commentaires non lus et n'apparaît que si un autre onglet est ouvert.
+  Les conseils ne sont accusés comme lus qu'à l'ouverture de l'onglet Reçues.
+- Artistes et albums : tuiles en grille avec la pochette (`image_ref`), badge de type, point rouge « nouveau »,
+  avatars des conseillers, flèche de lecture (album Subsonic, radio de l'artiste Subsonic, morceau). Les cartes
+  Discogs gardent « Rechercher pour écouter » : rien à lire directement. Morceaux : liste avec petite pochette.
+- Commentaires (1.21) : repliés au départ. `RecommendationComments.group()` fournit la bulle (compteur, accent si non lu)
+  qui déplie le fil du conseiller le plus récent (non lu d'abord, puis avec message, puis le plus récent) ; « Voir les
+  autres conseillers » ouvre les autres. La saisie est une ligne (Entrée envoie, Maj+Entrée = nouvelle ligne).
+  L'onglet Envoyées (et archivées) utilise les mêmes tuiles.
+  Le fil se déplie sous la carte (la carte reste dans sa colonne) avec une animation CSS (déroulement, apparition
+  échelonnée des commentaires) et se replie par l'animation inverse (le fil est retiré à la fin, 300 ms ; classe
+  `folding`). Animations désactivées si le système demande moins de mouvement.
+  Le fil se déplie en place (`mount`) ; la fenêtre ne sert plus qu'à l'ouverture depuis la notification ou après
+  un envoi. Plusieurs fils peuvent être dépliés ; l'actualisation temps réel les met à jour sans redessiner la page.
+- Pas de changement de données, de routes ni de migration. Les conseils YouTube restent hors périmètre.
 
 ## Données
 
