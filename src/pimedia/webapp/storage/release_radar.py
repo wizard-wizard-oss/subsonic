@@ -41,6 +41,15 @@ class ReleaseSources:
         self.db.execute("UPDATE release_sources SET hidden = 1 WHERE user_id = ? AND kind = ? AND identity = ?",
                         (user_id, kind, identity))
 
+    def prune(self, user_id, origin, keep):
+        """Retire les sources automatiques de cette origine qui ne sont plus calculées ; une source masquée reste
+        (elle mémorise le refus), une source manuelle n'est jamais touchée."""
+        rows = self.db.query("SELECT id, kind, identity FROM release_sources WHERE user_id = ? AND origin = ? "
+                             "AND hidden = 0", (user_id, origin))
+        stale = [row["id"] for row in rows if (row["kind"], row["identity"]) not in keep]
+        for source_id in stale:
+            self.db.execute("DELETE FROM release_sources WHERE id = ?", (source_id,))
+
     def active_union(self):
         """Sources visibles d'au moins un compte, sans doublon : ce que la synchronisation interroge."""
         rows = self.db.query("SELECT kind, identity, MIN(name) AS name FROM release_sources WHERE hidden = 0 "
@@ -107,6 +116,37 @@ class RadarReleases:
     def last_full_sync(self):
         row = self.db.one("SELECT finished_at FROM radar_runs WHERE name = ?", (FULL_SYNC,))
         return row["finished_at"] if row else None
+
+
+class RadarProfiles:
+    """Goûts d'un compte (tags pondérés), choix des découvertes et dernière demande d'actualisation."""
+    def __init__(self, db):
+        self.db = db
+
+    def _ensure(self, user_id):
+        self.db.execute("INSERT OR IGNORE INTO radar_profiles (user_id) VALUES (?)", (user_id,))
+
+    def get(self, user_id):
+        """(tags pondérés, découvertes activées)."""
+        row = self.db.one("SELECT tags, discoveries_off FROM radar_profiles WHERE user_id = ?", (user_id,))
+        return (json.loads(row["tags"]), not row["discoveries_off"]) if row else ({}, True)
+
+    def save_tags(self, user_id, tags, at):
+        self._ensure(user_id)
+        self.db.execute("UPDATE radar_profiles SET tags = ?, computed_at = ? WHERE user_id = ?",
+                        (json.dumps(tags, sort_keys=True), int(at), user_id))
+
+    def set_discoveries(self, user_id, enabled):
+        self._ensure(user_id)
+        self.db.execute("UPDATE radar_profiles SET discoveries_off = ? WHERE user_id = ?", (int(not enabled), user_id))
+
+    def refresh_requested_at(self, user_id):
+        row = self.db.one("SELECT refresh_requested_at FROM radar_profiles WHERE user_id = ?", (user_id,))
+        return row["refresh_requested_at"] if row else None
+
+    def request_refresh(self, user_id, at):
+        self._ensure(user_id)
+        self.db.execute("UPDATE radar_profiles SET refresh_requested_at = ? WHERE user_id = ?", (int(at), user_id))
 
 
 class AlbumLabels:

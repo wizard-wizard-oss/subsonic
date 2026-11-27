@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.storage.release_radar import AlbumLabels, RadarReleases, ReleaseSources
+from pimedia.webapp.storage.release_radar import AlbumLabels, RadarProfiles, RadarReleases, ReleaseSources
 from pimedia.webapp.weekly_releases.entities import RadarRelease
 
 RADAR_MIGRATION = 29   # première migration du radar (numérotée à partir de 1)
@@ -46,6 +46,30 @@ class RadarStorageTest(unittest.TestCase):
         source = self.sources.add(1, "style", "techno", "techno", "manual")
         self.sources.hide(2, source.id)
         self.assertEqual(len(self.sources.for_user(1)), 1)
+
+    def test_prune_removes_stale_automatic_sources_but_keeps_hidden_and_manual(self):
+        self.sources.add(1, "artist", "kept", "Gardé", "trends")
+        self.sources.add(1, "artist", "stale", "Ancien", "trends")
+        refused = self.sources.add(1, "artist", "refused", "Refusé", "trends")
+        self.sources.hide(1, refused.id)
+        self.sources.add(1, "artist", "mine", "À moi", "manual")
+        self.sources.add(2, "artist", "stale", "Ancien", "trends")
+        self.sources.prune(1, "trends", {("artist", "kept")})
+        self.assertEqual({s.identity for s in self.sources.for_user(1, include_hidden=True)},
+                         {"kept", "mine", "refused"})
+        self.assertEqual([s.identity for s in self.sources.for_user(2)], ["stale"])
+
+    def test_profiles(self):
+        profiles = RadarProfiles(self.db)
+        self.assertEqual(profiles.get(1), ({}, True))
+        profiles.save_tags(1, {"techno": 2.5}, 10)
+        profiles.set_discoveries(1, False)
+        self.assertEqual(profiles.get(1), ({"techno": 2.5}, False))
+        self.assertIsNone(profiles.refresh_requested_at(1))
+        profiles.request_refresh(1, 20)
+        self.assertEqual(profiles.refresh_requested_at(1), 20)
+        profiles.set_discoveries(1, True)
+        self.assertEqual(profiles.get(1), ({"techno": 2.5}, True))
 
     def test_union_is_deduplicated_and_skips_hidden(self):
         self.sources.add(1, "label", "warp-id", "Warp", "manual")

@@ -48,3 +48,16 @@ class RadarRelease:
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,
                 "date": self.released_on.isoformat(), "type": self.kind}
+
+
+@dataclass(frozen=True)
+class RadarCard:
+    """Une sortie telle qu'un compte la voit : pourquoi elle est là, sa ressemblance avec ses goûts, sa copie locale."""
+    release: RadarRelease
+    reasons: tuple
+    score: float = 0.0
+    local: Optional[dict] = None
+
+    def to_api(self):
+        return dict(self.release.to_api(), reasons=[reason.to_api() for reason in self.reasons],
+                    score=round(self.score, 3), local=self.local)

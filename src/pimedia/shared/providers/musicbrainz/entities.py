@@ -53,6 +53,13 @@ class MusicLabel:
 
 
 @dataclass(frozen=True)
+class AlbumLabel:
+    """Label d'un album et édition MusicBrainz d'où il a été lu."""
+    label: MusicLabel
+    release_id: str
+
+
+@dataclass(frozen=True)
 class MusicWork:
     """Sortie ou enregistrement MusicBrainz figurant dans un catalogue ou un crédit."""
     id: str

@@ -8,8 +8,8 @@ from urllib.parse import urlencode
 from ...text import normalize
 from ..metadata import ProviderUnavailable, PublicMetadata
 from . import parsing
-from .entities import (ArtistConnections, MusicArtist, MusicProfile, MusicWork, Release, ReleaseGenre, Result,
-                       WeeklyReleasePage)
+from .entities import (AlbumLabel, ArtistConnections, MusicArtist, MusicProfile, MusicWork, Release, ReleaseGenre,
+                       Result, WeeklyReleasePage)
 
 BASE = "https://musicbrainz.org/ws/2/"
 GENRE_CATALOG_TTL = 86400
@@ -177,11 +177,18 @@ class MusicBrainz(PublicMetadata):
         return self._groups("(" + " OR ".join("arid:" + identity for identity in ids) + ")", start, end,
                             offset=offset)
 
-    def groups_by_artist_name(self, name, start, end):
-        """Artiste sans MBID connu : le nom crédité doit être exactement le même (« Air » n'est pas « Air Supply »)."""
-        page = self._groups("artist:" + parsing.search_phrase(name), start, end)
-        return replace(page, albums=tuple(a for a in page.albums if normalize(a.artist) == normalize(name)),
-                       next_offset=None)
+    def release_label(self, title, artist):
+        """Label de l'album d'après la première édition de ce titre et de cet artiste qui en indique un."""
+        query = "release:%s AND artist:%s" % (parsing.search_phrase(title), parsing.search_phrase(artist))
+        for raw in self._get("release", query=query, limit=SEARCH_LIMIT).data.get("releases", []):
+            if normalize(raw.get("title")) != normalize(title) or \
+                    normalize(artist) not in map(normalize, parsing.artist_names(raw)):
+                continue
+            for info in raw.get("label-info") or []:
+                found = parsing.label(info.get("label") or {})
+                if found:
+                    return AlbumLabel(found, parsing.mbid(raw["id"]))
+        return None
 
     def label_groups(self, label_id, start, end):
         """Nouveautés d'un label : ses éditions de la période, gardées si leur groupe sort pour la première fois."""

@@ -64,12 +64,6 @@ class MusicBrainzRadarTest(unittest.TestCase):
         album = self.client.groups_by_artists((mbid(1),), START, END).albums[0]
         self.assertEqual(album.tags, ("techno", "electronic"))
 
-    def test_name_search_rejects_homonyms(self):
-        self.responses[("release-group", 'artist:"Air"')] = {"count": 2, "release-groups": [
-            group(1, "Bon", "Air", "2026-11-27"), group(2, "Autre", "Air Supply", "2026-11-27")]}
-        page = self.client.groups_by_artist_name("Air", START, END)
-        self.assertEqual([a.artist for a in page.albums], ["Air"])
-
     def test_label_keeps_only_new_groups(self):
         new, reissue, single = mbid(1), mbid(2), mbid(3)
         self.responses[("release", "laid:")] = {"count": 3, "releases": [
@@ -101,6 +95,22 @@ class MusicBrainzRadarTest(unittest.TestCase):
             {"id": "pas-un-mbid", "name": "Mauvais"}]}
         found = self.client.search_labels("Warp")
         self.assertEqual([(label.id, label.name, label.country) for label in found.value], [(mbid(700), "Warp", "GB")])
+
+    def test_release_label_takes_first_matching_edition_with_a_label(self):
+        credit = [{"name": "Moderat", "artist": {"id": mbid(5), "name": "Moderat"}}]
+        self.responses[("release", "release:")] = {"releases": [
+            {"id": mbid(60), "title": "III", "artist-credit": [{"name": "Autre"}],
+             "label-info": [{"label": {"id": mbid(701), "name": "Faux"}}]},
+            {"id": mbid(61), "title": "III", "artist-credit": credit, "label-info": []},
+            {"id": mbid(62), "title": "III", "artist-credit": credit,
+             "label-info": [{"label": {"id": mbid(700), "name": "Monkeytown"}}]}]}
+        found = self.client.release_label("III", "Moderat")
+        self.assertEqual((found.label.id, found.label.name, found.release_id), (mbid(700), "Monkeytown", mbid(62)))
+        self.assertEqual(len(self.urls), 1)
+
+    def test_release_label_none_when_nothing_matches(self):
+        self.responses[("release", "release:")] = {"releases": []}
+        self.assertIsNone(self.client.release_label("III", "Moderat"))
 
     def test_artist_tags(self):
         self.responses[("artist/" + mbid(5), "")] = {"id": mbid(5), "tags": [
