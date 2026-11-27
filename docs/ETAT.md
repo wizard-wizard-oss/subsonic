@@ -1,5 +1,15 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Présentation de l’application, 1.15.1 (26/11/2026, déployée et vérifiée)** : le menu « Nouveautés »
+et le titre de sa page deviennent « Découvrir l’application ». Correction de libellé publiée après la 1.15
+mobile, avec un troisième numéro. Route, cartes et liens conservés. HTTPS confirme le nouveau menu,
+le titre et la version 1.15.1 ; conteneur sain. Les 238 fichiers applicatifs sont conservés, avec seulement
+les textes, la note de version et le commentaire du composant modifiés. Configuration inchangée,
+aucune migration. Sauvegarde code/configuration et SQLite :
+`../pimedia-backups/pre-1.15.1-20261126T212908Z/` ; image précédente
+`pimedia-web:pre-1.15.1-20261126t212908z`. Aucune suite de tests relancée pour ce changement de texte,
+conformément à la consigne utilisateur du 26/11/2026. Détail : [Découvrir l’application](features/nouveautes.md).
+
 **Affichage mobile isolé, 1.15 (26/11/2026, déployée et vérifiée)** : menu ☰ cliquable pour les artistes,
 playlists et liens existants, salon en volet, accueil et lecteur contenus sur petit écran. CSS et JS dédiés
 activés sur petit écran, y compris en paysage tactile ; ouverture locale sans changement des préférences PC.

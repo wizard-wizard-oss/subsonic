@@ -1,5 +1,14 @@
 # Déployer le projet
 
+Publication 1.15.1 le 26/11/2026 : le menu « Nouveautés » et le titre de sa page deviennent
+« Découvrir l’application ». Correction de libellé au troisième numéro, publiée sur la version mobile 1.15.
+Mise à jour ciblée des textes, de l’historique et du commentaire du composant, puis reconstruction Docker.
+Les 235 autres fichiers applicatifs restent identiques à la 1.15 ; aucune migration ni modification de
+configuration. HTTPS confirme la version, le menu et le titre ; conteneur sain. Aucune suite de tests
+relancée, conformément à la consigne sur les modifications de texte du 26/11/2026.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.15.1-20261126T212908Z/` ;
+image précédente : `pimedia-web:pre-1.15.1-20261126t212908z`. Le retour de code peut conserver la base courante.
+
 Publication 1.15 le 26/11/2026 : responsive isolé pour les petits écrans, menu artistes/playlists
 et salon en volets ; CSS et JS mobiles dédiés. Navigation PC et moteur YouTube conservés. L’instantané
 reprend la production 1.14.2 et ajoute seulement cette évolution ; les travaux de tags et de textes encore

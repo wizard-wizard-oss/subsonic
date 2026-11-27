@@ -1,5 +1,5 @@
 "use strict";
-/* Page « Nouveautés » (#/whatsnew), pour les personnes qui utilisent le site : ce qu'il fait en plus de Subsonic, et
+/* Page « Découvrir l’application » (#/whatsnew), pour les personnes qui utilisent le site : ce qu'il fait en plus de Subsonic, et
    l'idée qui va avec (Subsonic reste la bibliothèque, le site ajoute le reste). Tous les textes sont dans fr.yaml
    (section whatsnew) ; ici seulement leur ordre, une icône par partie et le lien vers la page concernée. */
 

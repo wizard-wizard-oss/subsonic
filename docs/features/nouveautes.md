@@ -1,7 +1,7 @@
-# Nouveautés : la page qui explique le site aux utilisateurs (site web)
+# Découvrir l’application : la page qui explique le site aux utilisateurs (site web)
 
 ## Ce que ça fait
-Page **« Nouveautés »** (`#/whatsnew`, lien dans le menu du haut), écrite **pour les personnes qui utilisent le site**,
+Page **« Découvrir l’application »** (`#/whatsnew`, lien dans le menu du haut), écrite **pour les personnes qui utilisent le site**,
 pas pour les développeurs, sur un ton léger : le principe (Subsonic reste la maison de la musique, le site ajoute le
 reste), puis six parties et 34 cartes :
 
@@ -17,6 +17,9 @@ reste), puis six parties et 34 cartes :
 - Les petits plus : paroles synchronisées, file et lecture juste après, raccourcis, télécharger/envoyer,
   changement de pochette selon les droits du compte.
 - Qui garde quoi : données Subsonic et données du site, dont marque-pages, recommandations et choix Discogs.
+
+Le menu et le titre de la page portent ce nom depuis la correction éditoriale 1.15.1 publiée le 26/11/2026.
+Le libellé distingue la présentation de l’application des actualités musicales.
 
 Certaines cartes ont un lien « J'y vais », notamment les marque-pages et recommandations vers `#/listen-later`.
 En haut, un lien vers la page « Versions » (`docs/features/versions.md`).
@@ -34,5 +37,5 @@ locale). À la demande de l'utilisateur, ce complément éditorial n'ajoute aucu
 playlists (glisser-déposer, communautaires, partagées), lien vers Mix.
 
 ## N'existe pas
-- Pas de pastille sur le lien « Nouveautés » : ce qui est nouveau depuis la dernière visite est signalé par la page
+- Pas de pastille sur le lien « Découvrir l’application » : ce qui est nouveau depuis la dernière visite est signalé par la page
   « Versions » (numéro et pastille à côté du titre du site).

@@ -1279,7 +1279,7 @@ function makeEventSource(jar) {
   check("versions : pastille retirée une fois vue", !$("#version-tag").classList.contains("fresh"));
   w.location.hash = "#/whatsnew";
   await until(() => $(".whatsnew-versions"));
-  check("versions : lien depuis Nouveautés", $(".whatsnew-versions").getAttribute("href") === "#/versions");
+  check("versions : lien depuis Découvrir l’application", $(".whatsnew-versions").getAttribute("href") === "#/versions");
   w.location.hash = "#/";
 
   // --- Importer une playlist : guide, lien Deezer, rapprochement, YouTube, création dans l'ordre ---
