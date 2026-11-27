@@ -4,11 +4,12 @@ import io
 import os
 import stat
 import unittest
+from unittest.mock import patch
 import zipfile
 from urllib.parse import quote
 
-from pimedia.webapp.layout import MusicTree
-from pimedia.webapp.uploads import MAX_FILE_BYTES, Uploads, UploadError, incoming_dir, safe_name
+from pimedia.webapp.library.files import LibraryFiles
+from pimedia.webapp.uploads import MAX_FILE_BYTES, MAX_ZIP_BYTES, Uploads, UploadError, incoming_dir, safe_name
 from tests.webapp_support import WebAppTestCase
 
 AUDIO = b"fLaC" + bytes(range(200))
@@ -46,7 +47,7 @@ class UploadHttpTest(WebAppTestCase):
         self.music = os.path.join(self.tmp, "Music")
         self.incoming = os.path.join(self.music, "Incoming")
         os.makedirs(self.incoming)
-        self.use(MusicTree(self.music, self.incoming))
+        self.use(LibraryFiles(self.music, self.incoming))
         self.bob = self.client("bob", "pw2")
 
     def use(self, library):
@@ -61,35 +62,39 @@ class UploadHttpTest(WebAppTestCase):
         status = self.bob.get("/api/upload/status").json()
         self.assertEqual((status["enabled"], status["folder"]), (True, "Incoming"))
 
-    def test_a_lone_file_waits_in_incoming(self):
-        response = self.send("Mon%20titre.flac")
-        self.assertEqual((response.status, response.json()),
-                         (200, {"files": 1, "skipped": 0, "placed": [], "waiting": ["Mon titre.flac"]}))
-        path = os.path.join(self.incoming, "Mon titre.flac")
-        with open(path, "rb") as saved:
-            self.assertEqual(saved.read(), AUDIO)
-        self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o664)               # lisible par Subsonic, modifiable par le groupe
-        self.assertEqual(os.listdir(self.incoming), ["Mon titre.flac"])           # pas de reste « .part »
+    def test_lone_audio_files_are_refused_without_writing_or_history(self):
+        for extension in ("mp3", "flac", "m4a", "ogg", "opus", "wav", "aiff", "MP3"):
+            response = self.send("Mon%20titre." + extension)
+            self.assertEqual((response.status, response.json()["error"]), (400, "upload.album_required"))
+        self.assertEqual(os.listdir(self.incoming), [])
+        self.assertEqual(self.bob.get("/api/upload/history").json()["entries"], [])
 
-    def test_never_overwrites(self):
-        self.send("a.mp3")
-        self.assertEqual(self.send("a.mp3").json()["waiting"], ["a (2).mp3"])
-        self.assertEqual(self.send("a.mp3").json()["waiting"], ["a (3).mp3"])
+    def test_rejected_audio_never_overwrites_an_existing_file(self):
+        path = os.path.join(self.incoming, "a.mp3")
+        with open(path, "wb") as target:
+            target.write(b"original")
+        self.assertEqual(self.send("a.mp3").status, 400)
+        with open(path, "rb") as target:
+            self.assertEqual(target.read(), b"original")
 
-    def test_lone_file_keeps_accents_and_punctuation(self):
+    def test_zip_without_album_is_refused_before_extraction(self):
+        archive = make_zip({"Artiste/01.mp3": AUDIO, "Artiste/Album/02.mp3": AUDIO})
+        with patch.object(self.app.uploads, "_extract", side_effect=AssertionError("extraction inutile")):
+            self.assertEqual(self.send("lot.zip", archive).json()["error"], "upload.album_required")
+
+    def test_rejected_audio_name_does_not_leave_a_file(self):
         name = "Nán Fiero & Mon$rock [Live] !.flac"
-        response = self.send(quote(name))
-        self.assertEqual((response.status, response.json()["waiting"]), (200, [name]))
-        self.assertEqual(files_under(self.incoming), [name])
+        self.assertEqual(self.send(quote(name)).json()["error"], "upload.album_required")
+        self.assertEqual(files_under(self.incoming), [])
 
-    def test_path_tricks_stay_in_the_folder(self):
-        self.assertEqual(self.send("..%2F..%2Fx.mp3").json()["waiting"], ["x.mp3"])
-        self.assertEqual(self.send("C%3A%5Cmusique%5Cy.mp3").json()["waiting"], ["y.mp3"])
-        self.assertEqual(files_under(self.music), ["Incoming/x.mp3", "Incoming/y.mp3"])
+    def test_path_tricks_cannot_publish_a_lone_file(self):
+        for name in ("..%2F..%2Fx.mp3", "C%3A%5Cmusique%5Cy.mp3"):
+            self.assertEqual(self.send(name).json()["error"], "upload.album_required")
+        self.assertEqual(files_under(self.music), [])
 
     def test_refusals(self):
         for name, body, error in (("a.exe", AUDIO, "upload.bad_type"), ("sans-extension", AUDIO, "upload.bad_type"),
-                                  ("a.mp3", b"", "upload.bad_size")):
+                                  ("a.zip", b"", "upload.bad_size")):
             response = self.send(name, body)
             self.assertEqual((response.status, response.json()["error"]), (400, error), name)
         self.assertEqual(os.listdir(self.incoming), [])
@@ -115,10 +120,10 @@ class UploadHttpTest(WebAppTestCase):
     def test_incoming_is_created_in_the_music_root(self):
         root = os.path.join(self.tmp, "Autre")
         os.makedirs(root)
-        self.use(MusicTree(root, incoming_dir(root, "Incoming")))
+        self.use(LibraryFiles(root, incoming_dir(root, "Incoming")))
         self.assertEqual(self.bob.get("/api/upload/status").json()["enabled"], True)
-        self.assertEqual(self.send("a.mp3").status, 200)
-        self.assertEqual(files_under(root), ["Incoming/a.mp3"])
+        self.assertEqual(self.send("a.zip", make_zip({"Artist/Album/01.mp3": AUDIO})).status, 200)
+        self.assertEqual(files_under(root), ["Artist/Album/01.mp3"])
         self.assertEqual(stat.S_IMODE(os.stat(os.path.join(root, "Incoming")).st_mode), 0o775)
 
     def test_not_writable_folder_is_reported_before_sending(self):
@@ -155,41 +160,43 @@ class UploadHistoryTest(UploadHttpTest):
     def test_attributes_each_upload_to_the_authenticated_account(self):
         self.assertEqual(self.history(), {"entries": [], "before": None})
         alice = self.client("alice", "secret")
-        self.send("same.flac&username=alice&userId=1")
-        self.send("same.flac", client=alice)
+        archive = make_zip({"Artist/Album/01.flac": AUDIO})
+        self.send("same.zip&username=alice&userId=1", archive)
+        self.send("same.zip", archive, client=alice)
         entries = self.history()["entries"]
         self.assertEqual([e["username"] for e in entries], ["alice", "bob"])
-        self.assertEqual([e["waiting"] for e in entries], [["same (2).flac"], ["same.flac"]])
-        self.assertEqual(entries[0]["bytes"], len(AUDIO))
+        self.assertEqual(entries[0]["waiting"], ["Artist"])
+        self.assertEqual(entries[1]["placed"], ["Artist/Album"])
+        self.assertEqual(entries[0]["bytes"], len(archive))
         self.assertGreater(entries[0]["uploadedAt"], 0)
         self.assertEqual(entries, self.history(alice)["entries"])
         self.assertNotIn("subsonic_token", str(entries))
 
     def test_zip_records_the_archive_and_its_actual_placement(self):
         self.send("Lot.zip", make_zip({"Converge/Jane Doe/01.flac": AUDIO,
-                                        "Seul/02.flac": AUDIO, "notes.txt": b"x"}))
+                                        "Other/Album/02.flac": AUDIO, "notes.txt": b"x"}))
         entry = self.history()["entries"][0]
         self.assertEqual((entry["filename"], entry["files"], entry["skipped"]), ("Lot.zip", 2, 1))
-        self.assertEqual(entry["placed"], ["Converge/Jane Doe"])
-        self.assertEqual(entry["waiting"], ["Seul"])
+        self.assertEqual(entry["placed"], ["Converge/Jane Doe", "Other/Album"])
+        self.assertEqual(entry["waiting"], [])
 
     def test_failed_or_interrupted_upload_is_not_recorded(self):
         self.send("bad.exe")
         self.send("bad.zip", b"not a zip")
         bob = self.app.users.by_name("bob")
         with self.assertRaises(UploadError):
-            self.app.uploads.save(bob, io.BytesIO(b"x"), len(AUDIO), "short.flac")
+            self.app.uploads.save(bob, io.BytesIO(b"x"), len(AUDIO), "short.zip")
         self.assertEqual(self.history()["entries"], [])
 
     def test_history_survives_a_new_database_connection(self):
         from pimedia.storage.database import Database
         from pimedia.webapp.schema import MIGRATIONS
         from pimedia.webapp.storage.uploads import UploadRepository
-        self.send(quote("Été.flac"))
+        self.send(quote("Été.zip"), make_zip({"Artiste/Été/01.flac": AUDIO}))
         database = Database(self.app.db.path, MIGRATIONS)
         try:
             entries = UploadRepository(database).page(None, 50)
-            self.assertEqual((entries[0].username, entries[0].filename), ("bob", "Été.flac"))
+            self.assertEqual((entries[0].username, entries[0].filename), ("bob", "Été.zip"))
         finally:
             database.close()
 
@@ -230,7 +237,7 @@ class UploadHistoryTest(UploadHttpTest):
         self.send("Arrival.zip", make_zip({"ABBA/Arrival/01.flac": AUDIO}))
         other = os.path.join(self.tmp, "Other")
         os.makedirs(other)
-        self.use(MusicTree(other, incoming_dir(other, "Incoming")))
+        self.use(LibraryFiles(other, incoming_dir(other, "Incoming")))
         self.assertNotIn("uploadedBy", self.bob.get("/api/album?id=al1").json())
 
     def test_simultaneous_uploads_of_the_same_name_keep_the_correct_authors(self):
@@ -247,7 +254,8 @@ class UploadHistoryTest(UploadHttpTest):
         def save(username, body):
             try:
                 user = self.app.users.by_name(username)
-                self.app.uploads.save(user, Together(body), len(body), "same.flac")
+                self.app.uploads.save(user, Together(make_zip({"Artist/Album/01.flac": body})),
+                                      len(make_zip({"Artist/Album/01.flac": body})), "same.zip")
             finally:
                 self.app.db.close()
 
@@ -259,7 +267,9 @@ class UploadHistoryTest(UploadHttpTest):
         entries = self.history()["entries"]
         self.assertEqual(len(entries), 2)
         for entry in entries:
-            with open(os.path.join(self.incoming, entry["waiting"][0]), "rb") as received:
+            base = self.music if entry["placed"] else self.incoming
+            folder = entry["placed"][0] if entry["placed"] else "Artist/Album"
+            with open(os.path.join(base, folder, "01.flac"), "rb") as received:
                 self.assertEqual(received.read(), entry["username"].encode())
 
     def test_cursor_bounds_are_validated(self):
@@ -275,7 +285,7 @@ class UploadHistoryTest(UploadHttpTest):
             self.app.uploads.history.add(user, "a.flac", len(AUDIO), result, n)
         first = self.history()
         self.assertEqual(len(first["entries"]), HISTORY_PAGE_SIZE)
-        self.send("latest.flac")
+        self.send("latest.zip", make_zip({"Artist/Latest/01.flac": AUDIO}))
         last = self.history(suffix="?before=" + str(first["before"]))
         self.assertEqual(len(last["entries"]), 2)
         self.assertIsNone(last["before"])
@@ -334,6 +344,61 @@ class UploadZipTest(UploadHttpTest):
         self.assertEqual(response.json()["placed"], ["DJ Naze/Nouveau", "Dälek/Precipice"])
         self.assertEqual(sorted(os.listdir(self.music)), ["DJ Naze", "Dälek", "Incoming"])
 
+    def test_trentemoller_self_titled_album_is_capitalised_and_joins_its_artist(self):
+        self.existing("Trentemøller", "Fixion", "01.mp3")
+        response = self.send(quote("Trentemøller.zip"), make_zip({
+            "Trentemøller/trentemøller/01 Swerve.mp3": AUDIO,
+            "Trentemøller/trentemøller/02 Terrified.mp3": AUDIO}))
+        self.assertEqual((response.status, response.json()),
+                         (200, {"files": 2, "skipped": 0, "placed": ["Trentemøller/Trentemøller"], "waiting": []}))
+        self.assertEqual(sorted(os.listdir(self.music)), ["Incoming", "Trentemøller"])
+        self.assertEqual(files_under(self.music), ["Trentemøller/Fixion/01.mp3",
+                                                   "Trentemøller/Trentemøller/01 Swerve.mp3",
+                                                   "Trentemøller/Trentemøller/02 Terrified.mp3"])
+        entry = self.bob.get("/api/upload/history").json()["entries"][0]
+        self.assertEqual(entry["placed"], ["Trentemøller/Trentemøller"])
+
+    def test_lowercase_artist_reuses_existing_spelling_and_capitalises_the_album(self):
+        self.existing("DJ NaZe", "Ancien", "01.flac")
+        response = self.send("a.zip", make_zip({"dj naze/new album [live]/01.flac": AUDIO}))
+        self.assertEqual(response.json()["placed"], ["DJ NaZe/New Album [Live]"])
+        self.assertEqual(sorted(os.listdir(self.music)), ["DJ NaZe", "Incoming"])
+        self.assertEqual(files_under(self.music), ["DJ NaZe/Ancien/01.flac", "DJ NaZe/New Album [Live]/01.flac"])
+
+    def test_new_artist_word_initials_preserve_accents_acronyms_and_track_names(self):
+        response = self.send("a.zip", make_zip({"jean-michel & DJ NaZe/été après minuit/01 été.flac": AUDIO}))
+        self.assertEqual(response.json()["placed"], ["Jean-Michel & DJ NaZe/Été Après Minuit"])
+        self.assertEqual(files_under(self.music), ["Jean-Michel & DJ NaZe/Été Après Minuit/01 été.flac"])
+
+    def test_capitalised_upload_never_overwrites_an_existing_album_match(self):
+        self.existing("DJ NaZe", "Long live [DELUXE]", "01.flac")
+        response = self.send("a.zip", make_zip({"dj naze/long-live deluxe/02.flac": AUDIO}))
+        self.assertEqual((response.json()["placed"], response.json()["waiting"]), ([], ["dj naze"]))
+        self.assertEqual(files_under(self.music), ["DJ NaZe/Long live [DELUXE]/01.flac",
+                                                   "Incoming/dj naze/long-live deluxe/02.flac"])
+        with open(os.path.join(self.music, "DJ NaZe", "Long live [DELUXE]", "01.flac"), "rb") as saved:
+            self.assertEqual(saved.read(), b"x")
+
+    def test_album_collision_after_capitalisation_keeps_the_upload_in_incoming(self):
+        self.existing("Müzisyen", "Işık", "01.flac")
+        response = self.send("a.zip", make_zip({"Müzisyen/ışık/02.flac": AUDIO}))
+        self.assertEqual((response.status, response.json()["placed"], response.json()["waiting"]),
+                         (200, [], ["Müzisyen"]))
+        self.assertEqual(files_under(self.music), ["Incoming/Müzisyen/ışık/02.flac", "Müzisyen/Işık/01.flac"])
+        with open(os.path.join(self.incoming, "Müzisyen", "ışık", "02.flac"), "rb") as saved:
+            self.assertEqual(saved.read(), AUDIO)
+
+    def test_an_album_destination_that_is_a_file_keeps_the_upload_in_incoming(self):
+        self.existing("Artiste", "Album")
+        response = self.send("a.zip", make_zip({"Artiste/Album/01.flac": AUDIO}))
+        self.assertEqual((response.status, response.json()["placed"], response.json()["waiting"]),
+                         (200, [], ["Artiste"]))
+        self.assertEqual(files_under(self.music), ["Artiste/Album", "Incoming/Artiste/Album/01.flac"])
+        with open(os.path.join(self.music, "Artiste", "Album"), "rb") as saved:
+            self.assertEqual(saved.read(), b"x")
+        with open(os.path.join(self.incoming, "Artiste", "Album", "01.flac"), "rb") as saved:
+            self.assertEqual(saved.read(), AUDIO)
+
     def test_zip_preserves_artist_album_and_track_names(self):
         album = "BigDaddyChop, Mon$rock & Nán Fiero/Médalla [Deluxe]"
         track = album + "/01 Été ! #$;.flac"
@@ -379,16 +444,20 @@ class UploadZipTest(UploadHttpTest):
     def test_what_cannot_be_placed_waits_in_incoming_as_organised(self):
         self.existing("Converge", "Axe to Fall", "01.flac")
         response = self.send("Lot.zip", make_zip({
-            "Converge/Jane Doe/01.flac": AUDIO,                  # rangé
-            "Converge/axe to fall/01.flac": AUDIO,               # déjà dans la bibliothèque (majuscules mises à part)
-            "minuscule/Petitioning/01.flac": AUDIO,              # artiste sans majuscule
-            "Converge/Live/Face A/01.flac": AUDIO,               # « Face A » n'est pas un disque
-            "Seul/01.flac": AUDIO,                               # album sans artiste
-            "02.flac": AUDIO}))                                  # à la racine du zip : album au nom du zip, sans artiste
-        self.assertEqual(response.json()["placed"], ["Converge/Jane Doe"])
-        self.assertEqual(files_under(self.incoming), ["Converge/Live/Face A/01.flac", "Converge/axe to fall/01.flac",
-                                                      "Lot/02.flac", "Seul/01.flac", "minuscule/Petitioning/01.flac"])
-        self.assertEqual(response.json()["waiting"], ["Converge", "Lot", "Seul", "minuscule"])
+            "Converge/Jane Doe/01.flac": AUDIO,
+            "Converge/axe to fall/01.flac": AUDIO,
+            "minuscule/Petitioning/01.flac": AUDIO,
+            "Converge/Live/Face A/01.flac": AUDIO}))
+        self.assertEqual(response.json()["placed"], ["Converge/Jane Doe", "Minuscule/Petitioning"])
+        self.assertEqual(files_under(self.incoming), ["Converge/Live/Face A/01.flac", "Converge/axe to fall/01.flac"])
+        self.assertEqual(response.json()["waiting"], ["Converge"])
+
+    def test_zip_with_loose_tracks_is_refused_atomically_before_placing_any_album(self):
+        for loose in ("01.mp3", "Album/01.mp3"):
+            response = self.send("Lot.zip", make_zip({"Artist/Album/01.flac": AUDIO, loose: AUDIO}))
+            self.assertEqual((response.status, response.json()["error"]), (400, "upload.album_required"))
+            self.assertEqual(files_under(self.music), [])
+            self.assertEqual(self.bob.get("/api/upload/history").json()["entries"], [])
 
     def test_a_known_artist_above_makes_it_doubtful(self):
         self.existing("Converge", "Axe to Fall", "01.flac")
@@ -397,15 +466,16 @@ class UploadZipTest(UploadHttpTest):
         self.assertEqual(files_under(self.incoming), ["Converge/Live/Face A/01.flac"])
 
     def test_same_waiting_album_twice_never_overwrites(self):
-        self.send("a.zip", make_zip({"Seul/01.flac": AUDIO}))
-        self.send("b.zip", make_zip({"Seul/01.flac": b"autre"}))
-        self.assertEqual(files_under(self.incoming), ["Seul/01 (2).flac", "Seul/01.flac"])
+        self.existing("Artist", "Album", "original.flac")
+        self.send("a.zip", make_zip({"Artist/Album/01.flac": AUDIO}))
+        self.send("b.zip", make_zip({"Artist/Album/01.flac": b"autre"}))
+        self.assertEqual(files_under(self.incoming), ["Artist/Album/01 (2).flac", "Artist/Album/01.flac"])
 
     def test_paths_inside_the_zip_stay_in_the_folder(self):
-        response = self.send("a.zip", make_zip({"../../Evil/Album/a.mp3": AUDIO, "/abs/x.flac": AUDIO,
+        response = self.send("a.zip", make_zip({"../../Evil/Album/a.mp3": AUDIO, "/abs/Album/x.flac": AUDIO,
                                                 "C:\\win\\y.ogg": AUDIO}))
         self.assertEqual(response.json()["files"], 3)
-        self.assertEqual(files_under(self.music), ["Evil/Album/a.mp3", "Incoming/C_/win/y.ogg", "Incoming/abs/x.flac"])
+        self.assertEqual(files_under(self.music), ["Abs/Album/x.flac", "C_/Win/y.ogg", "Evil/Album/a.mp3"])
 
     def test_bad_or_empty_zip_is_refused_and_leaves_nothing(self):
         for body, error in ((b"pas un zip" * 10, "upload.bad_zip"), (make_zip({"notes.txt": b"x"}), "upload.empty_zip")):
@@ -420,19 +490,19 @@ class UploadUnitTest(WebAppTestCase):
         super().setUp()
         self.incoming = os.path.join(self.tmp, "Incoming")
         os.makedirs(self.incoming)
-        self.uploads = Uploads(self.subsonic, self.app.users, MusicTree(self.tmp, self.incoming), self.app.uploads.history)
+        self.uploads = Uploads(self.subsonic, self.app.users, LibraryFiles(self.tmp, self.incoming), self.app.uploads.history)
         self.user = self.app.users.save_login("zoé/../x", "s", "t", frozenset({"upload"}))
 
     def test_interrupted_upload_leaves_nothing(self):
         with self.assertRaises(UploadError) as raised:
-            self.uploads.save(self.user, io.BytesIO(AUDIO[:50]), len(AUDIO), "a.flac")
+            self.uploads.save(self.user, io.BytesIO(AUDIO[:50]), len(AUDIO), "a.zip")
         self.assertEqual(raised.exception.args[0], "upload.interrupted")
         self.assertEqual([f for _, _, files in os.walk(self.incoming) for f in files], [])
 
     def test_too_big_is_refused_without_reading(self):
         stream = io.BytesIO(AUDIO)
         with self.assertRaises(UploadError):
-            self.uploads.save(self.user, stream, MAX_FILE_BYTES + 1, "a.flac")
+            self.uploads.save(self.user, stream, MAX_ZIP_BYTES + 1, "a.zip")
         self.assertEqual(stream.tell(), 0)
 
     def test_names_are_made_safe(self):
@@ -441,7 +511,8 @@ class UploadUnitTest(WebAppTestCase):
         self.assertEqual(safe_name("  .caché.mp3", "x"), "caché.mp3")
         self.assertEqual(safe_name("a<b>:c*.flac", "x"), "a_b__c_.flac")
         self.assertEqual(safe_name("", "user"), "user")
-        self.assertEqual(self.uploads.save(self.user, io.BytesIO(AUDIO), len(AUDIO), "a.flac")["waiting"], ["a.flac"])
+        archive = make_zip({"Artist/Album/01.flac": AUDIO})
+        self.assertEqual(self.uploads.save(self.user, io.BytesIO(archive), len(archive), "album.zip")["placed"], ["Artist/Album"])
 
     def test_names_keep_punctuation_and_both_unicode_forms(self):
         for name in ("Mon$rock", "Nán Fiero", "Na\u0301n Fiero", "Mon\u0308rock", "Médalla [Deluxe] ! #;=", "!!!"):

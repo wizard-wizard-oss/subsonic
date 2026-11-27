@@ -1,12 +1,16 @@
 # Bibliothèque : accueil, artiste, album, albums, recherche, favoris (site web)
 
+Sur téléphone, un menu cliquable donne accès aux mêmes artistes, playlists et pages sans modifier
+la navigation PC. Voir [Affichage mobile](mobile.md).
+
 ## Ce que ça fait
 - **Accueil** (`#/`) : derniers albums, plus écoutés (`frequent`), mieux notés (`highest`), albums commentés récemment.
 - **Artiste** (`#/artist/<id>`) : **le dossier de l'artiste** (pas les tags) ; ses albums = ses sous-dossiers (par année,
   puis nom), cœur (étoile posée sur le dossier), « Radio de l'artiste », « Créer un mix à partir de cet artiste »,
-  **biographie** (27/10/2026 : Wikipédia en français, sinon Last.fm via Subsonic `getArtistInfo2`, sinon Wikipédia en
-  anglais ; photo Wikipédia, lien vers la source, repliée avec « Lire la suite », `GET /api/artist/bio?name=&id=`, gardée
-  un jour, `pimedia/webapp/facts.py`), **titres populaires** (5 puis 10, Last.fm via Subsonic, chargés après la page),
+  **biographie** (priorité corrigée le 26/11/2026 : Last.fm via Subsonic `getArtistInfo2`, sinon Wikipédia en français,
+  puis en anglais ; portrait chargé séparément, lien vers la source, repliée avec « Lire la suite »,
+  `GET /api/artist/bio?name=&id=`, gardée un jour, `pimedia/webapp/facts.py`),
+  **titres populaires** (5 puis 10, Last.fm via Subsonic, chargés après la page),
   **artistes similaires** (Last.fm).
 - **Album** (`#/album/<id>`) : **le dossier de l'album** ; ses titres = ceux du dossier puis de ses dossiers de disques
   (CD1, CD2…), nom de l'album = nom du dossier, artiste = dossier parent. Pochette, année, genre, nombre de titres, durée,
@@ -23,9 +27,96 @@
   des albums commentés gardent leur présentation.
 - **Recherche** (champ du haut, dès 2 lettres) : artistes, albums, titres, et section « Ailleurs » (voir `musique-ailleurs.md`).
 - **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
-- **À écouter** : marque-pages et recommandations d’artistes/albums, indépendants des cœurs. Boutons sur les fiches ; voir [listen-later](listen-later.md).
+- **À écouter** : marque-pages et recommandations d’artistes/albums/morceaux, indépendants des cœurs.
+  Boutons sur les fiches et « Conseiller à quelqu’un » sur les lignes de morceaux Subsonic. Les morceaux reçus
+  se lisent ensemble et se retirent individuellement ; voir [listen-later](listen-later.md).
 
-### Dossiers ou tags (`pimedia/webapp/folders.py`)
+### Édition des informations (1.11)
+
+Les comptes ayant le droit « Modifier pochettes et tags » disposent d'un bouton « Modifier les informations ».
+L'éditeur prépare
+les corrections manuelles ou proposées par MusicBrainz/Discogs, écrit les tags puis demande la réindexation.
+Navigation, titre et artiste affichés en haut restent ceux des dossiers. Voir [Tags d'albums](tags-albums.md)
+pour les droits, formats, préservation et limites. Aucun renommage ni stockage des tags en SQL.
+
+Depuis la 1.11.1, le style est le premier champ visible. Les autres informations sont repliées ; les éditions
+se choisissent dans des cartes et leurs styles sont affichés avant import, sans correspondance de pistes requise.
+
+### Colonnes des morceaux comme dans Subsonic (1.12)
+
+Les réglages rapides et Mon compte → Affichage proposent la même grille que les paramètres personnels
+Subsonic montrés par l’utilisateur : neuf informations, chacune activable pour « Parcourir » et
+« Liste de lecture ». Parcourir concerne les albums, titres populaires, recherche, favoris et playlists
+enregistrées ; Liste de lecture concerne la file du lecteur. Le titre et les commandes restent affichés.
+
+| Information | Parcourir, choix initial | Liste de lecture, choix initial |
+|---|---|---|
+| Piste # | oui | non |
+| Artiste, album, style, année, débit, durée | oui | oui |
+| Format, taille du fichier | non | non |
+
+Ces choix initiaux reprennent la capture fournie, pas les valeurs d’usine d’une autre version de Subsonic.
+Chaque case agit immédiatement, sans recharger les données, modifier l’ordre ni interrompre le lecteur.
+Les dix-huit booléens `browse_*` et `queue_*` sont persistants par compte et indépendants entre contextes.
+Ils sont propres au site : aucun réglage du serveur Subsonic n’est modifié ou importé automatiquement.
+
+Les informations viennent de chaque piste via l’API Subsonic : `track`, `artist`, `album`, `genre`, `year`,
+`bitRate`, `duration`, `suffix`, `size`. Débit en kbps, taille en Mio à partir des octets et format original
+du fichier ; aucun calcul à partir du flux transcodé. Piste # conserve le tag réel, même dans une playlist,
+et ne devient pas un rang inventé. Le style ne reprend jamais celui de l’album lorsqu’il manque au morceau.
+Un « — » signale les valeurs absentes, y compris pour les titres d’ailleurs ; la source remplace leur album.
+Les styles et textes longs sont tronqués avec texte complet au survol. Les séparations de disques et
+l’état vide de la file s’adaptent aux colonnes visibles. Les colonnes choisies restent consultables en
+défilement horizontal lorsque la fenêtre est étroite. Aucun nouveau stockage de tags, scan ou migration.
+
+Schéma unique : `webapp/preferences.py` (`SONG_COLUMNS`), fourni dans `/api/me.songColumns` et réutilisé
+par la grille et les deux tableaux. Projection de la taille : `webapp/library/catalog.py`.
+Formats/visibilité : `web-pc/static/js/song-columns.js` ; tableaux : `views.js`, `queue.js` ; réglages :
+`dialogs.js` et `account.js`, styles dans `base.css`, `views.css`, `player.css`, textes dans `i18n/fr.yaml`.
+Tests : `tests/test_song_styles.py` (projection/HTTP, neuf options, isolation compte/contexte, validation
+booléenne et refus atomique), `tests/e2e_webapp.js` (grille complète, réglages immédiats, tags absents,
+formats, titres d’ailleurs et disques), `tests/e2e_webapp_queue.js` (restauration de la file).
+Les sauvegardes des cases sont sérialisées pour conserver les changements rapides, même sur une même case ;
+les réponses retardées ne remplacent pas les choix récents et les sauvegardes d’un ancien compte sont ignorées.
+Tests différés dédiés dans `e2e_webapp_queue.js` (ordre, échec puis reprise et changement de compte).
+
+Validation locale du 19/11/2026 : 148 tests Python ciblés et quatre parcours jsdom PC réussis (424 contrôles).
+Chrome : réglages en clair/sombre à 1440, 900, 390 et 320 px ; Mon compte à 1440, 390 et 320 px ;
+playlist avec style long et absent, file avec débit/format/taille distincts. Syntaxe JS et `git diff --check`
+valides. Essais sur faux Subsonic, aucune musique réelle modifiée.
+Publication le 20/11/2026 depuis un instantané de la 1.11.1 enrichi des colonnes uniquement : 148 tests Python
+et les deux parcours principaux revalidés sur cet instantané. Version publique 1.12, santé HTTPS, 231 fichiers
+applicatifs et 52 ressources publiques conformes. Conteneur sain, SQLite intègre au schéma 19 et données
+conservées. Le parcours connecté à la production n’a pas été rejoué ; recharger avec Cmd+Maj+R.
+
+### Style sur les cartes d’albums (1.10.2)
+
+Dans les grilles de l’accueil, des artistes, d’Albums (y compris les pages suivantes), de la recherche et des favoris,
+le style musical remplace le nombre d’écoutes. Les deux vues « Plus écoutés » (accueil et onglet Albums) conservent
+le compteur à cet emplacement. La fiche album garde son style et « Écouté N fois ». Étoiles et commentaires restent
+visibles ; le style occupe une ligne entière pour rester lisible aussi en grille compacte. Les styles longs sont
+tronqués avec leur texte complet au survol.
+
+Le style vient du champ `genre` fourni par Subsonic, transmis dans les trois sources de cartes : listes ID3,
+dossiers d’un artiste et albums les mieux notés (genre du dossier, sinon du premier titre déjà chargé).
+Si le style manque, aucune mention de remplacement ni compteur d’écoutes n’est ajouté. Aucun appel Subsonic
+supplémentaire, changement de tags ou migration. Les cartes Discogs gardent leurs métadonnées propres.
+
+Code : `webapp/library/catalog.py`, `library/folders.py`, `ratings.py`, `web-pc/static/js/views.js` et `static/css/views.css`.
+Depuis la préparation de la 1.10.3, le package `webapp/library/` regroupe les accès : catalogue, dossiers,
+index des artistes, statistiques, accès aux fichiers, Incoming et règles de nommage. `Library` consulte Subsonic ;
+`LibraryFiles` range les albums et délègue les noms à `LibraryNaming`. Le SQL reste dans les dépôts existants,
+et le transport dans `subsonic.py` ; aucun second catalogue musical n’est ajouté. Détail : `docs/architecture/README.md`.
+Tests : `tests/test_webapp.py` (style de toutes les listes, genres absents ou numériques), `tests/e2e_webapp.js`
+(accueil, onglets et pagination, artiste, recherche, favoris, étoiles/commentaires et écoutes sur la fiche).
+Validation locale : 71 tests Python ciblés et 344 contrôles du parcours PC passent. Rendu Chrome vérifié avec
+styles longs, étoiles et commentaires, en grilles normale et compacte à 1440, 390 et 320 px.
+Déployée le 17/11/2026 sur https://music2.foos.fr : santé HTTPS et conteneur vérifiés, version publique 1.10.2,
+216 fichiers conformes aux sources testées, JavaScript/CSS servis avec leur nouvelle empreinte de cache.
+SQLite reste intègre au schéma 19 et les données sont conservées ; sauvegarde et image précédente disponibles.
+Le parcours connecté à la production n’a pas été rejoué. Recharger la page avec Cmd+Maj+R.
+
+### Dossiers ou tags (`pimedia/webapp/library/folders.py`)
 La bibliothèque est rangée `Artiste/Album/titre` (voir `envoi-fichiers.md`) : la barre des artistes, la page artiste et la
 page album suivent ces **dossiers** (`getIndexes`, `getMusicDirectory`). Ainsi « Dälek » n'apparaît qu'une fois même si
 des tags disent « Dalek ». Le reste de Subsonic parle en tags (ID3) ; le site fait le lien :
@@ -53,7 +144,7 @@ collecte du catalogue ni scan Subsonic. Incoming et les restes macOS sont exclus
 Si cette liste est indisponible, les résultats des tags restent utilisables. Les albums et les titres continuent
 de venir de `search3`, avec les limites existantes (12 albums et 30 titres). Pas de correction des fautes de frappe.
 
-Code : `webapp/library.py` (`search`, `_search_artists`), dépendance `artist_indexes` assemblée dans `app.py`.
+Code : `webapp/library/catalog.py` (`search`, `_search_artists`), dépendance `artist_indexes` assemblée dans `app.py`.
 Tests : `tests/test_webapp_search.py` (Gurriers sans résultat ID3, variantes de noms, classement, doublons, tags seuls,
 cache, périmètres des comptes, exclusions, indisponibilité de l'index, albums/titres/requête vide),
 `tests/e2e_webapp.js` (saisie du nom partiel sans accent puis ouverture du dossier artiste).
@@ -85,7 +176,7 @@ renvoyés dans `/api/home`, jamais le contenu des autres propriétés ni le chem
 La prochaine visite de l’accueil prend le résultat du nouveau scan ; pas de mise à jour automatique d’une page restée
 ouverte. Pas de migration, de minuterie, d’identifiants supplémentaires ni de changement de Subsonic.
 
-Code : `webapp/library_statistics.py`, entité `LibraryStatistics` dans `entities.py`, assemblage dans `app.py`,
+Code : `webapp/library/statistics.py`, entité `LibraryStatistics` dans `entities.py`, assemblage dans `app.py`,
 `controllers/library.py` ; composant `web-pc/static/js/library-statistics.js` et sa feuille CSS.
 Tests : `tests/test_library_statistics.py` (format natif, cache, changement de scan, redémarrage, source absente ou
 incomplète, remplacement de fichier, HTTP authentifié et absence de collecte/secrets), `tests/e2e_webapp.js`
@@ -115,12 +206,15 @@ Depuis la version 1.7.3, la page artiste propose aussi « Membres et autres proj
 depuis un album, les membres de ses artistes principaux s'ouvrent dans les crédits. Chaque musicien permet de
 retrouver ses autres groupes / projets et d'ouvrir leurs fiches musicales (toutes périodes, dates connues affichées).
 
-`pimedia/webapp/library.py`, `folders.py` (pages artiste et album par dossiers), `controllers/library.py` ; page :
+`pimedia/webapp/library/catalog.py`, `library/folders.py` (pages artiste et album par dossiers), `controllers/library.py` ; page :
 `web-pc/static/js/views.js`, `stars.js`.
 
 ## Tests
 `tests/test_webapp.py`, `tests/test_webapp_folders.py` (pages par dossiers, liens ID3, noms de dossiers, cœur),
-`tests/test_webapp_ext.py` (recherche), `tests/e2e_webapp.js` (dont les pochettes : flèche existante, chargement
+`tests/test_webapp_music.py` (biographie Last.fm via l'API Subsonic prioritaire, cas Jungle groupe/style,
+replis Wikipédia français puis anglais, API absente/en erreur, cache),
+`tests/test_webapp_ext.py` (recherche), `tests/e2e_webapp.js` (biographie Last.fm et son lien, repli Wikipédia,
+lecture sur les pochettes : flèche existante, chargement
 unique, album complet sans navigation, erreur sans perdre la file, lien sur le nom).
 Version 1.7.7 déployée le 07/11/2026 : santé HTTPS et conteneur sains ; version, JavaScript et CSS servis vérifiés.
 Les interactions sont validées dans jsdom ; le parcours avec un compte connecté en production reste à regarder.

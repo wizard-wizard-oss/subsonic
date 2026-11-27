@@ -1,5 +1,5 @@
 """Actualité : articles des flux suivis, ceux qui parlent d'un artiste, ajout et retrait d'un flux."""
-from .base import int_param, ok
+from .base import get, int_param, ok, post
 
 
 class NewsController:
@@ -34,3 +34,13 @@ class NewsController:
             raise ValueError(feed_id)
         self.news.remove(user, feed_id)
         return ok()
+
+    def routes(self):
+        return [
+            get("/api/news", self.latest),
+            get("/api/news/artist", self.about),
+            get("/api/news/feeds", self.feeds),
+            post("/api/news/feed/add", self.add),
+            post("/api/news/feed/remove", self.remove),
+            post("/api/news/feed/show", self.show),
+        ]

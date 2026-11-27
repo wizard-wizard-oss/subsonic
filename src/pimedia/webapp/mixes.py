@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from ..shared.text import normalize
-from .library import DECADES as LIBRARY_DECADES, as_list, song_row, visible
+from .library.catalog import DECADES as LIBRARY_DECADES, as_list, song_row, visible
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 DECADES = tuple(d for d in LIBRARY_DECADES if d >= 1960)

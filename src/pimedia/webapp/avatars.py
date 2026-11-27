@@ -3,18 +3,16 @@ sinon rien (la page affiche alors l'initiale en couleur)."""
 import base64
 import hashlib
 import re
-import urllib.error
-import urllib.request
 
-from ..shared.external import USER_AGENT
-from .library import TtlCache
+from ..shared.providers.http import TooLarge
+from .library.cache import TtlCache
+from .providers.gravatar import Gravatar, GravatarUnreachable
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 MAX_BYTES = 300 * 1024
 SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"RIFF", "image/webp"),
               (b"GIF87a", "image/gif"), (b"GIF89a", "image/gif"))
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-GRAVATAR = "https://gravatar.com/avatar/%s?s=256&d=404"     # d=404 : pas de dessin par défaut si l'adresse n'a pas de photo
 
 
 class InvalidAvatar(ValueError):
@@ -29,41 +27,13 @@ def image_type(data):
     return None
 
 
-def gravatar_url(email):
-    """Adresse de la photo Gravatar : empreinte SHA-256 de l'adresse e-mail, sans espaces, en minuscules."""
-    return GRAVATAR % hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
-
-
-class Gravatar:
-    """Lit une photo sur gravatar.com. None : l'adresse n'a pas de photo ; GravatarUnreachable : site injoignable."""
-
-    def __init__(self, opener=urllib.request.urlopen, timeout=8):
-        self.opener, self.timeout = opener, timeout
-
-    def fetch(self, email):
-        request = urllib.request.Request(gravatar_url(email), headers={"User-Agent": USER_AGENT})
-        try:
-            with self.opener(request, timeout=self.timeout) as response:
-                return response.read(MAX_BYTES + 1)
-        except urllib.error.HTTPError as error:
-            if error.code == 404:
-                return None
-            raise GravatarUnreachable() from error
-        except (OSError, ValueError) as error:
-            raise GravatarUnreachable() from error
-
-
-class GravatarUnreachable(Exception):
-    pass
-
-
 class Avatars:
     def __init__(self, repository, users, subsonic, cache=None, gravatar=None):
         self.repository = repository
         self.users = users
         self.subsonic = subsonic
         self.cache = cache or TtlCache(3600)
-        self.gravatar = gravatar or Gravatar()
+        self.gravatar = gravatar or Gravatar(max_bytes=MAX_BYTES)
 
     def upload(self, user, data_url):
         """Image envoyée par la page (déjà réduite par le navigateur), en « data: » base64."""
@@ -87,6 +57,8 @@ class Avatars:
             data = self.gravatar.fetch(email)
         except GravatarUnreachable:
             raise InvalidAvatar("avatar.gravatar_unreachable")
+        except TooLarge:
+            raise InvalidAvatar("avatar.too_big")
         if data is None:
             raise InvalidAvatar("avatar.gravatar_none")
         return self._save(user, data)

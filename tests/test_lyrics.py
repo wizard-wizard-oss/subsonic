@@ -3,7 +3,8 @@ import unittest
 import urllib.parse
 from unittest.mock import Mock
 
-from pimedia.shared.external import LyricsFinder, filter_lyrics_candidates, lyrics_search_pairs
+from pimedia.shared.external import filter_lyrics_candidates, lyrics_search_pairs
+from pimedia.shared.providers.lyrics import LyricsFinder
 
 
 def lyric(artist="Guy Marchand", title="Destinée", duration=275, text="Paroles du bon morceau"):
@@ -18,6 +19,13 @@ class LyricsSites:
 
     def answer(self, path, params, body):
         self.answers[(path, tuple(sorted(params.items())))] = body
+
+    def get_json(self, url, headers=None):
+        """Comme HttpClient.get_json : l'adresse inconnue est une erreur réseau."""
+        found = self.try_get(url)
+        if found is None:
+            raise OSError("introuvable : " + url)
+        return found
 
     def try_get(self, url, timeout=8):
         self.urls.append(url)

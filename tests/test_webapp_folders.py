@@ -1,8 +1,8 @@
 """Édition PC : pages artiste et album tirées des dossiers (getMusicDirectory), pas des tags ID3."""
 import unittest
 
-from pimedia.webapp.artist_index import parse_index
-from pimedia.webapp.library import mac_leftover, visible
+from pimedia.webapp.library.artists import parse_index
+from pimedia.webapp.library.catalog import mac_leftover, visible
 from tests.webapp_support import WebAppTestCase
 
 

@@ -9,10 +9,15 @@ signalent une mise à jour. Ouvrir la page la marque comme vue. Lien aussi en ha
 
 ## Tenir l'historique (à CHAQUE modification du site)
 - Le contenu est dans **`src/i18n/versions.yaml`** : ajouter une entrée **en tête** avant de déployer, **à chaque fois**.
-  Évolution, finition visuelle ou correction de la même fonctionnalité : **troisième niveau** (1.7.1 → 1.7.2 → 1.7.3).
-  Fonctionnalité distincte : **mineure** ; grand changement : **majeure** (décision utilisateur du 07/11/2026).
+  **Règle confirmée par l'utilisateur le 22/11/2026** : nouvelle fonctionnalité ou nouveau comportement,
+  même dans une fonctionnalité existante : **mineure** (`1.13` → `1.14`). **Troisième numéro réservé aux
+  corrections de bugs** (`1.14.1`). Grand changement ou rupture de compatibilité : **majeure**.
+  Les commentaires privés des recommandations sont la **1.14**. Les versions déjà publiées ne sont pas renumérotées.
 - Le numéro doit grandir et la date ne pas reculer ; un champ manquant ou mal écrit **empêche le site de démarrer**
   (`InvalidVersions`) et fait échouer `tests/test_versions.py`.
+- Une **simple renumérotation** se vérifie avec `tests/test_versions.py` (format, ordre et dates) ; elle ne justifie
+  ni une suite complète ni des parcours d'interface. Élargir les vérifications seulement si le code change ou si
+  un problème précis le demande (rappel utilisateur du 22/11/2026).
 - `deploy/pc/push.sh` affiche la version déployée et rappelle d'en ajouter une si la plus récente n'est pas datée du jour
   (rappel seulement, il ne bloque pas).
 - Exception explicite du 07/11/2026 : la livraison brièvement publiée comme 1.8 est renumérotée **1.7.3** à la

@@ -1,14 +1,11 @@
 "use strict";
-/* Page « Envoyer » (#/upload) : des fichiers audio (ou des albums en zip) glissés ou choisis sont envoyés un par un au site,
+/* Page « Envoyer » (#/upload) : les albums en ZIP glissés ou choisis sont envoyés un par un au site,
    qui les range dans le dossier Incoming de Subsonic (un zip y est décompressé) ; à la fin, Subsonic est invité à scanner.
    Droit Subsonic « upload » requis. */
 
 Views.upload = (() => {
   const el = App.el, t = App.t;
-  const EXTENSIONS = ["mp3", "flac", "m4a", "aac", "ogg", "oga", "opus", "wav", "aiff", "aif"];
   const ZIP = "zip";
-  const MAX_BYTES = 300 * 1024 * 1024;
-  const MAX_ZIP_BYTES = 2000 * 1024 * 1024;
 
   /** Envoie un fichier (corps brut) avec sa progression ; erreur : l'Error porte la clé de texte du serveur. */
   function send(file, onProgress) {
@@ -38,10 +35,11 @@ Views.upload = (() => {
     return parts.join(" — ");
   }
 
-  function problem(file) {
+  function problem(file, status) {
     const extension = (file.name.split(".").pop() || "").toLowerCase();
-    if (!EXTENSIONS.includes(extension) && extension !== ZIP) return "upload.bad_type";
-    if (!file.size || file.size > (extension === ZIP ? MAX_ZIP_BYTES : MAX_BYTES)) return "upload.bad_size";
+    if (status.audioExtensions.includes(extension)) return "upload.album_required";
+    if (extension !== ZIP) return "upload.bad_type";
+    if (!file.size || file.size > status.maxZipBytes) return "upload.bad_size";
     return "";
   }
 
@@ -102,12 +100,13 @@ Views.upload = (() => {
         main.appendChild(el("p.page-error", {text: t("upload." + status.reason)}));
         return;
       }
+      this.uploadStatus = status;
       this.rows = el("ul.upload-list");
       this.totalBar = el("progress", {max: 1, value: 0});
       this.totalLabel = el("span.upload-state");
       this.total = el("div.upload-total", {hidden: true}, el("strong", {text: t("upload.total")}), this.totalBar, this.totalLabel);
       this.summary = el("p.muted.upload-summary");
-      this.input = el("input", {type: "file", multiple: true, hidden: true, accept: EXTENSIONS.concat(ZIP).map(e => "." + e).join(","),
+      this.input = el("input", {type: "file", multiple: true, hidden: true, accept: ".zip",
                                 onchange: () => { this.add(Array.from(this.input.files)); this.input.value = ""; }});
       const zone = el("div.upload-zone", {tabIndex: 0, role: "button", onclick: () => this.input.click(),
                                           onkeydown: e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.input.click(); } }},
@@ -129,7 +128,7 @@ Views.upload = (() => {
 
     add(files) {
       for (const file of files) {
-        const bad = problem(file);
+        const bad = problem(file, this.uploadStatus);
         const bar = el("progress", {max: 1, value: 0});
         const state = el("span.upload-state", {text: bad ? t(bad) : t("upload.waiting")});
         const row = el("li.upload-row" + (bad ? ".failed" : ""), {}, el("span.upload-name", {text: file.name}), bar, state);

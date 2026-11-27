@@ -2,9 +2,9 @@
 import urllib.parse
 
 from .artist_entities import ArtistImage
-from .lastfm import LASTFM_BLANK
-from .library import TtlCache
-from .music_metadata import MusicSourceError
+from .providers.lastfm import LASTFM_BLANK
+from .library.cache import TtlCache
+from ..shared.providers.metadata import ProviderUnavailable
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 IMAGE_HOSTS = frozenset(("lastfm-img.freetls.fastly.net", "lastfm.freetls.fastly.net",
@@ -47,7 +47,7 @@ class ArtistPortraits:
     def _discogs(self, link):
         try:
             return self.discogs.artist(link.discogs_artist_id) if link else None
-        except MusicSourceError:
+        except ProviderUnavailable:
             return None
 
     def _subsonic(self, user, identity):

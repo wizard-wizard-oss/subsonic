@@ -8,8 +8,9 @@ import unittest
 import urllib.parse
 
 from pimedia.webapp.app import WebApplication
-from pimedia.webapp.avatars import GravatarUnreachable
+from pimedia.webapp.providers.gravatar import GravatarUnreachable
 from tests.fake_subsonic import PNG, FakeSubsonicFull
+from pimedia.shared.providers.metadata import Pacer
 from tests.fake_musicbrainz import FakeMusicBrainz
 from tests.support import HttpClient, youtube_music_down
 
@@ -37,6 +38,13 @@ class FakeLyricsSites:
 
     def __init__(self):
         self.urls = []
+
+    def get_json(self, url, headers=None):
+        """Comme HttpClient.get_json : l'adresse inconnue est une erreur réseau."""
+        found = self.try_get(url)
+        if found is None:
+            raise OSError("introuvable : " + url)
+        return found
 
     def try_get(self, url, timeout=8):
         self.urls.append(url)
@@ -72,7 +80,7 @@ class FakeInfoSites:
     def __init__(self):
         self.urls = []
 
-    def get(self, url, timeout=8):
+    def get_json(self, url, headers=None):
         self.urls.append(url)
         if "wikipedia.org/api/rest_v1/page/summary/ABBA" in url and "fr." in url:
             return self.ABBA
@@ -86,15 +94,30 @@ class FakeInfoSites:
 
     def try_get(self, url, timeout=8):
         try:
-            return self.get(url, timeout)
+            return self.get_json(url)
         except OSError:
             return None
 
 
+def without_waiting(app):
+    """Les services externes du site, sans cadence ni attente entre deux requêtes."""
+    for provider in (app.musicbrainz, app.discogs, app.lastfm):
+        provider.sleep = lambda seconds: None
+        provider.pacer = Pacer(0)
+
+
+def use_fake_musicbrainz(app):
+    """La seule instance MusicBrainz du site, simulée, sans cadence ni attente."""
+    app.musicbrainz.http = FakeMusicBrainz()
+    app.musicbrainz.sleep = lambda seconds: None
+    app.musicbrainz.pacer = Pacer(0)
+    return app.musicbrainz.http
+
+
 def use_fake_info_sites(app):
-    """Biographies et anecdotes : Wikipédia et MusicBrainz simulés (un seul faux pour les deux)."""
-    app.facts.wikipedia.fetcher = app.facts.musicbrainz.fetcher = FakeInfoSites()
-    return app.facts.wikipedia.fetcher
+    """Biographies et anecdotes : Wikipédia simulé ; MusicBrainz (« Arrival », 1976) par use_fake_musicbrainz."""
+    app.facts.wikipedia.http = FakeInfoSites()
+    return app.facts.wikipedia.http
 
 
 class WebClient(HttpClient):
@@ -118,9 +141,9 @@ class WebAppTestCase(unittest.TestCase):
         self.addCleanup(self.subsonic.stop)
         self.app = WebApplication(PROJECT, environ=dict(self.environ, PI_MEDIA_WEB_SUBSONIC_URL=self.subsonic.url),
                                   data_dir=self.tmp)
-        self.app.lyrics.finder.fetcher = FakeLyricsSites()          # jamais les vrais sites pendant les tests
-        self.app.exploration.metadata.fetcher = FakeMusicBrainz()
-        self.app.exploration.metadata.sleep = lambda seconds: None
+        self.app.lyrics.finder.http = FakeLyricsSites()          # jamais les vrais sites pendant les tests
+        use_fake_musicbrainz(self.app)
+        without_waiting(self.app)
         use_fake_info_sites(self.app)
         self.app.extmusic.youtube.music = youtube_music_down()      # ni YouTube Music
         self.app.avatars.gravatar = FakeGravatar()                  # ni gravatar.com

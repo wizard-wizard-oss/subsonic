@@ -19,7 +19,7 @@
 
 ## Où
 `web-pc/static/js/sidebar.js` (`ArtistSidebar`), `playlists.js` (`PlaylistPanel`), `dnd.js`, `css/layout.css` ;
-serveur : `pimedia/webapp/artist_index.py` (liste et raccourcis), `storage/artist_index.py`, `controllers/library.py`
+serveur : `pimedia/webapp/library/artists.py` (liste et raccourcis), `storage/artist_index.py`, `controllers/library.py`
 (`/api/artists` : `index` et `shortcuts`), `config.py` (`shortcut_folders`).
 
 ## Tests

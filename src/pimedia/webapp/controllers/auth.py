@@ -2,7 +2,8 @@
 from ...server.transport import Reply
 from ..accounts import LoginRefused, TooManyAttempts
 from ..chat import REACTIONS
-from .base import Guard, client_address, ok, session_cookie, session_token
+from ..preferences import SONG_COLUMNS
+from .base import Guard, client_address, get, ok, post, public, session_cookie, session_token
 
 
 class AuthController:
@@ -37,8 +38,17 @@ class AuthController:
 
     def me(self, request, user):
         user = self.accounts.refresh_roles(user)              # un administrateur a pu changer ses droits
-        return ok({"user": user.to_api(), "preferences": self.preferences.of(user), "reactions": list(REACTIONS),
+        return ok({"user": user.to_api(), "preferences": self.preferences.of(user), "songColumns": list(SONG_COLUMNS),
+                   "reactions": list(REACTIONS),
                    "unread": self.chat.unread(user), "usernames": self.users.usernames()})
 
     def save_preferences(self, request, user, body):
         return ok({"preferences": self.preferences.update(user, body.get("changes"))})
+
+    def routes(self):
+        return [
+            get("/api/me", self.me),
+            public("POST", "/api/login", self.login),
+            public("POST", "/api/logout", self.logout),
+            post("/api/preferences", self.save_preferences),
+        ]

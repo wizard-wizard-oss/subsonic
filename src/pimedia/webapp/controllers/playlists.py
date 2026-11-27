@@ -1,7 +1,9 @@
 """Playlists Subsonic de la personne connectée, celles des autres rendues publiques (lecture) ou communautaires (ajout)."""
 from ..playlists import PlaylistError
-from .base import ok
+from .base import get, ok, post
 from .library import item_id
+
+EXT_ITEMS_BODY_LIMIT = 512 * 1024             # titres d'ailleurs envoyés complets par la page : jusqu'à 500 d'un coup
 
 MAX_SONGS = 500
 MAX_ORDER = 5000                     # une playlist peut être bien plus longue que ce qu'on y ajoute d'un coup
@@ -96,3 +98,18 @@ class PlaylistController:
     def delete(self, request, user, body):
         self.playlists.delete(user, item_id(body.get("id")))
         return ok()
+
+    def routes(self):
+        return [
+            get("/api/playlist", self.get),
+            get("/api/playlists", self.all),
+            post("/api/playlist/add", self.add, right="playlist"),
+            post("/api/playlist/add-ext", self.add_ext, right="playlist", body_limit=EXT_ITEMS_BODY_LIMIT),
+            post("/api/playlist/community", self.community, right="playlist"),
+            post("/api/playlist/create", self.create, right="playlist"),
+            post("/api/playlist/delete", self.delete, right="playlist"),
+            post("/api/playlist/remove", self.remove, right="playlist"),
+            post("/api/playlist/remove-ext", self.remove_ext, right="playlist"),
+            post("/api/playlist/rename", self.rename, right="playlist"),
+            post("/api/playlist/reorder", self.reorder, right="playlist", body_limit=EXT_ITEMS_BODY_LIMIT),
+        ]

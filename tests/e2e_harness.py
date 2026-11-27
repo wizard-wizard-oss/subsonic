@@ -12,11 +12,13 @@ from tests.fake_subsonic import FakeSubsonic
 from tests.test_podcasts import FakeFetcher, FakeHttp, ITUNES_RESULTS
 from tests.support import PROJECT, ROOT, youtube_music_down
 from tests.test_guests import FakeSystem
-from pimedia.server.transport import Reply
+from pimedia.server.transport import Reply, ThreadedServer
 from tests.test_extmusic import JAMENDO_ANSWER, VIDEOS_ANSWER, YOUTUBE_ANSWER
 
 
 def main():
+    # Comme le harness PC : jsdom charge les ressources simultanément, au-delà du backlog TCP par défaut.
+    ThreadedServer.request_queue_size = 128
     tmp = tempfile.mkdtemp(prefix="pm-e2e-")
     fake = FakeSubsonic().start()
     app_dir = os.path.join(tmp, "app")

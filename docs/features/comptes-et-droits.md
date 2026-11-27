@@ -12,9 +12,9 @@
    fait dans Subsonic s'applique sans se reconnecter ; si Subsonic ne répond pas, on garde les derniers connus
    (`users.roles`, migration 6).
 4. Réglages par personne (`/api/preferences`) : barre à gauche (fixe/survol/masquée), largeur, densité, salon ouvert/fermé,
-   grille d'albums, compteurs d'albums, notifications de mentions, onglet de la barre (`sidebar_tab`).
+   grille d'albums, colonnes des morceaux, notifications de mentions, onglet de la barre (`sidebar_tab`).
 5. **Réglages rapides** (roue dentée en haut, gardée) : affichage (barre, largeur en px, salon, densité, pochettes,
-   notifications), liste « Votre compte Subsonic permet de… » et lien vers « Mon compte ».
+   colonnes des morceaux, notifications), liste « Votre compte Subsonic permet de… » et lien vers « Mon compte ».
 6. **Page « Mon compte »** (`#/account`, 27/10/2026), ouverte par **sa photo et son nom en haut à droite** (ou depuis les
    réglages rapides), en cartes :
    - **Photo de profil** : d'où vient la photo (`GET /api/account` : `source` = `site`, `subsonic` ou rien) ;
@@ -36,6 +36,14 @@
    site : date d'envoi ; Subsonic : « s » + empreinte de l'image, relue au plus toutes les heures) : la page ne demande
    l'image que pour elles, relit la liste toutes les 10 minutes et tout de suite après un changement de sa photo.
 
+Depuis la 1.12, une grille « Colonnes des morceaux » reprend les neuf cases de Subsonic : piste, artiste,
+album, style, année, débit, durée, format et taille. Choix séparés pour Parcourir et Liste de lecture,
+enregistrés immédiatement dans dix-huit préférences booléennes `browse_*`/`queue_*`, sans migration.
+Le titre et les commandes restent disponibles. Les choix initiaux suivent la capture de l’utilisateur ;
+le style est activé. Les paramètres Subsonic restent indépendants. Voir
+[Bibliothèque](bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+Tests dédiés : `tests/test_song_styles.py` et `tests/e2e_webapp.js`.
+
 ## Droits appliqués
 | Droit Subsonic | Effet sur le site |
 |---|---|
@@ -45,6 +53,7 @@
 | `comment` | étoiles et commentaires d'album (le salon reste libre) |
 | `scrobble` | le lecteur signale les écoutes |
 | `upload` | page « Envoyer » |
+| `coverArt` | modifier les tags d'un album ou de ses pistes, sans droit administrateur |
 | `admin` | modérer le salon ; scan Subsonic avec ce compte |
 
 ## Où
@@ -66,7 +75,7 @@ photo : refus expliqué ; adresse avec photo : copiée), photo en haut et dans l
   il faudrait un compte administrateur Subsonic dans le `.env` (pour `changePassword`), un envoi de mail (SMTP) et des
   jetons à usage unique en base. `changePassword` en administrateur n'a pas été vérifié sur le Subsonic de production.
 - Inscription : il n'y a pas de création de compte, tout passe par Subsonic.
-- Droits `coverArt` (tags ID3), `share` (liens publics), `settings` : lus mais **aucune fonction ne les utilise** (le lien
+- Droits `share` (liens publics), `settings` : lus mais **aucune fonction ne les utilise** (le lien
   vers les réglages Subsonic est montré à tous ; Subsonic refuse lui-même si le droit manque).
 - Pas de connexion à un compte YouTube ou SoundCloud (« J'aime » privés) : demande OAuth Google (mode test : 100 personnes
   inscrites à la main, reconnexion chaque semaine) et une appli SoundCloud (inscriptions restreintes) : pas fait.

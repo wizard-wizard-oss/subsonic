@@ -1,6 +1,6 @@
 """Photos de profil (envoyée sur le site, sinon celle de Subsonic) et radios Internet de Subsonic."""
 from ...server.transport import Reply, StreamReply
-from .base import ok
+from .base import get, ok, post
 from .library import item_id
 
 AVATAR_BODY_LIMIT = 512 * 1024        # image de 300 Ko au plus, en base64
@@ -49,3 +49,15 @@ class ProfileController:
         if upstream is None:
             return Reply.not_found()
         return StreamReply(upstream, 200)
+
+    def routes(self):
+        return [
+            get("/api/account", self.account),
+            get("/api/avatar", self.avatar),
+            get("/api/avatars", self.avatar_versions),
+            get("/api/radios", self.stations),
+            get("/api/radios/stream", self.stream),
+            post("/api/avatar/delete", self.remove_avatar),
+            post("/api/avatar/gravatar", self.gravatar),
+            post("/api/avatar/upload", self.upload_avatar, body_limit=AVATAR_BODY_LIMIT),
+        ]

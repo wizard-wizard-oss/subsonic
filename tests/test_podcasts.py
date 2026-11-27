@@ -42,6 +42,13 @@ class FakeHttp:
                 return answer
         return {"results": [], "feeds": []}
 
+    def get_json(self, url, headers=None):
+        """Comme HttpClient.get_json : une panne prévue (DirectoryError) devient une erreur réseau."""
+        try:
+            return self.get(url, headers)
+        except DirectoryError as error:
+            raise OSError(str(error)) from error
+
 
 class FakeFetcher:
     def __init__(self, data=RSS):

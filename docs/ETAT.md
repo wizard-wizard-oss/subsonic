@@ -1,5 +1,301 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Sorties de la semaine · 1.19.1
+
+La page Actualités propose les annonces MusicBrainz du lundi au dimanche, les styles suivis par compte et le guide Help associé. La 1.19.1 remplace la pagination JSON du catalogue des styles par une requête texte et conserve les abonnements existants par nom, sans migration. Voir [Actualités](features/actualite.md).
+
+**Menu du compte, 1.18 (27/11/2026, déployée et vérifiée)** : Mon compte, Notifications et Se déconnecter
+regroupés dans un menu sous la photo. Pastille rouge sur la photo visible menu fermé, également sur
+téléphone. Liens, notifications et action de déconnexion existants réutilisés ; fermeture extérieure,
+Échap, navigation et coordination avec les volets mobiles. Aucun changement de schéma ou de données.
+Validation : 58 contrôles mobiles, parcours Notifications/PC/mobile, cinq tests de versions et Chrome
+à 1440/390/320 px et en paysage 667×375, clair/sombre. Détails : [Notifications](features/notifications.md).
+
+Publication 1.18 vérifiée le 27/11/2026 sur https://music2.foos.fr : conteneur sain, version publique,
+253 fichiers exécutés et 62 ressources HTTPS conformes à la livraison isolée de la 1.17. Menu et pastille
+confirmés dans le HTML publié. Aucune migration : schéma 22, intégrité et clés étrangères valides,
+notification n° 1 à Mnu conservée. Aucun message supplémentaire envoyé. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.18-20261127T005355Z/` ; image précédente `pimedia-web:pre-1.18-20261127t005355z`.
+
+**Notifications privées et albums ZIP, 1.17 (27/11/2026, déployée et vérifiée)** : les administrateurs peuvent
+envoyer un message à un membre depuis Notifications. Messages persistants, lecture explicite, pagination,
+pastille privée et rattrapage SSE ; les réponses tardives sont écartées lors des changements de compte.
+Migration 22 : table notifications indépendante de l’attribution des envois. Fichiers audio seuls et ZIP
+sans artiste/album refusés avant toute publication. Le MP3 Baston 3000 de Mnu a été retiré sur demande ;
+son historique reste intact. Correctifs précédemment préparés en 1.16.1 inclus dans cette 1.17 :
+invalidation du cache d’attribution et poursuite du rangement après erreur. Aucun auteur de modification
+d’album n’est enregistré. Validation : 154 tests Python, parcours Notifications/PC/mobile et Chrome
+à 1440/390/320 px en clair/sombre. Migration répétée sur la sauvegarde de production : valeurs des
+26 tables existantes conservées, intégrité et clés étrangères valides. Détails :
+[Notifications](features/notifications.md), [Envois](features/envoi-fichiers.md).
+
+Publication vérifiée sur https://music2.foos.fr : version 1.17, conteneur sain, 251 fichiers exécutés et
+60 ressources HTTPS conformes à la livraison isolée de la production 1.16. Le refus HTTP d’un MP3 seul
+renvoie `upload.album_required` sans créer de fichier ni d’historique. SQLite intègre au schéma 22,
+clés étrangères valides. Notification privée n° 1 envoyée via l’API réelle à Mnu, non lue au contrôle ;
+l’historique de l’envoi 18 conserve Mnu. Scan Subsonic terminé, un titre en moins et MP3 absent de la recherche.
+`getSong` par son ancien identifiant conserve une ancienne fiche, sans fichier sur le disque.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.17-20261127T002811Z/` ; image précédente
+`pimedia-web:pre-1.17-20261127t002811z`. La source publiée n’inclut pas les autres travaux locaux de tags.
+
+**Diagnostic initial des envois (27/11/2026 ; correctifs intégrés à la 1.17)** : le cache des chemins
+utilisé pour afficher l’auteur d’un envoi est invalidé avec les autres caches avant/après un scan de tags.
+Les tests HTTP couvrent un style modifié par un autre compte et la réutilisation d’un identifiant ID3.
+Le rattrapage Incoming poursuit les autres albums après une erreur et scanne les déplacements réussis,
+y compris en cas d’échec de nettoyage ; trois régressions dédiées. Aucun changement de schéma ni écriture
+dans l’historique par l’éditeur de tags. En production, l’attribution de Coilguns reste Mnu après la correction
+du style ; l’écrasement persistant signalé n’a pas été reproduit. Le MP3 seul de Baston 3000 restait alors dans
+Incoming faute d’album et d’arborescence Artiste/Album, avec des droits corrects. Téléchargement individuel
+200 vérifié via Subsonic ; sa fiche générique Incoming ne renvoie aucune piste. Aucun fichier musical,
+droit ni donnée de production modifié. Détails : [Envois](features/envoi-fichiers.md), [Tags](features/tags-albums.md).
+
+Validation locale du correctif : 139 tests Python ciblés (envois, tags, rangement, dossiers et droits) et
+5 tests de versions réussis. Les deux régressions principales échouent sur les méthodes originales,
+puis passent avec le correctif. `git diff --check` est valide. Aucun changement de navigateur.
+
+**Help structuré par thèmes, 1.16 (26/11/2026, déployée et vérifiée)** : nom **Help** conservé dans
+le menu et le titre à la demande de l’utilisateur. Trois mises en avant (salon, paroles synchronisées,
+presse) puis sept thèmes et 39 guides de trois étapes. Captures des composants réels avec des données
+d’exemple ; liens et actions vers les fonctions existantes. Explications détaillées pour les labels liés
+aux éditions d’albums, les imports, les flux RSS et les recommandations privées. Navigation accessible,
+styles dédiés adaptés à la largeur disponible ; aucun effet sur la lecture ou les préférences en consultant
+les guides. Textes séparés du rendu, aucun service ni stockage ajouté. Validation : 12 groupes Help, parcours PC
+(367 contrôles), parcours mobile et cinq tests de versions réussis ; navigateur de 320 à 1440 px,
+clair/sombre, sans débordement de Help ni erreur JavaScript. Détails : [Help](features/nouveautes.md).
+Publication le 26/11/2026 depuis une livraison isolée de la production 1.15.2, par
+`deploy/pc/push.sh` (empreinte `e01ea663204e`). Seuls les 12 fichiers applicatifs Help
+diffèrent de la production précédente. Les 245 fichiers exécutés et 64 ressources HTTPS, dont les
+six captures, correspondent à cette livraison. Menu et titre Help, sept thèmes, 39 guides et
+117 étapes confirmés par HTTPS. Conteneur sain, configuration et volume de données conservés ;
+SQLite intègre au schéma 21, clés étrangères valides. Les recherches et autres écritures reçues
+pendant la publication sont conservées. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.16-20261126T221729Z/` ; image précédente `pimedia-web:pre-1.16-20261126t221729z`.
+Aucune migration. Le retour de code peut conserver la base courante.
+Validation de la livraison exacte : 12 groupes Help, parcours PC général, parcours mobile complet
+et cinq tests de versions réussis.
+
+**Menu Help, 1.15.2 (26/11/2026, déployée et vérifiée)** : à la demande de l’utilisateur, « Help »
+remplace « Découvrir l’application » dans le menu et le titre de la page pour raccourcir le libellé sur mobile.
+Route, cartes et liens conservés ; seules les traductions, la note de version et le commentaire du composant
+ont changé en production. HTTPS confirme Help et la version 1.15.2 ; conteneur sain, configuration conservée.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15.2-20261126T213916Z/` ; image précédente :
+`pimedia-web:pre-1.15.2-20261126t213916z`. Attentes textuelles existantes adaptées ; aucun test relancé.
+
+**Présentation de l’application, 1.15.1 (26/11/2026, déployée et vérifiée)** : le menu « Nouveautés »
+et le titre de sa page deviennent « Découvrir l’application ». Correction de libellé publiée après la 1.15
+mobile, avec un troisième numéro. Route, cartes et liens conservés. HTTPS confirme le nouveau menu,
+le titre et la version 1.15.1 ; conteneur sain. Les 238 fichiers applicatifs sont conservés, avec seulement
+les textes, la note de version et le commentaire du composant modifiés. Configuration inchangée,
+aucune migration. Sauvegarde code/configuration et SQLite :
+`../pimedia-backups/pre-1.15.1-20261126T212908Z/` ; image précédente
+`pimedia-web:pre-1.15.1-20261126t212908z`. Aucune suite de tests relancée pour ce changement de texte,
+conformément à la consigne utilisateur du 26/11/2026. Détail : [Découvrir l’application](features/nouveautes.md).
+
+**Affichage mobile isolé, 1.15 (26/11/2026, déployée et vérifiée)** : menu ☰ cliquable pour les artistes,
+playlists et liens existants, salon en volet, accueil et lecteur contenus sur petit écran. CSS et JS dédiés
+activés sur petit écran, y compris en paysage tactile ; ouverture locale sans changement des préférences PC.
+Les nœuds et gestionnaires d’origine reviennent sur grand écran. Les styles mobiles ont une source unique,
+Échap laisse les contrôles du salon agir avant de fermer le volet ; les barres sont compactées en paysage court.
+Revue indépendante puis recontrôle : responsabilités et couches existantes conservées, aucune duplication
+métier. Chargement YouTube et édition Pi inchangés. Détails : [Affichage mobile](features/mobile.md).
+Publication le 26/11/2026 depuis l’instantané testé du commit `376064d`, par
+`deploy/pc/push.sh`. Version publique 1.15, conteneur sain, 238 fichiers applicatifs et
+57 ressources HTTPS conformes. Validation de cet instantané : 58 contrôles mobiles,
+parcours complet mobile, parcours PC général et cinq tests de versions. Configuration et volume de données
+conservés ; SQLite intègre au schéma 21, clés étrangères valides. Les messages et sessions reçus pendant
+la publication sont conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15-20261126T212335Z/` ;
+image précédente `pimedia-web:pre-1.15-20261126t212335z`. Aucune migration ; le retour de code peut conserver la base courante.
+La validation visuelle finale à 320 px et en paysage reste à confirmer : le navigateur de test est indisponible.
+La lecture YouTube réelle sur téléphone reste à vérifier avec les retours utilisateur.
+
+**Biographies Last.fm prioritaires, 1.14.2 (26/11/2026, déployée et vérifiée)** : la fiche artiste
+consulte d'abord la biographie de `getArtistInfo2` par l'API Subsonic existante, puis Wikipédia en français,
+puis en anglais si elle est absente ou si Subsonic est indisponible. Le portrait garde son chargement
+indépendant ; une biographie Last.fm ne demande plus de photo à Wikipédia. Cas signalé : Jungle renvoyait
+le style musical car la page Wikipédia française empêchait tout appel Last.fm. Fiche publique Last.fm du
+groupe et biographie fournie par le serveur Subsonic réel confirmées. Tests et détails :
+[Bibliothèque](features/bibliotheque.md).
+Validation locale : 30 tests Python ciblés (biographies, anecdotes, portraits et versions) passent,
+ainsi que le parcours jsdom PC général, avec la biographie Last.fm et son lien affichés et le repli
+Wikipédia conservé. Le test HTTP Jungle confirme que la biographie du groupe fournie par Subsonic
+passe avant une page Wikipédia décrivant le style musical. Vérification réelle limitée à la lecture des
+métadonnées, sans modification de la bibliothèque.
+Publication depuis l'instantané du commit dédié `81f5d3f`, par `deploy/pc/push.sh`. Les 12 tests ciblés
+biographies/versions de cet instantané passent. Version publique 1.14.2, 234 fichiers applicatifs conformes
+au commit et conteneur sain, sans erreur de démarrage. La route réelle `/api/artist/bio` renvoie pour
+Jungle une biographie du groupe, sourcée Last.fm et liée à sa fiche. SQLite reste intègre au schéma 21,
+clés étrangères et comptages métier conservés ; configuration inchangée. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.14.2-20261126T211022Z/` ; image précédente
+`pimedia-web:pre-1.14.2-20261126t211022z`. La note publiée ne contient que ce correctif.
+
+**Commentaires des recommandations, 1.14 (22/11/2026, déployée et vérifiée)** : commentaire
+initial facultatif et échanges privés successifs entre émetteur et destinataire, pour artiste/album/morceau.
+Entité RecommendationComment commune au commentaire initial et aux réponses ; un dépôt SQL et un composant
+de fil réutilisé dans les conseils reçus, envoyés et archivés. Pas de champ feedback parallèle. Migration 21 :
+commentaires, curseurs de lecture par participant et archivage des conseils ; ancien contenu et marqueurs de
+livraison conservés, unicité des conseils actifs et des essais réseau. Pastille et bouton d'accès direct aux
+commentaires non lus via les événements existants. Envois/archives et commentaires paginés ; brouillon conservé
+lors des mises à jour et des échecs, changement de compte protégé. Détails : [À écouter](features/listen-later.md).
+Validation de l'instantané publié : 869 tests Python et les quatre parcours jsdom PC passent. Navigateur
+réel avec comptes fictifs : envoi et réponse, réception SSE, actualisation des envois depuis un marque-page et
+dialogue contenu à 390/320 px. Publication sur https://music2.foos.fr depuis le commit `68ba21a` par
+`deploy/pc/push.sh` ; 234 fichiers applicatifs et 53 ressources HTTPS conformes. Conteneur sain, SQLite intègre
+au schéma 21, clés étrangères et données conservées ; session/CSRF vérifiés sans créer de commentaires réels.
+Sauvegarde préalable : `../pimedia-backups/pre-1.14-20261122T210559Z/` ; image `pimedia-web:pre-1.14-20261122t210559z`.
+La correction des tags 1.13.1 reste séparée. Nomenclature confirmée : fonctionnalité nouvelle ou enrichie =
+mineure ; correctif de bug = troisième numéro. Une renumérotation seule appelle uniquement le contrôle ciblé
+de l'historique des versions.
+
+**Morceaux recommandés, 1.13 (21/11/2026, déployée et vérifiée)** : « Conseiller à quelqu’un »
+sur les lignes de morceaux Subsonic. Dans À écouter, les morceaux reçus forment une liste : titre, artiste,
+conseillers, lecture depuis une ligne, « Tout écouter » et retrait individuel. Une croix retire le conseil
+reçu sans toucher aux autres titres, aux marque-pages ou à la lecture en cours. Métadonnées relues avec le
+compte courant avant de remplacer la file ; droit d'écoute respecté, pistes introuvables ignorées et panne
+sans interruption de la lecture existante. Migration 20 pour accepter les morceaux dans les deux tables,
+en conservant les entrées et marqueurs de lecture. Les références artistes/albums existantes gardent leur
+parcours. Détails, tests et limites : [À écouter](features/listen-later.md).
+Validation locale : 853 tests Python passent, ainsi que les trois parcours jsdom PC (général, file et
+À écouter). Chrome vérifie l'envoi entre deux comptes avec le vrai flux SSE, « Tout écouter », le retrait
+individuel et les rendus clair/sombre à 1440, 390 et 320 px. Sources musicales simulées pour ces essais.
+Publication depuis l'instantané testé, commit `da9edc6` : 231 fichiers applicatifs et 52 ressources HTTPS
+conformes, version publique 1.13, conteneur sain sans erreur de démarrage. SQLite intègre au schéma 20,
+clés étrangères valides ; 14 comptes, 173 messages, quatre marque-pages, neuf recommandations et les
+historiques d'envois conservés. Configuration inchangée ; routes protégées par session et CSRF vérifiées.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.13-20261121T174551Z/`, image précédente
+`pimedia-web:pre-1.13-20261121t174551z`. Migration répétée sur copie avant publication. Les évolutions
+tags, colonnes, progression et recommandations ont chacune leur commit local ; aucun push Git.
+
+**Colonnes des morceaux, 1.12 (20/11/2026, déployé et vérifié)** : même grille que la capture des
+paramètres personnels Subsonic, neuf informations pour Parcourir et Liste de lecture, choix indépendants
+et persistants par compte. Style individuel visible, valeurs absentes indiquées par « — », débit/format/taille
+distincts, numéro de piste issu du tag. Les choix initiaux reprennent la capture. Titre et commandes restent
+accessibles, réglages immédiats sans modifier la lecture ; séparateurs de disques ajustés. Schéma unique
+fourni par `/api/me.songColumns`, préférences `browse_*`/`queue_*`, aucune migration ni copie des tags.
+Sauvegardes des cases sérialisées ; anciennes files synchronisées enrichies avec les métadonnées actuelles,
+sans interrompre une lecture démarrée pendant la restauration. Validation : 148 tests Python ciblés,
+quatre parcours jsdom PC (424 contrôles), Chrome clair/sombre et petits écrans, diff/syntaxe propres.
+Tests et validation : voir [Bibliothèque](features/bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+Publication depuis un instantané de la 1.11.1 avec uniquement cette évolution, sans la progression des tags
+1.12.1 préparée dans l’autre travail. Instantané exact revalidé : 148 tests Python et deux parcours PC.
+HTTPS et version publique 1.12 vérifiés ; 231 fichiers applicatifs et 52 ressources publiques conformes,
+conteneur sain sans erreur de démarrage. SQLite intègre au schéma 19 ; données métier conservées.
+Sauvegarde code/configuration/données : `../pimedia-backups/pre-1.12-20261119T230713Z/`, image précédente
+`pimedia-web:pre-1.12-20261119t230713z`. Aucun tag réel modifié pendant les contrôles.
+
+**Progression des tags, 1.12.1 (20/11/2026, déployée et vérifiée)** : l'éditeur explique le brouillon et
+l'enregistrement dans les fichiers audio. Barre visible dès le clic, compteurs réels par fichier durant
+la préparation et la publication, puis attente distincte de l'actualisation Subsonic. Le suivi des opérations
+longues continue sans pause automatique après une minute ; une coupure propose de reprendre le suivi sans
+réécrire. Erreur d'écriture : brouillon conservé ; scan non confirmé : fichiers enregistrés signalés séparément.
+Aucun nouveau stockage ni changement du mécanisme de sauvegarde/restauration. Tests et détails :
+[Tags d'albums](features/tags-albums.md). Publication depuis la 1.12, avec ses colonnes conservées.
+116 tests Python et deux parcours PC passent ; santé HTTPS, version publique 1.12.1, 231 fichiers
+applicatifs et 52 ressources publiques conformes. Conteneur sain, aucune erreur de démarrage ; SQLite
+intègre au schéma 19 et données métier conservées. Sauvegarde préalable :
+`../pimedia-backups/pre-1.12.1-20261120T190256Z/`, image `pimedia-web:pre-1.12.1-20261120t190256z`.
+Aucun tag réel modifié pendant les contrôles.
+
+**Style d'album simplifié, 1.11.1 (18/11/2026, déployé et vérifié)** : style en premier, autres tags/pistes repliés.
+Les éditions sont des cartes visibles avec styles/pochette disponibles, ordonnées par titre/artiste exacts
+et année locale. Le style s'importe indépendamment des correspondances de pistes ; import manuel et aperçu
+conservés. Discogs par défaut s'il est configuré. Repli MusicBrainz sur les genres du groupe d'éditions,
+sans attribuer ceux de l'artiste. Cas réel Trentemøller 2026 : genre absent dans Subsonic, choix Discogs
+Shoegaze/Indie Rock/Post-Punk récupérés en lecture seule. 221 tests Python ciblés et quatre parcours PC
+passent ; rendu Chrome contrôlé à 768/390/320 px. Voir [Tags d'albums](features/tags-albums.md).
+Publication par `deploy/pc/push.sh` depuis un instantané figé : santé HTTPS et note 1.11.1 vérifiées,
+JS/CSS publics et 230 fichiers applicatifs conformes, conteneur sain. SQLite intègre au schéma 19 ;
+13 comptes, 167 messages, quatre marque-pages, six recommandations, sept envois et sept albums attribués
+conservés. Sauvegarde code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.11.1-20261118T000805Z/` ; image 1.11 conservée sous
+`pimedia-web:pre-1.11.1-20261118t000805z`. Aucun enregistrement de tags sur la musique réelle.
+
+**Éditeur de tags d'album, 1.11 (18/11/2026, déployé et vérifié)** : édition avec le droit
+Subsonic `coverArt` (« Modifier pochettes et tags »), sans exiger `admin` ; valeurs communes ou par piste,
+artiste d'album distinct des artistes des pistes, aperçu avant
+écriture. MusicBrainz ou Discogs est choisi explicitement ; les clients sont séparés et leurs propositions
+rejoignent le brouillon manuel. Navigation et en-têtes restent par dossiers, aucun renommage ni déplacement.
+Subsonic fournit l'inventaire ; lecture ciblée pour les champs manquants et la fraîcheur avant écriture Mutagen.
+Aucun catalogue de tags ni historique de valeurs en SQLite. Sauvegardes techniques bornées hors musique,
+reprise conservatrice et suivi en mémoire ; scan partagé avec les envois. Enregistrement et réindexation
+distingués. Tests sur fichiers temporaires, faux serveurs et parcours navigateur ; validation finale dans la
+fiche [Tags d'albums](features/tags-albums.md). Aucune musique de production modifiée.
+Validation : 787 tests Python complets, puis 82 tests ciblés après les derniers ajouts ; huit parcours jsdom
+verts, rendu Chrome clair/sombre et 768/390/320 px, `git diff --check` propre. Docker local indisponible ;
+tests sous Python 3.12.14 et dépendances isolées. Le harness Pi autorise maintenant le chargement simultané
+des ressources comme celui du PC, sans changement du produit Pi.
+Correction du droit avant publication : `coverArt` suffit, y compris sans `admin` ; un administrateur dépourvu
+de `coverArt` ne peut pas éditer. 114 tests ciblés scanner/routes/envois et parcours jsdom sous compte non
+administrateur passent ; le scan observe et utilise un administrateur connu valide quand nécessaire.
+Publication par `deploy/pc/push.sh` depuis un instantané figé : https://music2.foos.fr sert la 1.11 et sa note,
+les 230 fichiers applicatifs sont conformes, Mutagen 1.47.0 installé, conteneur sain et aucune erreur de démarrage.
+SQLite intègre au schéma 19 inchangé : 13 comptes, 167 messages, quatre marque-pages, six recommandations,
+sept envois et sept albums attribués conservés. Sauvegarde code/configuration/données et copie SQLite cohérente :
+`../pimedia-backups/pre-1.11-20261117T234433Z/` ; image précédente `pimedia-web:pre-1.11-20261117t234433z`.
+Aucune modification de tags sur la musique réelle pendant les vérifications. L'effet des regroupements/IDs
+sur les références existantes reste à essayer sur une copie. Les champs absents de l'API, dont l'artiste
+d'album standard, sont vérifiés dans les fichiers. Recharger avec Cmd+Maj+R.
+
+**Décision sur les rapprochements entre alphabets (18/11/2026)** : une même translittération pour un nom arabe
+et un nom latin doit produire une proposition à vérifier, jamais une fusion ni un rangement automatique sur cette
+seule base. Les noms et dossiers d’origine restent conservés. Le rangement actuel respecte déjà cette limite ;
+la génération et l’interface de ces propositions restent à implémenter.
+
+**Nomenclature et organisation de la bibliothèque, 1.10.3 (18/11/2026, déployée et vérifiée)** : les accès à la
+bibliothèque du site sont regroupés dans le package `webapp/library/` : catalogue Subsonic, navigation par dossiers,
+index des artistes, statistiques, fichiers, rangement d’Incoming et nomenclature. `Library` reste le catalogue
+consulté via l’API ; `LibraryFiles` porte les opérations sur les fichiers ; `LibraryNaming` sépare normalisation
+artistique, normalisation des albums et clé de comparaison commune (`shared.text.normalize`). Les services
+consommateurs et les tests importent les sous-modules explicitement ; aucun ancien module ni façade de compatibilité.
+Le rangement retrouve l’artiste quelle que soit la casse reçue et conserve exactement son dossier existant.
+Les nouveaux dossiers d’artistes et d’albums reçoivent une initiale majuscule à chaque mot séparé par un espace
+ou un tiret ; accents, ponctuation et autres majuscules sont conservés. Décision utilisateur : cette règle
+s’applique aussi aux albums. Les métadonnées musicales restent dans les fichiers audio et sont lues via Subsonic ;
+aucune copie de tags ni second catalogue en base, aucun accès direct supplémentaire aux fichiers.
+Cause réelle de l’incident Trentemøller : `Incoming/Trentemøller/trentemøller/` contient dix MP3 ; le nom d’album
+était refusé parce qu’il commence par une minuscule. Les deux noms portent le même ø U+00F8, sans espace caché.
+AnyASCII 0.3.3 complète maintenant les lettres latines des clés du rangement (`ø/o`, `ł/l`, `đ/d`), après la
+normalisation partagée et sans toucher au Pi. Les noms exacts puis les clés natives restent prioritaires ; une
+ambiguïté laisse l’album dans Incoming. Les alphabets non latins restent natifs, sans fusion arabe/latin automatique.
+Aucune bibliothèque de correspondance approximative ajoutée : les suggestions RapidFuzz ne sont pas implémentées.
+Validation finale : 725 tests Python complets passent sous Python 3.12.14, ainsi que les trois parcours PC jsdom
+(389 contrôles). Tests multilingues, priorité des correspondances, ambiguïtés et collisions avec des fichiers à
+destination couverts. La garde de destination conserve l’envoi dans Incoming au lieu de perdre son staging.
+Docker local indisponible ; dépendance AnyASCII 0.3.3 isolée pour les tests, déclarée dans requirements.txt.
+`git diff --check` passe. Publication du commit `c52cf40` sur https://music2.foos.fr par le script habituel,
+depuis une archive Git figée pour exclure les autres travaux en cours. HTTPS, version publique 1.10.3, ressources
+publiques et les 219 fichiers applicatifs correspondent au commit ; anciens modules absents, neuf modules du
+package importables et AnyASCII 0.3.3 vérifié dans le conteneur. SQLite reste au schéma 19, intègre, avec les
+comptages de la sauvegarde conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.10.3-20261117T231434Z` ;
+image précédente : `pimedia-web:pre-1.10.3-20261117t231434z`.
+Le rattrapage d’Incoming a rangé automatiquement `Le$/Lost In Japan` et `Trentemøller/Trentemøller` dès le redémarrage.
+Les dix MP3 de Trentemøller (104194801 octets) gardent leurs empreintes SHA-256 ; source Incoming disparue.
+Scan terminé et dix titres au nouveau chemin confirmés par l’API Subsonic avec un jeton administrateur existant
+utilisé uniquement pour ces lectures, sans exposition ni modification de compte. L’album apparaît aussi dans
+les nouveautés (`getAlbumList2`). Limite constatée : `search3` ne retourne pas encore le nouvel album après le
+scan ; ce point de recherche reste à examiner séparément. PR différée à la demande utilisateur.
+Fiches : [Envoi de fichiers](features/envoi-fichiers.md), [Bibliothèque](features/bibliotheque.md),
+[Architecture](architecture/README.md). Les anciens chemins cités plus bas dans l’historique reflètent les versions de l’époque.
+
+**Style sur les cartes d’albums, 1.10.2 (17/11/2026, déployée et vérifiée)** : les grilles
+de l’accueil, d’Albums, des artistes, de la recherche et des favoris affichent le style musical à la place
+des écoutes. Compteurs conservés uniquement dans les deux vues « Plus écoutés » et dans la fiche album.
+Champ `genre` transmis par les listes ID3, les dossiers et les mieux notés, sans requête supplémentaire ;
+style absent laissé vide et styles longs tronqués avec texte complet au survol. Le style dispose d’une ligne entière,
+y compris en grille compacte ; étoiles et commentaires conservés.
+Validation : 71 tests Python ciblés passent, ainsi que les 344 contrôles du parcours PC jsdom. Rendu Chrome
+vérifié en grilles normale et compacte à 1440, 390 et 320 px, avec styles longs, étoiles et commentaires.
+`git diff --check` passe. Version et fiche [Bibliothèque](features/bibliotheque.md) mises à jour.
+La suite complète et les autres parcours n’ont pas été rejoués.
+Publication sur https://music2.foos.fr : conteneur sain, HTTPS et version publique 1.10.2 vérifiés ;
+216 fichiers applicatifs identiques aux sources testées, seuls les six fichiers attendus changent.
+JavaScript et CSS publics conformes, servis avec l’empreinte `a94804d512`. Listes protégées par session,
+aucune erreur de démarrage. SQLite intègre au schéma 19 inchangé ; 13 comptes, 167 messages, quatre
+marque-pages, cinq recommandations et les six envois/six albums attribués conservés.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.10.2-20261117T202115Z` ;
+image précédente : `pimedia-web:pre-1.10.2-20261117t202115z`. Déploiement par `deploy/pc/push.sh`,
+avec la clé prévue via le trousseau macOS ; aucune configuration SSH persistante ajoutée.
+Parcours connecté à la production non rejoué ; aucun jeton de compte utilisé. Recharger avec Cmd+Maj+R.
+
 **Persistance de la file d'écoute, 1.10.1 (12/11/2026, déployée et vérifiée)** : vérification de l'API officielle
 Subsonic (`getPlayQueue` / `savePlayQueue`, depuis 1.12.0) et branchement des routes existantes au lecteur web.
 Liste, ordre, titre courant et position restaurés en pause après rafraîchissement ou reconnexion, y compris depuis
@@ -597,12 +893,10 @@ L'API Subsonic standard n'a pas de pagination pour `getArtists` : impossible de 
      migration 8 (liste recalculée). Détail : `docs/features/bibliotheque.md`. **Pas vérifié sur le vrai Subsonic.**
    - Raccourci **Compilations** en haut de la barre des artistes (26/10/2026) : dossiers réglés par `SHORTCUT_FOLDERS`
      dans le `.env` (`docs/features/barre-gauche.md`).
-3 quater. **Corriger les tags ID3** (demandé le 25/10/2026, à préciser) : l'API Subsonic standard ne sait pas
-   écrire les tags. Il faudrait que le site accède aux fichiers (déjà possible depuis le 26/10/2026 : `MUSIC_DIR` monté en écriture sur `/music`, sous l'utilisateur `music` ; dossier de musique de Subsonic monté dans le
-   conteneur, en écriture), les modifie (bibliothèque Python `mutagen`), puis demande `startScan`. À décider : qui a
-   le droit (proposé : le droit Subsonic `coverArt`, « modifier pochettes et tags », déjà lu par le site), quoi
-   corriger (titre, artiste, album, année, genre, n°, pochette ?),
-   album entier ou titre par titre, et suggestions MusicBrainz (`shared/external.py` le sait déjà) ou saisie à la main.
+3 quater. **Corriger les tags audio** : version 1.11 du 18/11/2026, déployée. Droit `coverArt`,
+   saisie manuelle ou propositions MusicBrainz/Discogs, aperçu puis écriture Mutagen et scan Subsonic.
+   Les dossiers restent inchangés et les tags restent dans les fichiers, sans catalogue SQL.
+   Détail et vérifications restantes : `docs/features/tags-albums.md` et entrée en tête de ce document.
    **Actualité** (fait le 26/10/2026, voir `docs/features/actualite.md`) : page `#/news`, flux de webzines ajoutés par
    chacun et partagés, lus toutes les heures, articles gardés ; chacun décoche les flux qu'il ne veut pas voir (pour
    lui seul) ; « Dans la presse » sur la page artiste. Plus tard, éventuellement : recherche dans les archives des

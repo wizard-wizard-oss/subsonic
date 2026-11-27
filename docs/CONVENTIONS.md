@@ -13,6 +13,15 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
   Un seul endroit assemble tout (`app.py`).
 
 ## Données
+- **API Subsonic en priorité** : pour la bibliothèque musicale et les fonctions gérées par Subsonic, utiliser son API
+  au maximum (navigation, recherche, métadonnées, lecture, mix, favoris, notes, playlists…). Réutiliser les clients
+  existants ; éviter un accès direct à ses fichiers ou à sa base interne lorsqu'une opération est couverte par l'API.
+- **Les tags restent dans les fichiers audio**, puis sont indexés et exposés par Subsonic. Ne pas créer dans la base
+  du site une copie des tags, un historique de leurs valeurs ou un second catalogue musical sans décision explicite.
+  Les données propres au site et les caches techniques existants gardent leurs responsabilités distinctes.
+- Si l'API ne couvre pas une opération nécessaire, limiter l'accès aux fichiers à ce besoin : par exemple l'écriture
+  des tags, avec lecture ciblée des champs que l'API n'expose pas et préservation des autres métadonnées. Après une
+  correction, demander une réindexation à Subsonic, puis relire et vérifier les données par son API.
 - Tables et colonnes en anglais, migrations numérotées (`schema.py`), jamais modifier une migration publiée.
 - Entités en dataclasses avec `to_api()` ; pas de dictionnaires qui traînent entre les couches.
 - Secrets dans `.env` (hors code, hors archive) ; jamais de mot de passe en base (jeton Subsonic seulement).
@@ -27,6 +36,12 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - JavaScript sans outil de build, un fichier par composant.
 
 ## Qualité
+- **Modifications de texte uniquement** (menus, titres, messages, aide, traductions et documentation) :
+  ne pas relancer de tests unitaires, d’intégration ou de parcours navigateur pour ce seul changement.
+  Adapter les attentes textuelles des tests existants si nécessaire, sans les exécuter ni créer de nouveaux
+  tests dédiés. Se limiter à la relecture du diff et à la validité du format si le fichier est structuré
+  (par exemple YAML). Les changements de comportement ou de logique appellent les tests ciblés adaptés.
+  Consigne confirmée par l’utilisateur le 26/11/2026.
 - Chaque fonctionnalité arrive avec ses tests (unitaires + intégration + parcours jsdom pour la page).
 - Écritures protégées (en-tête CSRF), entrées validées côté serveur, erreurs renvoyées comme clés de texte.
 - Commentaires et noms clairs, petites fonctions, pas de duplication.
@@ -38,8 +53,14 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - Un changement de déploiement met à jour `docs/DEPLOIEMENT.md`.
 - **Toute modification du site met à jour la version**, à chaque fois, avant le déploiement : une entrée datée en tête de
   `src/i18n/versions.yaml` (page « Versions », écrite pour les utilisateurs ; voir `docs/features/versions.md`).
-  **Évolution, finition visuelle ou correction de la même fonctionnalité : troisième niveau** (1.7.1, 1.7.2,
-  1.7.3…). Décision utilisateur du 08/11/2026 : le lot de fiches artiste/album, choix Discogs mémorisé, biographie,
-  images et raccourcis est la **1.8** ; la retouche des compteurs est la **1.7.13**, après la 1.7.12.
-  Réserver la version **mineure** à une fonctionnalité distincte ou à un lot significatif, et la
-  **majeure** à un grand changement. Rien ne part en production sans cette entrée.
+  **Nomenclature confirmée par l'utilisateur le 22/11/2026** :
+  - **Mineure** (`1.13` → `1.14`) : ajout d'une fonctionnalité ou d'un comportement, y compris l'enrichissement
+    d'une fonctionnalité existante. Les commentaires privés des recommandations sont la **1.14**.
+  - **Correctif, troisième numéro** (`1.14.1`) : correction d'un bug uniquement. Ne pas numéroter une nouvelle
+    possibilité comme un correctif au motif qu'elle complète une fonctionnalité existante.
+  - **Majeure** : grand changement ou rupture de compatibilité.
+  Les versions déjà publiées conservent leur numéro ; cette règle s'applique aux prochaines livraisons.
+  Rien ne part en production sans son entrée datée.
+  **Vérifications proportionnées** : une simple renumérotation ne justifie pas de rejouer toute la suite de tests.
+  Contrôler uniquement la validité de l'historique (format, ordre, dates) avec `tests/test_versions.py` ; élargir
+  les tests seulement si un changement de code ou un problème identifié le justifie (rappel utilisateur du 22/11/2026).

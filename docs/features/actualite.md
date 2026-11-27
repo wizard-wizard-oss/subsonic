@@ -51,3 +51,13 @@ Routes : `GET /api/news[?feed=&beforeDate=&beforeId=]`, `GET /api/news/feeds`, `
 - Mowno est derrière Cloudflare : son flux répond aujourd'hui, sa recherche non.
 - **Pas vérifié** sur le vrai serveur (lecture toutes les heures dans le conteneur) ; les trois flux de départ ont été
   lus une fois depuis le Mac avec le code du site.
+
+## Sorties de la semaine
+
+Dans l’édition web, le nouvel onglet ouvre `#/news/releases`. La semaine va du lundi au dimanche, selon la date locale du lecteur. Une sortie du vendredi déjà datée et classée dans MusicBrainz est visible dès le lundi. Les résultats publics sont conservés une heure en cache. En cas de panne, une mention signale un résultat de recherche plus ancien. Les flèches permettent de consulter les semaines passées et futures.
+
+Le catalogue complet de styles provient de MusicBrainz (`genre/all?fmt=txt`). Il est chargé en une requête et mis en cache 24 heures, avec repli sur le dernier catalogue valide en cas de panne. Le service filtre les groupes de sorties par tag, date de première sortie et type Album ou EP. Les abonnements appartiennent au compte connecté (migration 23) et sont rapprochés par nom MusicBrainz depuis la 1.19.1. Chaque carte mène à la recherche pour écouter, ou directement à l’album Subsonic lors d’une correspondance unique dans la bibliothèque accessible. Le guide Help « Suivre les sorties de la semaine » ouvre cet onglet.
+
+Le client MusicBrainz, le service `weekly_releases.py`, son contrôleur et son dépôt de données servent la vue `weekly-releases.js`. Les routes sont `GET /api/news/releases/genres`, `GET /api/news/releases` et `POST /api/news/releases/follow`. La première version couvre la consultation et le suivi manuel. La disponibilité des annonces dépend de la date et du genre saisis chez MusicBrainz.
+
+Tests ciblés : `tests/test_weekly_releases.py` vérifie le vendredi annoncé, le filtrage des dates, la pagination, le cache, l’isolation des comptes, la migration et les routes avec session et protection CSRF. `tests/e2e_weekly_releases.js` vérifie la navigation et les abonnements dans jsdom avec des réponses simulées.

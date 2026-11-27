@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from pimedia.storage.database import Database
 from pimedia.webapp import schema
@@ -16,6 +17,7 @@ from pimedia.webapp.storage.messages import MessageRepository
 from pimedia.webapp.storage.preferences import PreferenceRepository
 from pimedia.webapp.storage.users import SessionRepository, UserRepository, hash_token
 from pimedia.webapp.subsonic import Credentials, SubsonicServer
+from tests.fake_subsonic import ID3_ARTISTS
 from tests.webapp_support import WebAppTestCase, read_event
 
 
@@ -380,6 +382,31 @@ class WebAppHttpTest(WebAppTestCase):
         self.assertEqual([a["name"] for a in home["newest"]], ["Post", "Arrival", "Waterloo"])
         self.assertEqual([(a["name"], a["plays"]) for a in home["mostPlayed"]],
                          [("Arrival", 12), ("Post", 7), ("Waterloo", 3)])
+
+    def test_album_genres_are_available_in_every_list(self):
+        bob = self.client("bob", "pw2")
+        self.subsonic.ratings[("alice", "dir-al1")] = 4
+        bob.post_json("/api/favorite", {"kind": "album", "id": "al3", "on": True})
+        home = bob.get("/api/home").json()
+        lists = [("home/" + key, home[key]) for key in ("newest", "mostPlayed", "topRated")]
+        for kind in ("newest", "frequent", "highest", "recent", "random", "starred", "alphabetical",
+                     "decade&value=1970", "genre&value=Pop"):
+            lists.append((kind, bob.get("/api/albums?kind=" + kind).json()["albums"]))
+        for url in ("/api/artist?id=fdir-ar1", "/api/search?q=post", "/api/starred"):
+            lists.append((url, bob.get(url).json()["albums"]))
+        expected = {"Arrival": "Pop", "Waterloo": "Pop", "Post": "Electronic"}
+        for source, albums in lists:
+            with self.subTest(source=source):
+                self.assertTrue(albums)
+                self.assertEqual([a["genre"] for a in albums], [expected[a["name"]] for a in albums])
+
+    def test_album_genres_can_be_missing_or_numeric(self):
+        bob = self.client("bob", "pw2")
+        album = ID3_ARTISTS["ar3"]["album"][0]
+        for raw, expected in ((None, ""), (80, "80")):
+            with self.subTest(genre=raw), patch.dict(album, genre=raw):
+                self.assertEqual(bob.get("/api/search?q=post").json()["albums"][0]["genre"], expected)
+                self.assertEqual(bob.get("/api/artist?id=fdir-ar3").json()["albums"][0]["genre"], expected)
 
     def test_stars_go_to_the_album_folder_in_subsonic_with_each_users_account(self):
         alice, bob = self.client("alice", "secret"), self.client("bob", "pw2")

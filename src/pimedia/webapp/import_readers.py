@@ -5,14 +5,13 @@ import csv
 import io
 import plistlib
 import re
-import urllib.parse
-import urllib.request
 
-from ..server.podcasts.directories import DirectoryError
+from ..shared.providers.deezer import DeezerNotFound
+from ..shared.providers.http import HttpClient
+from ..shared.providers.metadata import ProviderUnavailable
 from .entities import ImportedTrack
 
 MAX_TRACKS = 1000
-DEEZER_API = "https://api.deezer.com/playlist/"
 DEEZER_LINK = re.compile(r"^https?://(?:www\.)?deezer\.com/(?:[a-z]{2}/)?playlist/(\d{1,20})(?:[/?#].*)?$")
 # Lien court donné par « Partager » dans l'application : il renvoie vers la vraie adresse de la playlist.
 DEEZER_SHORT = re.compile(r"^https://(?:link\.deezer\.com/s/|deezer\.page\.link/)[\w-]{1,64}$")
@@ -185,46 +184,32 @@ def deezer_playlist_id(link):
     return match.group(1)
 
 
-def follow_short_link(link, timeout=10):
+def follow_short_link(link, http=None):
     """Adresse finale d'un lien court Deezer (on ne suit que les liens courts de Deezer, rien d'autre)."""
-    request = urllib.request.Request(link, headers={"User-Agent": "Mozilla/5.0 (pimedia)"})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.geturl()
-    except OSError:
+        return (http or HttpClient()).final_url(link)
+    except (OSError, ValueError):
         raise ImportFailed("import.unreachable")
 
 
 class DeezerReader:
     """Playlist publique de Deezer : nom et titres, par pages de 100."""
 
-    def __init__(self, http, follow=follow_short_link):
-        """follow(lien court) -> adresse finale ; remplaçable dans les tests."""
-        self.http = http
+    def __init__(self, deezer, follow=follow_short_link):
+        """deezer : la classe Deezer ; follow(lien court) -> adresse finale, remplaçable dans les tests."""
+        self.deezer = deezer
         self.follow = follow
-
-    def _get(self, url):
-        try:
-            data = self.http.get(url)
-        except DirectoryError:
-            raise ImportFailed("import.unreachable")
-        if data.get("error"):                         # Deezer répond 200 avec une erreur : privée ou inexistante
-            raise ImportFailed("import.not_found")
-        return data
 
     def read(self, link):
         link = (link or "").strip()
         if DEEZER_SHORT.match(link):
             link = self.follow(link)
         playlist_id = deezer_playlist_id(link)
-        name = str(self._get(DEEZER_API + playlist_id).get("title") or "Deezer")[:100]
-        rows, index = [], 0
-        while len(rows) < MAX_TRACKS:
-            page = self._get(DEEZER_API + playlist_id + "/tracks?" + urllib.parse.urlencode([("index", index), ("limit", 100)]))
-            items = page.get("data") or []
-            rows += [(t.get("title"), (t.get("artist") or {}).get("name"), (t.get("album") or {}).get("title"),
-                      int(t.get("duration") or 0)) for t in items]
-            index += len(items)
-            if not items or not page.get("next"):
-                break
+        try:
+            playlist = self.deezer.playlist(playlist_id, MAX_TRACKS)
+        except DeezerNotFound:
+            raise ImportFailed("import.not_found")
+        except ProviderUnavailable:
+            raise ImportFailed("import.unreachable")
+        name, rows = playlist.name, [(t.title, t.artist, t.album, t.duration) for t in playlist.tracks]
         return name, _tracks(rows)

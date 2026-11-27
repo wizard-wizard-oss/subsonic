@@ -1,5 +1,5 @@
 """Écoute : scrobble, en écoute maintenant, marque-pages, file d'attente partagée avec les applis."""
-from .base import ok
+from .base import get, ok, post
 from .library import item_id
 from ..listening import MAX_QUEUE_SONGS
 
@@ -45,3 +45,14 @@ class ListeningController:
         self.listening.save_play_queue(user, [item_id(song) for song in ids], item_id(current) if current else "",
                                        seconds(body.get("position", 0)))
         return ok()
+
+    def routes(self):
+        return [
+            get("/api/bookmarks", self.bookmarks),
+            get("/api/now-playing", self.now_playing),
+            get("/api/play-queue", self.play_queue),
+            post("/api/bookmark/delete", self.delete_bookmark),
+            post("/api/bookmark/save", self.save_bookmark),
+            post("/api/play-queue/save", self.save_play_queue, body_limit=PLAY_QUEUE_BODY_LIMIT),
+            post("/api/scrobble", self.scrobble),
+        ]

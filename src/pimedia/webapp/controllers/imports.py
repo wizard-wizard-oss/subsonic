@@ -1,8 +1,12 @@
 """Import d'une playlist venue d'ailleurs : lire (lien ou fichier), retrouver par lots, créer."""
 from ..entities import ImportedTrack
 from ..import_readers import ImportFailed, NeedsChoice, read_file
-from .base import ok
+from .base import ok, post
 from .library import item_id
+
+IMPORT_FILE_LIMIT = 5 * 1024 * 1024          # fichier de playlist lu par la page (export Apple Music : XML bavard)
+IMPORT_CREATE_LIMIT = 1024 * 1024
+MATCH_BODY_LIMIT = 65536
 
 MATCH_BATCH = 25                     # titres cherchés dans la bibliothèque par demande
 YOUTUBE_BATCH = 5                    # titres cherchés sur YouTube par demande
@@ -59,3 +63,11 @@ class ImportController:
 
     def create(self, request, user, body):
         return ok({"playlist": self.imports.create(user, body.get("name"), entries(body.get("entries")))})
+
+    def routes(self):
+        return [
+            post("/api/import/create", self.create, right="playlist", body_limit=IMPORT_CREATE_LIMIT),
+            post("/api/import/match", self.match, right="playlist", body_limit=MATCH_BODY_LIMIT),
+            post("/api/import/read", self.read, right="playlist", body_limit=IMPORT_FILE_LIMIT),
+            post("/api/import/youtube", self.youtube, right="playlist", body_limit=MATCH_BODY_LIMIT),
+        ]

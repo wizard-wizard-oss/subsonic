@@ -1,6 +1,6 @@
 """Crédits d'un album accessible au compte : choix d'une édition Discogs exacte, jamais d'identité devinée."""
-from .discogs import discogs_id
-from .discogs_entities import DiscogsAlbumCredits
+from .providers.discogs import discogs_id
+from .providers.discogs_entities import DiscogsAlbumCredits
 
 
 class DiscogsExploration:

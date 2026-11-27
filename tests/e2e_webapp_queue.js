@@ -48,6 +48,69 @@ function component(saved = {}) {
   return w;
 }
 
+async function preferenceChecks() {
+  const preferences = component();
+  preferences.eval(`
+    App.preferences = {browse_genre: true, queue_format: false};
+    window.preferenceRequests = []; window.preferenceEvents = []; window.preferenceErrors = [];
+    window.preferenceServer = {...App.preferences}; window.preferenceActive = 0; window.preferenceMax = 0;
+    App.toast = (message, kind) => preferenceErrors.push({message, kind});
+    App.bus.on("preferences", values => preferenceEvents.push({...values}));
+    App.api.post = (url, body) => {
+      preferenceActive++; preferenceMax = Math.max(preferenceMax, preferenceActive);
+      return new Promise((resolve, reject) => preferenceRequests.push({userId: App.user.id, body,
+        finish(error) {
+          preferenceActive--;
+          if (error) reject(new Error("failed"));
+          else { Object.assign(preferenceServer, body.changes); resolve({preferences: {...preferenceServer}}); }
+        }}));
+    };
+    window.preferenceFirst = App.savePreference("browse_genre", false);
+    window.preferenceSecond = App.savePreference("queue_format", true);
+    window.preferenceLast = App.savePreference("browse_genre", true);
+  `);
+  check("colonnes : plusieurs clics changent immédiatement l'affichage", preferences.eval(
+    "App.preferences.browse_genre && App.preferences.queue_format && preferenceEvents.length === 3"));
+  await until(() => preferences.preferenceRequests.length === 1);
+  preferences.preferenceRequests[0].finish();
+  await until(() => preferences.preferenceRequests.length === 2);
+  check("colonnes : une réponse ancienne ne remplace pas les choix plus récents", preferences.eval(
+    "App.preferences.browse_genre && App.preferences.queue_format && preferenceRequests[1].body.changes.queue_format"));
+  preferences.preferenceRequests[1].finish();
+  await until(() => preferences.preferenceRequests.length === 3);
+  preferences.preferenceRequests[2].finish();
+  await preferences.eval("preferenceLast");
+  check("colonnes : sauvegardes sérialisées, dernier clic sur la même case conservé", preferences.eval(
+    "preferenceMax === 1 && preferenceServer.browse_genre && preferenceServer.queue_format && " +
+    "preferenceRequests.map(request => Object.keys(request.body.changes)[0]).join() === 'browse_genre,queue_format,browse_genre'"));
+
+  preferences.eval(`window.preferenceFailed = App.savePreference("browse_genre", false);
+    window.preferenceAfterFailure = App.savePreference("queue_format", false);`);
+  await until(() => preferences.preferenceRequests.length === 4);
+  preferences.preferenceRequests[3].finish(true);
+  await until(() => preferences.preferenceRequests.length === 5);
+  preferences.preferenceRequests[4].finish();
+  await preferences.eval("preferenceAfterFailure");
+  check("colonnes : une erreur est signalée, les sauvegardes suivantes continuent", preferences.eval(
+    "preferenceErrors.length === 1 && preferenceErrors[0].kind === 'error' && !preferenceServer.queue_format && " +
+    "!App.preferences.browse_genre && !App.preferences.queue_format"));
+
+  preferences.eval(`window.preferenceOld = App.savePreference("browse_album", false);
+    window.preferenceOldQueued = App.savePreference("queue_album", false);`);
+  await until(() => preferences.preferenceRequests.length === 6);
+  preferences.eval(`App.user = {id: 2, username: "alice", roles: ["stream"]};
+    App.preferences = {browse_album: true, queue_album: true};
+    window.preferenceNewAccount = App.savePreference("queue_format", true);`);
+  preferences.preferenceRequests[5].finish(true);
+  await until(() => preferences.preferenceRequests.length === 7);
+  check("colonnes : aucune écriture en attente de l'ancien compte ne traverse la reconnexion", preferences.eval(
+    "preferenceRequests.length === 7 && preferenceRequests[6].userId === 2 && preferenceRequests[6].body.changes.queue_format"));
+  preferences.preferenceRequests[6].finish();
+  await preferences.eval("Promise.all([preferenceOld, preferenceOldQueued, preferenceNewAccount])");
+  check("colonnes : ni réponse ni erreur anciennes ne modifient le nouveau compte", preferences.eval(
+    "App.preferences.browse_album && App.preferences.queue_album && App.preferences.queue_format && preferenceErrors.length === 1"));
+}
+
 async function componentChecks() {
   const w = component();
   await w.eval("App.memory.start()");
@@ -85,6 +148,37 @@ async function componentChecks() {
     check("source " + externals[index].ext + " : file et position locales, sans lecteur ni requête externe", external.eval(
       "App.player.queue.length === 3 && App.player.position === 12 && !App.player.audio.src && !document.querySelector('iframe, script')"));
   }
+
+  const staleSongs = [Object.assign(song("s1"), {genre: "Ancien style"}), externals[1],
+    Object.assign(song("s1"), {genre: "Ancien style"}), Object.assign(song("s2"), {genre: "Ancien style"})];
+  const staleSignature = JSON.stringify({ids: ["s1", "s1", "s2"], current: "s1", position: 24.25});
+  const refreshed = component({"pmw.queue.1": JSON.stringify({songs: staleSongs, index: 2, position: 24.25,
+    dirty: false, remote: staleSignature})});
+  refreshed.freshQueue = {songs: [Object.assign(song("s1"), {genre: "Disco", size: 12_000_000}),
+    Object.assign(song("s1"), {genre: "Disco", size: 12_000_000}),
+    Object.assign(song("s2"), {genre: "Pop", size: 13_000_000})], index: 0, position: 24.25};
+  refreshed.eval("App.api.get = async () => freshQueue; window.refreshWrites = 0; App.api.post = async () => { refreshWrites++; return {}; }");
+  await refreshed.eval("App.memory.start()");
+  check("ancienne copie synchronisée : taille et style rafraîchis depuis Subsonic", refreshed.eval(
+    "App.player.queue[0].genre === 'Disco' && App.player.queue[0].size === 12000000 && " +
+    "App.player.queue[2].genre === 'Disco' && App.player.queue[2].size === 12000000 && " +
+    "App.player.queue[3].genre === 'Pop' && App.player.queue[3].size === 13000000"));
+  check("tags rafraîchis : source externe, ordre, doublons, rang et position conservés", refreshed.eval(
+    "App.player.queue.map(song => song.id).join() === 's1,sc-a,s1,s2' && App.player.index === 2 && App.player.position === 24.25") &&
+    JSON.stringify(refreshed.eval("App.player.queue[1]")) === JSON.stringify(externals[1]));
+  check("tags rafraîchis : copie locale réécrite sans lecture ni sauvegarde de file", refreshed.eval(
+    "App.local.get('queue.1').songs[0].size === 12000000 && App.local.get('queue.1').songs[3].genre === 'Pop' && " +
+    "!App.memory.state.dirty && !App.player.playing && !App.player.audio.src && refreshWrites === 0"));
+
+  const activeRefresh = component({"pmw.queue.1": JSON.stringify({songs: [staleSongs[0]], index: 0, position: 0,
+    dirty: false, remote: JSON.stringify({ids: ["s1"], current: "s1", position: 0})})});
+  activeRefresh.eval("App.api.get = () => new Promise(resolve => window.finishMetadata = resolve)");
+  const pendingMetadata = activeRefresh.eval("App.memory.start()");
+  activeRefresh.eval("App.player.toggle()");
+  activeRefresh.finishMetadata({songs: [Object.assign(song("s1"), {genre: "Disco", size: 12_000_000})], index: 0, position: 0});
+  await pendingMetadata;
+  check("tags reçus après une reprise à zéro : la lecture en cours continue", activeRefresh.eval(
+    "App.player.playing && !!App.player.audio.src && App.player.current.genre === 'Disco' && App.player.current.size === 12000000"));
 
   const corrupt = component({"pmw.queue.1": '{"songs":null}'});
   await corrupt.eval("App.memory.start()");
@@ -264,6 +358,7 @@ async function pageChecks() {
 }
 
 (async () => {
+  await preferenceChecks();
   await componentChecks();
   await pageChecks();
   console.log(failures ? "ÉCHECS : " + failures : "TOUT PASSE");

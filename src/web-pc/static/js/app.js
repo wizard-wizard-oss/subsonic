@@ -25,9 +25,12 @@ class MusicApp {
   }
 
   showLogin(message) {
+    AlbumTagsEditor.destroy();
     if (this.queueMemory) this.queueMemory.suspend();
     if (App.queuePanel) App.queuePanel.close();
     App.live.stop();
+    NotificationsUI.reset();
+    AccountMenu.close();
     document.getElementById("app").hidden = true;
     document.getElementById("login").hidden = false;
     document.getElementById("login-error").textContent = message || "";
@@ -59,10 +62,13 @@ class MusicApp {
       App.live.stop();
       if (this.queueMemory) this.queueMemory.suspend();
     }
+    AccountMenu.close();
     App.user = me.user;
+    NotificationsUI.start();
     ListenLaterUI.reset();
     ListenLaterUI.start();
     App.preferences = me.preferences;
+    App.songColumns = me.songColumns;
     App.reactions = me.reactions;
     App.usernames = me.usernames;
     App.unread = me.unread;
@@ -71,6 +77,7 @@ class MusicApp {
     App.append(App.clear(document.getElementById("me")), [App.avatar(App.user.username, 26),
                                                           App.el("span.me-name", {text: App.user.username})]);
     if (this.started) {
+      App.bus.emit("preferences", App.preferences);
       this.queueMemory.start();
       if (changedUser) App.live.start();
       this.navigate();
@@ -120,6 +127,7 @@ class MusicApp {
   }
 
   bindTopbar() {
+    AccountMenu.start();
     const search = document.getElementById("search");
     let timer = null;
     search.addEventListener("input", () => {
@@ -177,8 +185,9 @@ class MusicApp {
     if (view === "artist" || view === "album" || view === "search") return id ? {view, id} : {view: "home"};
     if (view === "playlist") return id ? {view, id} : {view: "home"};
     if (view === "listen-later") return {view: "listenLater"};
+    if (view === "whatsnew" && id) return {view, id};
     if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
-        view === "account") return {view};
+        view === "account" || view === "notifications") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)
     if (view === "mix") return {view, id};                        // id : artiste de départ (facultatif)
     if (view === "news") return {view, id};                       // id : un seul flux (facultatif)

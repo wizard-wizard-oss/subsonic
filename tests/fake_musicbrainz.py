@@ -24,7 +24,7 @@ class FakeMusicBrainz:
         self.artists = [{"id": GROUP, "name": "ABBA", "type": "Group", "country": "SE"},
                         {"id": PRODUCER, "name": "ABBA", "type": "Person", "disambiguation": "homonyme"}]
 
-    def get(self, url, timeout=8):
+    def get_json(self, url, headers=None):
         self.urls.append(url)
         if self.failures:
             raise self.failures.pop(0)
@@ -60,6 +60,10 @@ class FakeMusicBrainz:
                         "id": RECORDING, "title": "Dancing Queen", "artist-credit": ARTIST_CREDIT}}]}
         if path == "release":
             return {"releases": [copy.deepcopy(EDITION)], "release-count": 2}
+        if path == "release-group" and "query" in query:      # anecdote « sorti en 1976 »
+            found = "Arrival" in query["query"][0]
+            return {"release-groups": [{"title": "Arrival", "score": 100, "first-release-date": "1976-10-11"}]
+                    if found else []}
         if path == "release-group":
             return {"release-groups": [{"id": WORK, "title": "Arrival", "artist-credit": ARTIST_CREDIT,
                                          "first-release-date": "1976"}], "release-group-count": 1}

@@ -1,23 +1,107 @@
 """Listening intentions: identity, persistence, ownership and recommendation lifecycle."""
 import os
+import sqlite3
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from pimedia.storage.database import Database
-from pimedia.webapp.folders import FolderNotFound
-from pimedia.webapp.listen_later_entities import ListeningTarget
+from pimedia.webapp.library.folders import FolderNotFound
+from pimedia.webapp.listen_later.entities import ListeningTarget
 from pimedia.webapp.schema import MIGRATIONS
-from pimedia.webapp.recommendations import READ_BATCH_SIZE
+from pimedia.webapp.recommendations.service import READ_BATCH_SIZE
+from pimedia.webapp.recommendations.entities import COMMENT_MAX_LENGTH
 from pimedia.webapp.storage.listen_later import ListenLaterRepository
 from pimedia.webapp.storage.recommendations import RecommendationRepository
 from pimedia.webapp.storage.users import UserRepository
+from pimedia.webapp.subsonic import SubsonicError
 from tests.fake_discogs import FakeDiscogs
 from tests.webapp_support import WebAppTestCase
 
 
 class ListenLaterStorageTest(unittest.TestCase):
+    def test_song_migration_preserves_entries_and_constraints(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "webapp.db")
+            old = Database(path, MIGRATIONS[:19])
+            users = UserRepository(old)
+            sender = users.save_login("sender", "salt", "token", ())
+            recipient = users.save_login("recipient", "salt", "token", ())
+            old.execute("INSERT INTO listen_later (user_id, kind, source, library_key, source_id, title, artist, "
+                        "image_ref, created_at) VALUES (?, 'album', 'subsonic', 'library', 'f1', 'Album', 'Artist', "
+                        "'cover', 100), (?, 'artist', 'discogs', '', '7', 'Artist', '', '', 200)", (sender.id, sender.id))
+            old.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, library_key, source_id, "
+                        "title, artist, image_ref, created_at) VALUES (?, ?, 'album', 'subsonic', 'library', 'f1', "
+                        "'Album', 'Artist', 'cover', 300)", (sender.id, recipient.id))
+            old.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, source_id, title, "
+                        "created_at, unread_token) VALUES (?, ?, 'artist', 'discogs', '7', 'Artist', 400, ?)",
+                        (sender.id, recipient.id, "a" * 32))
+            tables = ("listen_later", "recommendations")
+            before = {table: [dict(row) for row in old.query("SELECT * FROM " + table + " ORDER BY id")]
+                      for table in tables}
+            old.close()
+
+            # Migration 20 (morceaux) : contrôlée dans le schéma de sa version, avant les migrations suivantes.
+            migrated = Database(path, MIGRATIONS[:23])
+            for table in tables:
+                columns = ", ".join(before[table][0])
+                self.assertEqual([dict(row) for row in migrated.query(
+                    "SELECT " + columns + " FROM " + table + " ORDER BY id")], before[table])
+            self.assertEqual(migrated.query("PRAGMA foreign_key_check"), [])
+            migrated.close()
+
+            db = Database(path, MIGRATIONS)
+            self.addCleanup(db.close)
+            indexes = {row[0] for row in db.query("SELECT name FROM sqlite_master WHERE type = 'index'")}
+            self.assertTrue({"listen_later_by_date", "recommendations_by_recipient",
+                             "recommendations_unread_by_recipient"} <= indexes)
+            bookmarks, recommendations = ListenLaterRepository(db), RecommendationRepository(db)
+            song = ListeningTarget("song", "subsonic", "library", "s1", "Song", "Artist")
+            first = bookmarks.add(sender.id, song, 500)
+            self.assertEqual(bookmarks.add(sender.id, song, 600), first)
+            delivery = recommendations.add(sender.id, recipient.id, song, 500).recommendation
+            self.assertEqual(recommendations.add(sender.id, recipient.id, song, 600).recommendation, delivery)
+            invalid = ListeningTarget("song", "discogs", "", "123", "Unsupported")
+            with self.assertRaises(sqlite3.IntegrityError):
+                bookmarks.add(sender.id, invalid, 700)
+            with self.assertRaises(sqlite3.IntegrityError):
+                recommendations.add(sender.id, recipient.id, invalid, 700)
+            db.execute("DELETE FROM users WHERE id = ?", (sender.id,))
+            self.assertEqual(bookmarks.all(sender.id, "library"), [])
+            self.assertEqual(recommendations.received(recipient.id, "library").recommendations, ())
+
+    def test_new_bookmark_refreshes_the_shared_target_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Database(os.path.join(directory, "webapp.db"), MIGRATIONS)
+            self.addCleanup(db.close)
+            users = UserRepository(db)
+            alice = users.save_login("alice", "salt", "token", ())
+            bob = users.save_login("bob", "salt", "token", ())
+            bookmarks = ListenLaterRepository(db)
+            bookmarks.add(alice.id, ListeningTarget("album", "discogs", "", "1", "Ancien titre"), 100)
+            entry = bookmarks.add(bob.id, ListeningTarget("album", "discogs", "", "1", "Titre corrigé", "Artiste"), 200)
+            self.assertEqual(entry.target.title, "Titre corrigé")
+            self.assertEqual(bookmarks.all(alice.id, "server")[0].target.title, "Titre corrigé")
+            self.assertEqual(db.one("SELECT COUNT(*) FROM listening_targets")[0], 1)
+
+    def test_received_recommendations_are_paginated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Database(os.path.join(directory, "webapp.db"), MIGRATIONS)
+            self.addCleanup(db.close)
+            users = UserRepository(db)
+            alice = users.save_login("alice", "salt", "token", ())
+            bob = users.save_login("bob", "salt", "token", ())
+            repository = RecommendationRepository(db)
+            for index in range(5):
+                repository.add(alice.id, bob.id, ListeningTarget("artist", "discogs", "", str(index), "A"), 100 + index)
+            first = repository.received(bob.id, "server", limit=3)
+            self.assertEqual([r.target.source_id for r in first.recommendations], ["4", "3", "2"])
+            self.assertTrue(first.has_more)
+            rest = repository.received(bob.id, "server", limit=3, before=first.recommendations[-1].id)
+            self.assertEqual([r.target.source_id for r in rest.recommendations], ["1", "0"])
+            self.assertFalse(rest.has_more)
+
     def test_migration_preserves_existing_data_and_bookmarks_survive_reopening(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "webapp.db")
@@ -73,6 +157,76 @@ class ListenLaterHttpTest(WebAppTestCase):
     def page(self, client=None):
         return (client or self.alice).get("/api/listen-later").json()
 
+    def test_song_metadata_and_saved_description_come_from_subsonic(self):
+        response = self.alice.get("/api/song?id=s2")
+        self.assertEqual(response.status, 200)
+        song = response.json()["song"]
+        self.assertEqual((song["id"], song["title"], song["artist"], song["albumId"]),
+                         ("s2", "Knowing Me", "ABBA", "al1"))
+        self.assertGreater(song["duration"], 0)
+        entry = self.add(kind="song", source_id="s2", title="forged", artist="forged").json()["bookmark"]
+        target = entry["target"]
+        self.assertEqual(target, dict(kind="song", source="subsonic", sourceId="s2",
+                                      title=song["title"], artist=song["artist"], imageRef=song["coverId"]))
+        with patch.object(self.app.library, "song", side_effect=SubsonicError(70)):
+            self.assertEqual(self.page()["bookmarks"], [entry])
+            self.assertTrue(self.alice.post_json("/api/listen-later/remove", {"id": entry["id"]}).json()["removed"])
+
+    def test_song_recommendations_group_by_track_and_stay_independent_from_albums(self):
+        album = self.send().json()["recommendation"]
+        first = self.send(kind="song", source_id="s1").json()["recommendation"]
+        self.assertEqual(first, self.send(kind="song", source_id="s1").json()["recommendation"])
+        self.send(kind="song", source_id="s2")
+        self.subsonic.users["charlie"] = "pw3"
+        charlie = self.client("charlie", "pw3")
+        self.send(client=charlie, kind="song", source_id="s1")
+        data = self.page(self.bob)
+        self.assertEqual(data["bookmarks"], [])
+        self.assertEqual(len(data["recommendations"]), 3)
+        group = next(group for group in data["recommendations"] if group["target"]["sourceId"] == "s1")
+        self.assertEqual({sender["username"] for sender in group["senders"]}, {"alice", "charlie"})
+        self.assertEqual(len(group["unreadIds"]), 2)
+        self.assertTrue(self.unread())
+        self.read(self.tokens())
+        self.send(kind="song", source_id="s1")
+        self.assertFalse(self.unread())
+        self.add(client=self.bob, kind="song", source_id="s1")
+        with patch.object(self.app.library, "song", side_effect=SubsonicError(70)):
+            self.assertEqual(self.bob.post_json("/api/recommendation/remove", group["target"]).json()["removed"], 2)
+        data = self.page(self.bob)
+        self.assertEqual(data["bookmarks"][0]["target"]["sourceId"], "s1")
+        self.assertEqual(len(data["recommendations"]), 2)
+        self.assertIn(album["target"], [group["target"] for group in data["recommendations"]])
+
+    def test_song_recommendation_checks_both_accounts_and_refuses_inaccessible_tracks(self):
+        resolve = self.app.library.song
+        checked = []
+        def accessible(user, identity):
+            checked.append((user.username, identity))
+            if user.username == "bob":
+                raise SubsonicError(70)
+            return resolve(user, identity)
+        with patch.object(self.app.library, "song", side_effect=accessible):
+            self.assertEqual(self.send(kind="song", source_id="s1").status, 404)
+        self.assertEqual(checked, [("alice", "s1"), ("bob", "s1")])
+        self.assertEqual(self.page(self.bob)["recommendations"], [])
+
+    def test_missing_and_non_audio_songs_cannot_be_saved_or_recommended(self):
+        self.assertEqual(self.add(kind="song", source_id="missing").status, 404)
+        self.assertEqual(self.send(kind="song", source_id="missing").status, 404)
+        for raw in ({}, {"id": "s1", "isDir": True}, {"id": "s1", "isVideo": True},
+                    {"id": "s1", "path": "Artist/Album/._song.flac"}):
+            with self.subTest(raw=raw), patch.object(self.app.library, "_call", return_value={"song": raw}):
+                self.assertEqual(self.add(kind="song", source_id="s1").status, 404)
+        self.assertEqual(self.page()["bookmarks"], [])
+        self.assertEqual(self.page(self.bob)["recommendations"], [])
+
+    def test_song_metadata_requires_session_and_validates_identifiers(self):
+        self.assertEqual(self.client().get("/api/song?id=s1").status, 401)
+        for identity in ("", "../s1", "s1%3F", "a" * 101):
+            self.assertEqual(self.alice.get("/api/song?id=" + identity).status, 400)
+        self.assertEqual(self.alice.get("/api/song?id=missing").status, 404)
+
     def test_folder_and_id3_references_are_the_same_bookmark(self):
         self.app.listen_later.clock = lambda: 100
         first = self.add().json()["bookmark"]
@@ -95,7 +249,8 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.add(kind="artist", source="discogs", source_id="101")
         self.add()
         self.assertEqual(len(self.page()["bookmarks"]), 3)
-        self.assertEqual(self.page(self.bob), dict(bookmarks=[], recommendations=[], readBatchSize=READ_BATCH_SIZE))
+        self.assertEqual(self.page(self.bob), dict(bookmarks=[], recommendations=[], recommendationsHaveMore=False,
+                                                    readBatchSize=READ_BATCH_SIZE, commentMaxLength=COMMENT_MAX_LENGTH))
 
     def test_description_is_resolved_on_server_and_snapshot_needs_no_source(self):
         entry = self.add(title="forged", imageRef="https://untrusted.invalid/").json()["bookmark"]
@@ -180,7 +335,8 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertEqual(self.app.db.one("SELECT COUNT(*) FROM listen_later")[0], 1)
 
     def test_inputs_and_recipient_are_validated(self):
-        for extra in (dict(kind="song"), dict(source="youtube"), dict(source_id=""),
+        for extra in (dict(kind="video"), dict(kind="song", source="discogs", source_id="101"),
+                      dict(kind=[]), dict(source=[]), dict(source="youtube"), dict(source_id=""),
                       dict(source_id=True), dict(source="discogs", source_id="m123")):
             with self.subTest(extra=extra):
                 self.assertEqual(self.add(**extra).status, 400)
@@ -193,6 +349,7 @@ class ListenLaterHttpTest(WebAppTestCase):
         anonymous = self.client()
         self.assertEqual(anonymous.get("/api/listen-later").status, 401)
         operations = (
+            ("/api/recommendation/send", dict(recipient="bob", kind="song", source="subsonic", sourceId="s1")),
             ("/api/listen-later/add", dict(kind="album", source="subsonic", sourceId="al1")),
             ("/api/listen-later/remove", dict(id=1)),
             ("/api/recommendation/send", dict(recipient="bob", kind="artist", source="discogs", sourceId="7")),
@@ -206,10 +363,10 @@ class ListenLaterHttpTest(WebAppTestCase):
         return (client or self.bob).get("/api/recommendation/status").json()["unread"]
 
     def tokens(self, client=None):
-        return [token for group in self.page(client or self.bob)["recommendations"] for token in group["unreadTokens"]]
+        return [identity for group in self.page(client or self.bob)["recommendations"] for identity in group["unreadIds"]]
 
-    def read(self, tokens, client=None):
-        return (client or self.bob).post_json("/api/recommendation/read", {"tokens": tokens})
+    def read(self, ids, client=None):
+        return (client or self.bob).post_json("/api/recommendation/read", {"ids": ids})
 
     def test_reading_list_does_not_acknowledge_and_read_state_survives_new_connections(self):
         self.assertFalse(self.unread())
@@ -234,7 +391,7 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.send(client=charlie, source="discogs", source_id="104")
         group = self.page(self.bob)["recommendations"][0]
         self.assertEqual(len(group["senders"]), 2)
-        self.assertEqual(len(group["unreadTokens"]), 1)
+        self.assertEqual(len(group["unreadIds"]), 1)
         self.assertTrue(self.unread())
 
     def test_only_displayed_deliveries_are_marked_read(self):
@@ -245,13 +402,13 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertEqual(len(self.tokens()), 1)
         self.assertFalse(self.read(self.tokens()).json()["unread"])
 
-    def test_stale_acknowledgment_cannot_read_recreated_advice_even_if_id_is_reused(self):
+    def test_stale_acknowledgment_cannot_read_a_new_delivery_after_archiving(self):
         original = self.send().json()["recommendation"]
         tokens = self.tokens()
         target = self.page(self.bob)["recommendations"][0]["target"]
         self.bob.post_json("/api/recommendation/remove", target)
         recreated = self.send().json()["recommendation"]
-        self.assertEqual(original["id"], recreated["id"])
+        self.assertNotEqual(original["id"], recreated["id"])
         self.assertNotEqual(tokens, self.tokens())
         self.assertTrue(self.read(tokens).json()["unread"])
 
@@ -264,10 +421,11 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertTrue(self.unread(self.bob))
         owner = self.app.users.by_name("bob")
         reference = ListeningTarget("album", "subsonic", "old-server", "fdir-al1", "Old")
-        old = self.app.recommendations.repository.add(self.app.users.by_name("alice").id, owner.id, reference, 100)
-        self.read([old.unread_token])
-        rows = self.app.db.query("SELECT unread_token FROM recommendations WHERE library_key = 'old-server'")
-        self.assertEqual(rows[0]["unread_token"], old.unread_token)
+        old = self.app.recommendations.repository.add(self.app.users.by_name("alice").id, owner.id, reference, 100).recommendation
+        self.read([old.id])
+        rows = self.app.db.query("SELECT r.read_at FROM recommendations r JOIN listening_targets t ON t.id = r.target_id "
+                                 "WHERE t.library_key = 'old-server'")
+        self.assertIsNone(rows[0]["read_at"])
 
     def test_unread_events_only_reach_recipient_tabs_and_reading_updates_them(self):
         alice = self.app.hub.subscribe(self.app.users.by_name("alice"))
@@ -284,16 +442,16 @@ class ListenLaterHttpTest(WebAppTestCase):
         self.assertTrue(alice.events.empty())
         for subscriber in (bob, bob_tab):
             self.assertIn("event: recommendations", subscriber.events.get_nowait())
-        self.read(["0" * 32])
+        self.read([999999])
         self.assertTrue(bob.events.empty())
 
     def test_unread_routes_require_authentication_csrf_and_valid_batches(self):
         self.assertEqual(self.client().get("/api/recommendation/status").status, 401)
-        self.assertEqual(self.client().post_json("/api/recommendation/read", {"tokens": ["0" * 32]}).status, 401)
-        self.assertEqual(self.bob.post_json("/api/recommendation/read", {"tokens": ["0" * 32]}, csrf=False).status, 403)
-        for tokens in (None, [], True, "0" * 32, [None], ["A" * 32], ["0" * 31], ["0" * 32] * (READ_BATCH_SIZE + 1)):
-            with self.subTest(tokens=tokens):
-                self.assertEqual(self.read(tokens).status, 400)
+        self.assertEqual(self.client().post_json("/api/recommendation/read", {"ids": [1]}).status, 401)
+        self.assertEqual(self.bob.post_json("/api/recommendation/read", {"ids": [1]}, csrf=False).status, 403)
+        for ids in (None, [], True, 1, [None], ["1"], [0], [-1], [True], [1] * (READ_BATCH_SIZE + 1)):
+            with self.subTest(ids=ids):
+                self.assertEqual(self.read(ids).status, 400)
         self.send()
         target = self.page(self.bob)["recommendations"][0]["target"]
         self.bob.post_json("/api/recommendation/remove", target)
@@ -310,12 +468,14 @@ class RecommendationUnreadMigrationTest(unittest.TestCase):
             recipient = users.save_login("recipient", "salt", "token", frozenset())
             old.execute("INSERT INTO recommendations (sender_id, recipient_id, kind, source, source_id, title, created_at) "
                         "VALUES (?, ?, 'album', 'discogs', '101', 'Arrival', 100)", (sender.id, recipient.id))
-            bookmark = ListenLaterRepository(old).add(recipient.id, ListeningTarget("artist", "discogs", "", "7", "ABBA"), 100)
+            old.execute("INSERT INTO listen_later (user_id, kind, source, source_id, title, created_at) "
+                        "VALUES (?, 'artist', 'discogs', '7', 'ABBA', 100)", (recipient.id,))
             old.close()
             migrated = Database(path, MIGRATIONS)
             repository = RecommendationRepository(migrated)
             self.assertTrue(repository.has_unread(recipient.id, "server"))
-            advice = repository.received(recipient.id, "server")[0]
-            self.assertRegex(advice.unread_token, r"^[0-9a-f]{32}$")
-            self.assertEqual(ListenLaterRepository(migrated).all(recipient.id, "server"), [bookmark])
+            advice = repository.received(recipient.id, "server").recommendations[0]
+            self.assertIsNone(advice.read_at)
+            kept = ListenLaterRepository(migrated).all(recipient.id, "server")
+            self.assertEqual([(entry.target.source_id, entry.created_at) for entry in kept], [("7", 100)])
             migrated.close()

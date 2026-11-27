@@ -3,7 +3,7 @@ import re
 
 from ...server.transport import Reply, StreamReply
 from ..subsonic import Credentials
-from .base import ok
+from .base import get, ok, post
 
 ITEM_ID = re.compile(r"^[\w-]{1,100}$")
 
@@ -56,6 +56,9 @@ class LibraryController:
         album = self.folders.album(user, item_id(request.param("id")))
         self.upload_attribution.annotate(user, [album])
         return ok(album)
+
+    def song(self, request, user):
+        return ok({"song": self.library.song(user, item_id(request.param("id")))})
 
     def albums(self, request, user):
         page = request.param("page", "0")
@@ -115,3 +118,23 @@ class LibraryController:
             upstream.close()
             return Reply.not_found()
         return StreamReply(upstream, upstream.status)
+
+    def routes(self):
+        return [
+            get("/api/album", self.album),
+            get("/api/albums", self.albums),
+            get("/api/artist", self.artist),
+            get("/api/artist/similar", self.similar),
+            get("/api/artist/top", self.top_songs),
+            get("/api/artists", self.artists),
+            get("/api/cover", self.cover),
+            get("/api/download", self.download, right="download"),
+            get("/api/genres", self.genres),
+            get("/api/home", self.home),
+            get("/api/search", self.search),
+            get("/api/song", self.song),
+            get("/api/starred", self.starred),
+            get("/api/stream", self.stream, right="stream"),
+            post("/api/favorite", self.favorite),
+            post("/api/rating", self.rate, right="comment"),
+        ]

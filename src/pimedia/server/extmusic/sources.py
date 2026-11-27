@@ -4,7 +4,7 @@ import html
 import re
 import urllib.parse
 
-from ..podcasts.directories import DirectoryError
+from ..podcasts.directories import DirectoryError, json_get
 
 JAMENDO_TRACKS = "https://api.jamendo.com/v3.0/tracks/"
 YOUTUBE_SEARCH = "https://www.googleapis.com/youtube/v3/search"
@@ -120,7 +120,7 @@ class JamendoSource:
         query = urllib.parse.urlencode([
             ("client_id", self.config.get("ext_jamendo_id")), ("format", "json"), ("limit", MAX_RESULTS),
             ("search", term), ("audioformat", "mp32"), ("imagesize", 300), ("type", "single albumtrack")])
-        data = self.http.get(JAMENDO_TRACKS + "?" + query)
+        data = json_get(self.http, JAMENDO_TRACKS + "?" + query)
         headers = data.get("headers") or {}
         if headers.get("status") not in (None, "success"):
             raise DirectoryError(headers.get("error_message") or "Jamendo a refusé la demande")

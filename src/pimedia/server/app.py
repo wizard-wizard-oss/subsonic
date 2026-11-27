@@ -16,7 +16,12 @@ from .controllers.player import PlayerController
 from .controllers.podcasts import PodcastController
 from .controllers.queue import QueueController
 from .controllers.settings import SettingsController
-from .external import ExternalInfo, FactsBuilder, JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia
+from ..shared.providers.cache import MemoryStore
+from ..shared.providers.musicbrainz import MusicBrainz
+from ..shared.providers.http import HttpClient
+from ..shared.providers.lyrics import LyricsFinder
+from ..shared.providers.wikipedia import Wikipedia
+from .external import ExternalInfo, FactsBuilder
 from .extmusic.service import ExtMusicService
 from .extmusic.sources import JamendoSource, YouTubeSource
 from .extmusic.ytmusic import YouTubeMusicSearch
@@ -99,10 +104,10 @@ class Application:
         self.covers = CoverService(self.client, self.covers_cache, self.keys)
         self.library = LibraryCache(self.cache)
         self.watcher = LibraryWatcher(self.api, self.library, NewestAlbums(self.paths.newest_file))
-        fetcher = JsonFetcher()
-        musicbrainz = MusicBrainz(fetcher)
-        lyrics = LyricsFinder(fetcher, self._subsonic_lyrics)
-        facts = FactsBuilder(musicbrainz, Wikipedia(fetcher), self._artist_biography)
+        http = HttpClient()
+        musicbrainz = MusicBrainz(MemoryStore(), http)    # le Pi garde ses résultats dans son propre cache
+        lyrics = LyricsFinder(http, self._subsonic_lyrics)
+        facts = FactsBuilder(musicbrainz, Wikipedia(http), self._artist_biography)
         self.external = ExternalInfo(self.cache, self.keys, lyrics, facts, musicbrainz)
 
     def _subsonic_lyrics(self, artist, title):
@@ -157,7 +162,7 @@ class Application:
         router.add("POST", "/player/cmd", player.command)
 
     def _add_podcast_routes(self, router):
-        http = JsonHttp()
+        http = HttpClient(timeout=12)
         hub = DirectoryHub(ItunesDirectory(http), PodcastIndexDirectory(http, self.config))
         self.podcasts = PodcastService(self.config, hub, FeedReader(FeedFetcher()), PodcastLibrary(self.db))
         podcasts = PodcastController(self.config, self.podcasts, self.pages)
@@ -171,7 +176,7 @@ class Application:
     def _add_extmusic_routes(self, router):
         """Jamendo, YouTube et playlists locales."""
         http = JsonHttp()
-        sources = [JamendoSource(http, self.config), YouTubeSource(http, self.config, YouTubeMusicSearch())]
+        sources = [JamendoSource(HttpClient(timeout=12), self.config), YouTubeSource(http, self.config, YouTubeMusicSearch())]
         self.extmusic = ExtMusicService(self.config, sources, LocalPlaylists(self.db), UnplayableVideos(self.db))
         ext = ExtMusicController(self.extmusic)
         for name in ("status", "search", "playlists", "playlist", "favorites", "alternative"):

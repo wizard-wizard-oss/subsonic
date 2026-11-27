@@ -1,5 +1,5 @@
 """Biographie de l'artiste (page artiste) et anecdotes du titre en cours (panneau des paroles)."""
-from .base import ok
+from .base import get, ok
 from .library import item_id
 from .library import item_id
 
@@ -22,3 +22,10 @@ class FactsController:
     def song_facts(self, request, user):
         return ok(self.facts.song_facts(user, request.param("artist"), request.param("title"),
                                         optional_id(request.param("artistId")), request.param("album")))
+
+    def routes(self):
+        return [
+            get("/api/artist/bio", self.artist_bio),
+            get("/api/artist/image", self.artist_image),
+            get("/api/facts", self.song_facts),
+        ]

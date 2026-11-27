@@ -1,8 +1,8 @@
 """Catalogues de labels et discographies : pagination et regroupement des rééditions."""
 from ..shared.text import normalize
-from .discogs import MAX_PAGES
+from .providers.discogs import MAX_PAGES
 from .catalog_entities import CatalogAlbum, MusicCatalog
-from .music_metadata import MusicSourceError
+from ..shared.providers.metadata import ProviderUnavailable
 
 
 class CatalogError(ValueError):
@@ -47,7 +47,7 @@ class DiscogsCatalogs:
         person = self._identity(kind, identity)
         current = self.discogs.catalog(kind, identity, page, refresh=refresh)
         if current.pages > MAX_PAGES:
-            raise MusicSourceError("discovery.catalog_large")
+            raise ProviderUnavailable("discovery.catalog_large")
         if page > max(1, current.pages):
             raise ValueError("page")
         editions = self._editions(kind, identity, page)
@@ -58,17 +58,17 @@ class DiscogsCatalogs:
         for page in range(1, pages + 1):
             batch = self.discogs.catalog(kind, identity, page, cached=True)
             if batch is None:
-                raise MusicSourceError("discovery.load_catalog")
+                raise ProviderUnavailable("discovery.load_catalog")
             editions.extend(batch.editions)
         return editions
 
     def complete(self, kind, identity):
         if not self.discogs.enabled:
-            raise MusicSourceError("discovery.disabled")
+            raise ProviderUnavailable("discovery.disabled")
         self._identity(kind, identity)
         first = self.discogs.catalog(kind, identity, cached=True)
         if first is None or first.pages > MAX_PAGES:
-            raise MusicSourceError("discovery.load_catalog")
+            raise ProviderUnavailable("discovery.load_catalog")
         return group_editions(self._editions(kind, identity, max(1, first.pages)))
 
     def _identity(self, kind, identity):

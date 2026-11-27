@@ -3,7 +3,7 @@
 import unittest
 
 from pimedia.webapp.app import WebApplication
-from pimedia.webapp.artist_index import ArtistIndexes, parse_index
+from pimedia.webapp.library.artists import ArtistIndexes, parse_index
 from pimedia.webapp.subsonic import SLOW_TIMEOUT
 from tests.support import PROJECT
 from tests.webapp_support import WebAppTestCase, read_event

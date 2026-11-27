@@ -1,5 +1,158 @@
 # Déployer le projet
 
+Publication 1.18 vérifiée le 27/11/2026 sur https://music2.foos.fr : conteneur sain, version publique,
+253 fichiers exécutés et 62 ressources HTTPS conformes à la livraison isolée de la 1.17. Menu et pastille
+confirmés dans le HTML publié. Aucune migration : schéma 22, intégrité et clés étrangères valides,
+notification n° 1 à Mnu conservée. Aucun message supplémentaire envoyé. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.18-20261127T005355Z/` ; image précédente `pimedia-web:pre-1.18-20261127t005355z`.
+Les dix fichiers applicatifs modifiés ou ajoutés se limitent au menu de compte et à son signal de notification.
+Photo visible sur mobile ; notifications et déconnexion retirées de la navigation principale. Copie ciblée de
+`src/`, reconstruction du seul service web. Code de production 1.17 comparé à l’instantané avant publication ;
+configuration et volume de données conservés. Validation : cinq tests de versions, 58 contrôles du composant
+mobile, parcours Notifications/PC/mobile et Chrome à 1440/390/320 px, ainsi que 667×375 en paysage,
+clair/sombre ; liens et vraie déconnexion vérifiés sur des comptes de test. Aucun changement backend.
+Le retour de code peut conserver la base actuelle et les messages reçus.
+
+Publication 1.17 le 27/11/2026 : notifications administratives privées et refus des fichiers audio seuls.
+Livraison isolée issue du code de production 1.16, avec les correctifs de cache d’attribution et de rangement
+précédemment préparés en 1.16.1. Copie ciblée de `src/`, puis `docker compose up -d --build web` : configuration,
+volumes, documentation distante et autres fichiers préservés. Les 303 fichiers source préexistants avaient
+été comparés à l’instantané avant publication ; les 16 fichiers applicatifs modifiés ou ajoutés sont ceux testés.
+Migration 22 additive : table notifications indépendante. Répétition sur une copie de la base de production,
+contenu des 26 tables existantes conservé. Validation : 154 tests Python et parcours Notifications/PC/mobile ;
+Chrome à 1440/390/320 px clair/sombre. En production : 251 fichiers exécutés et 60 ressources HTTPS conformes,
+version 1.17, santé HTTP et Docker, intégrité SQLite et clés étrangères valides. Refus MP3 HTTP 400 sans
+écriture vérifié. Notification n° 1 envoyée à Mnu via l’API en service, en utilisant une session administrative
+temporaire supprimée après l’envoi ; clé de dédoublonnage liée à l’envoi 18. Aucun message envoyé à un autre membre.
+Le MP3 de cet envoi a été retiré sur demande ; copie de récupération hors catalogue dans
+`/data/removed-uploads/upload-18/`, SHA-256 `3509600ba2224c1095ff55750046911650c431b413787c1e588c72f25462043b`.
+Scan Subsonic terminé et disparition de la recherche vérifiée ; ancienne fiche encore lisible par son ID.
+Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.17-20261127T002811Z/` ; image précédente :
+`pimedia-web:pre-1.17-20261127t002811z`. La migration ajoute une table sans modifier les tables existantes :
+l’ancien code peut conserver la base courante ; les notifications y restent stockées sans interface dans
+l’ancienne version. Toute restauration complète de SQLite doit préserver les écritures reçues depuis la sauvegarde.
+
+Publication 1.16 le 26/11/2026 : Help est organisé en sept thèmes et 39 guides pas à pas,
+avec mises en avant du salon, des paroles synchronisées et des journaux.
+Publication le 26/11/2026 depuis une livraison isolée de la production 1.15.2, par
+`deploy/pc/push.sh` (empreinte `e01ea663204e`). Seuls les 12 fichiers applicatifs Help
+diffèrent de la production précédente. Les 245 fichiers exécutés et 64 ressources HTTPS, dont les
+six captures, correspondent à cette livraison. Menu et titre Help, sept thèmes, 39 guides et
+117 étapes confirmés par HTTPS. Conteneur sain, configuration et volume de données conservés ;
+SQLite intègre au schéma 21, clés étrangères valides. Les recherches et autres écritures reçues
+pendant la publication sont conservées. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.16-20261126T221729Z/` ; image précédente `pimedia-web:pre-1.16-20261126t221729z`.
+Aucune migration. Le retour de code peut conserver la base courante.
+Validation de la livraison exacte : 12 groupes Help, parcours PC général, parcours mobile complet
+et cinq tests de versions réussis.
+
+Publication 1.15.2 le 26/11/2026 : le menu et le titre de la page d’aide deviennent « Help »,
+plus court sur mobile, à la demande de l’utilisateur. Correction de texte sur la 1.15.1, sans tests relancés.
+Mise à jour ciblée et reconstruction Docker ; HTTPS confirme le nouveau libellé, la version et la santé du site.
+Aucune migration ni modification de configuration. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.15.2-20261126T213916Z/` ; image précédente : `pimedia-web:pre-1.15.2-20261126t213916z`.
+
+Publication 1.15.1 le 26/11/2026 : le menu « Nouveautés » et le titre de sa page deviennent
+« Découvrir l’application ». Correction de libellé au troisième numéro, publiée sur la version mobile 1.15.
+Mise à jour ciblée des textes, de l’historique et du commentaire du composant, puis reconstruction Docker.
+Les 235 autres fichiers applicatifs restent identiques à la 1.15 ; aucune migration ni modification de
+configuration. HTTPS confirme la version, le menu et le titre ; conteneur sain. Aucune suite de tests
+relancée, conformément à la consigne sur les modifications de texte du 26/11/2026.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.15.1-20261126T212908Z/` ;
+image précédente : `pimedia-web:pre-1.15.1-20261126t212908z`. Le retour de code peut conserver la base courante.
+
+Publication 1.15 le 26/11/2026 : responsive isolé pour les petits écrans, menu artistes/playlists
+et salon en volets ; CSS et JS mobiles dédiés. Navigation PC et moteur YouTube conservés. L’instantané
+reprend la production 1.14.2 et ajoute seulement cette évolution ; les travaux de tags et de textes encore
+préparés séparément ne sont pas inclus.
+Publication le 26/11/2026 depuis l’instantané testé du commit `376064d`, par
+`deploy/pc/push.sh`. Version publique 1.15, conteneur sain, 238 fichiers applicatifs et
+57 ressources HTTPS conformes. Validation de cet instantané : 58 contrôles mobiles,
+parcours complet mobile, parcours PC général et cinq tests de versions. Configuration et volume de données
+conservés ; SQLite intègre au schéma 21, clés étrangères valides. Les messages et sessions reçus pendant
+la publication sont conservés. Sauvegarde code/configuration/SQLite : `../pimedia-backups/pre-1.15-20261126T212335Z/` ;
+image précédente `pimedia-web:pre-1.15-20261126t212335z`. Aucune migration ; le retour de code peut conserver la base courante.
+
+Publication 1.14.2 le 26/11/2026 : correctif de priorité des biographies, Last.fm via l'API Subsonic avant
+Wikipédia français puis anglais, depuis l'instantané du commit dédié `81f5d3f`, par `deploy/pc/push.sh`.
+Le code et la note de version de ce correctif sont les seules différences applicatives avec la production
+précédente. Validation initiale : 30 tests Python ciblés et parcours jsdom PC général ; 12 tests biographies/versions
+passent aussi sur l'instantané isolé. En production : version publique 1.14.2, 234 fichiers applicatifs conformes,
+conteneur sain, aucune erreur de démarrage ; biographie du groupe Jungle et lien Last.fm vérifiés sur la route réelle.
+SQLite reste au schéma 21, intègre, avec clés étrangères valides et comptages métier conservés. Configuration
+inchangée, aucune nouvelle dépendance déclarée. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.14.2-20261126T211022Z/` ; image précédente
+`pimedia-web:pre-1.14.2-20261126t211022z`. Le retour arrière peut conserver la base actuelle.
+
+Publication 1.14 le 22/11/2026 : commentaires privés des recommandations, depuis l'instantané testé du
+commit `68ba21a`, par `deploy/pc/push.sh`. Version mineure pour cette nouvelle possibilité, conformément
+à la nomenclature confirmée par l'utilisateur ; troisième numéro réservé aux corrections de bugs. Une simple
+renumérotation ne justifie pas de relancer la suite complète : contrôle ciblé de l'historique des versions.
+Le correctif de tags préparé séparément n'est pas inclus.
+Migration web 21 : fils de commentaires, archivage et curseurs de lecture des deux participants. Répétition
+sur une copie de sauvegarde : valeurs des 25 tables existantes, identifiants et marqueurs de lecture conservés.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.14-20261122T210559Z/` ;
+image précédente `pimedia-web:pre-1.14-20261122t210559z`. Configuration et dépendances conservées.
+Validation de l'instantané : 869 tests Python et quatre parcours jsdom PC. En production : version publique
+1.14, 234 fichiers applicatifs et 53 ressources HTTPS conformes, conteneur sain, SQLite intègre au schéma 21,
+clés étrangères et données métier conservées. Les contrôles de session/CSRF ne créent aucun commentaire réel.
+Attention au retour vers une ancienne image : l'unicité des conseils est maintenant partielle (conseils actifs).
+Le code 1.13 ne peut pas être remis seul sur ce schéma. Préparer un retour code/base cohérent en tenant compte
+des écritures reçues depuis la sauvegarde ; ne pas restaurer aveuglément l'ancienne base.
+
+Publication 1.13 le 21/11/2026 : recommandations de morceaux avec lecture groupée et retrait individuel,
+depuis l'instantané testé du commit `da9edc6`, par `deploy/pc/push.sh`. Migration web 20 : les tables
+`listen_later` et `recommendations` acceptent les morceaux Subsonic. Reconstruction transactionnelle,
+identifiants et marqueurs de lecture conservés ; répétée sur une copie de la sauvegarde avant publication.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.13-20261121T174551Z/` ; image
+précédente `pimedia-web:pre-1.13-20261121t174551z`. Aucun nouveau réglage ni dépendance ; `.env` inchangé.
+Validation : 853 tests Python et trois parcours jsdom PC, Chrome à deux comptes avec SSE et six rendus.
+En production : version publique 1.13, 231 fichiers applicatifs et 52 ressources HTTPS conformes,
+conteneur sain sans erreur de démarrage. SQLite intègre au schéma 20, clés étrangères valides et données
+métier conservées ; contrôles de session et CSRF réussis sans écriture de données utilisateur.
+Le retour de code utilise l'image conservée ; toute restauration SQLite doit tenir compte des écritures
+reçues depuis la sauvegarde. Les commits restent locaux, séparés par évolution ; aucun push Git.
+
+Publication 1.12 le 20/11/2026 : instantané de la 1.11.1 avec les colonnes configurables, sans les changements
+de progression des tags 1.11.3 préparés séparément. 148 tests Python et les deux parcours PC principaux
+rejoués sur cet instantané, publication par `deploy/pc/push.sh`. Les 231 fichiers applicatifs et 52 ressources
+HTTPS sont conformes ; version publique 1.12, conteneur sain et aucun marqueur d’erreur de démarrage.
+Sauvegarde code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.12-20261119T230713Z/`, image précédente `pimedia-web:pre-1.12-20261119t230713z`.
+SQLite reste intègre au schéma 19, données conservées. Aucun changement d’infrastructure ni tag réel écrit.
+
+L'éditeur de tags 1.11, publié le 18/11/2026, ajoute Mutagen 1.47.0
+aux dépendances PC ; reconstruire l'image lors d'une mise à jour. Il réutilise `MUSIC_DIR` monté en
+écriture et le volume de données existants, sous le même UID/GID que la musique. Les sauvegardes techniques
+restent hors de la musique dans `<data_dir>/audio-tag-backups` (24 h, huit lots, 4 Gio pour les lots terminés).
+Prévoir l'espace pour les originaux et les copies temporaires. Aucun nouveau volume, réglage obligatoire ni
+migration SQL. Discogs réutilise son jeton configuré ; MusicBrainz n'exige pas de clé pour la consultation.
+Le comportement du vrai Subsonic après regroupement des tags d'album/artiste, notamment les liens,
+commentaires et favoris, reste à vérifier sur une copie. Voir [Tags d'albums](features/tags-albums.md).
+
+Publication 1.11 : instantané figé du code testé, 230 fichiers applicatifs conformes dans le conteneur,
+HTTPS et note de version vérifiés. Le droit d'édition est `coverArt`, sans exiger `admin` ; le scan réutilise
+un administrateur connu valide. Sauvegarde préalable code/configuration/données avec copie SQLite cohérente :
+`../pimedia-backups/pre-1.11-20261117T234433Z/`. Image précédente conservée :
+`pimedia-web:pre-1.11-20261117t234433z`. SQLite reste au schéma 19, intègre, et les données sont conservées.
+Aucun enregistrement de tags ni test d'écriture sur la musique de production pendant les contrôles.
+
+Publication 1.11.1 le 18/11/2026 : style en premier et résultats d'éditions en cartes. L'image est reconstruite
+depuis l'instantané testé ; les 230 fichiers applicatifs et les JS/CSS publics sont conformes, la santé HTTPS,
+le conteneur et la note publique vérifiés. Sauvegarde préalable code/configuration/données avec copie SQLite
+cohérente : `../pimedia-backups/pre-1.11.1-20261118T000805Z/`. Image 1.11 conservée sous
+`pimedia-web:pre-1.11.1-20261118t000805z`. Schéma 19, intégrité et données métier inchangés ; aucun tag réel écrit.
+
+Publication 1.12.1 le 20/11/2026 : progression de la préparation et de l’enregistrement des tags, puis
+suivi distinct de l’actualisation. Numérotation corrigée après publication de la 1.12 ; instantané basé
+sur cette version, colonnes des morceaux conservées. Déploiement par `deploy/pc/push.sh` après 116 tests
+Python et deux parcours PC sur l’instantané exact. Les 231 fichiers applicatifs et 52 ressources publiques
+sont conformes ; santé HTTPS, version publique et conteneur sain vérifiés, aucune erreur de démarrage.
+SQLite intègre au schéma 19, données métier conservées. Sauvegarde préalable :
+`../pimedia-backups/pre-1.12.1-20261120T190256Z/`, image `pimedia-web:pre-1.12.1-20261120t190256z`.
+Aucun tag réel modifié. Accès SSH de déploiement : compte `subsonic` sur l’hôte du projet, avec la clé
+existante et vérification stricte de l’identité d’hôte ; ne pas utiliser les comptes music ou thomas.
+
 Deux éditions, deux déploiements indépendants : le **site web** (édition PC, sur le serveur) et le **Pi** (station
 musicale). Une mise à jour de l'un ne touche jamais l'autre.
 
@@ -213,6 +366,30 @@ docker compose --profile pi rm -sf pi && docker volume rm pimedia_pi-data
 ```
 
 ## Avant de déployer
+
+La 1.10.3 regroupe les accès du site dans `pimedia/webapp/library/` et ajoute `anyascii==0.3.3` aux dépendances PC.
+Publiée le 18/11/2026 sur https://music2.foos.fr depuis l’archive du commit `c52cf40`, par `deploy/pc/push.sh`.
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.10.3-20261117T231434Z` ;
+image précédente : `pimedia-web:pre-1.10.3-20261117t231434z`. Aucun changement de schéma (19), de configuration ni des dépendances Pi.
+Les 219 fichiers applicatifs, AnyASCII et la santé HTTPS sont vérifiés ; SQLite est intègre et ses comptages conservés.
+Le rangement automatique d’Incoming a placé l’album Trentemøller ; dix fichiers identiques avant/après et indexation
+Subsonic confirmés après scan. La note 1.10.3 est datée du 18/11/2026. PR différée ; recharger avec Cmd+Maj+R.
+Pour une mise à jour ultérieure, envoyer l’arbre complet : le déplacement des modules nécessite la suppression
+des anciens chemins, assurée par le script habituel. Le code partagé et le Pi restent sans dépendance à AnyASCII.
+
+
+La 1.10.2 remplace les écoutes par le style sur les cartes d’albums, sauf dans « Plus écoutés » ; la fiche
+album garde les écoutes. Aucun changement de schéma, de configuration ou de dépendance.
+Publiée le 17/11/2026 sur https://music2.foos.fr par `deploy/pc/push.sh`, après 71 tests Python ciblés,
+344 contrôles du parcours PC jsdom et rendu Chrome (grilles normale/compacte, 1440/390/320 px).
+Sauvegarde cohérente code/configuration/SQLite : `../pimedia-backups/pre-1.10.2-20261117T202115Z` ;
+image précédente : `pimedia-web:pre-1.10.2-20261117t202115z`.
+SSH utilise la clé déjà prévue par le projet avec `UseKeychain=yes`, sans modifier la configuration SSH.
+Le conteneur et HTTPS sont sains ; version 1.10.2, 216 fichiers applicatifs et ressources publiques vérifiés.
+JavaScript/CSS servis avec l’empreinte `a94804d512`. SQLite reste au schéma 19, intègre ; comptes et
+données existantes conservés. Aucun compte ou jeton utilisateur utilisé pour ces vérifications.
+La suite complète, les autres parcours et la navigation connectée en production n’ont pas été rejoués.
+Recharger avec Cmd+Maj+R.
 
 La 1.10.1 ne change ni le schéma ni la configuration. Elle relie le lecteur aux routes existantes de file
 Subsonic et ajoute une copie locale par compte. Publiée le 12/11/2026 sur https://music2.foos.fr après

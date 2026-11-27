@@ -15,8 +15,12 @@ JOURNEYS = [   # (parcours, serveur de test)
     ("e2e_queue.js", PI_HARNESS),
     ("e2e_hifi.js", PI_HARNESS),
     ("e2e_webapp.js", PC_HARNESS),
+    ("e2e_help.js", PC_HARNESS),
+    ("e2e_mobile_page.js", PC_HARNESS),
     ("e2e_webapp_queue.js", PC_HARNESS),
     ("e2e_listen_later.js", PC_HARNESS),
+    ("e2e_notifications.js", PC_HARNESS),
+    ("e2e_album_tags.js", PC_HARNESS),
 ]
 TIMEOUT = 300
 
@@ -40,6 +44,10 @@ def run_journey(script, harness, jsdom):
 def main():
     jsdom = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("JSDOM_PATH", "jsdom")
     failed = []
+    for script in ("e2e_mobile.js", "e2e_weekly_releases.js"):
+        result = subprocess.run(["node", os.path.join("tests", script), jsdom], cwd=ROOT, timeout=TIMEOUT)
+        if result.returncode:
+            failed.append(script)
     for script, harness in JOURNEYS:
         print("== " + script, flush=True)
         if not run_journey(script, harness, jsdom):

@@ -1,14 +1,16 @@
-"""Édition PC : nomenclature de la bibliothèque (layout.py) et rattrapage d'Incoming corrigé à la main (incoming.py)."""
+"""Édition PC : nomenclature (library.naming), fichiers (library.files) et rangement d'Incoming (library.incoming)."""
 import os
 import shutil
 import stat
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from pimedia.shared.text import normalize
-from pimedia.webapp.incoming import HOUR, IncomingSorter
-from pimedia.webapp.layout import MusicTree, capitalised, find_albums, is_disc, tracks_fit
+from pimedia.webapp.library.incoming import HOUR, IncomingSorter
+from pimedia.webapp.library.files import LibraryFiles, find_albums, is_disc, tracks_fit
+from pimedia.webapp.library.naming import LibraryNaming
 
 
 def files_under(folder):
@@ -21,7 +23,7 @@ class MusicTestCase(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.music, True)
         self.incoming = os.path.join(self.music, "Incoming")
         os.mkdir(self.incoming)
-        self.library = MusicTree(self.music, self.incoming)
+        self.library = LibraryFiles(self.music, self.incoming)
 
     def write(self, *parts, base=None):
         path = os.path.join(base or self.incoming, *parts)
@@ -42,12 +44,75 @@ class LayoutTest(MusicTestCase):
     def test_names(self):
         self.assertTrue(all(is_disc(n) for n in ("CD1", "cd 2", "Disc 1", "Disk2", "Disque 3")))
         self.assertFalse(any(is_disc(n) for n in ("Face A", "CD", "Bonus", "CD1 Bonus")))
-        self.assertTrue(all(capitalised(n) for n in ("Converge", "38 Spesh", "Årabrot", "...Et Après", "Le$")))
-        self.assertFalse(any(capitalised(n) for n in ("converge", "dälek", "")))
         self.assertEqual(normalize("Dälek"), normalize("DALEK"))
         self.assertEqual(normalize("A.A.Williams"), normalize("A.A. Williams"))
         self.assertEqual(normalize("AC/DC"), normalize("Ac-Dc"))
         self.assertNotEqual(normalize("!!!"), normalize("?!"))                 # rien que des signes : gardés
+
+    def test_lowercase_artist_reuses_its_existing_folder_without_renaming_it(self):
+        self.write("DJ NaZe", "Ancien", "01.flac", base=self.music)
+        album = os.path.dirname(self.write("dj naze", "new album", "01.flac"))
+        self.assertEqual(self.library.place(album, "dj naze", "new album"), "DJ NaZe/New Album")
+        self.assertEqual(sorted(os.listdir(self.music)), ["DJ NaZe", "Incoming"])
+        self.assertEqual(files_under(os.path.join(self.music, "DJ NaZe")),
+                         ["Ancien/01.flac", "New Album/01.flac"])
+
+    def test_placement_uses_artist_and_album_naming_rules_separately(self):
+        class DistinctNaming(LibraryNaming):
+            @staticmethod
+            def normalize_artist(name):
+                return "Artist " + LibraryNaming.normalize_artist(name)
+
+            @staticmethod
+            def normalize_album(name):
+                return "Album " + LibraryNaming.normalize_album(name)
+
+        library = LibraryFiles(self.music, self.incoming, naming=DistinctNaming())
+        album = os.path.dirname(self.write("received artist", "received album", "01.flac"))
+        self.assertEqual(library.place(album, "received artist", "received album"),
+                         "Artist Received Artist/Album Received Album")
+        self.assertEqual(files_under(self.music), ["Artist Received Artist/Album Received Album/01.flac"])
+
+    def test_new_artist_and_album_receive_capitals_at_each_word(self):
+        album = os.path.dirname(self.write("jean-michel jarre", "oxygène [live]", "01.flac"))
+        self.assertEqual(self.library.place(album, "jean-michel jarre", "oxygène [live]"),
+                         "Jean-Michel Jarre/Oxygène [Live]")
+        self.assertEqual(files_under(self.music), ["Jean-Michel Jarre/Oxygène [Live]/01.flac"])
+
+    def test_new_artist_folder_never_replaces_an_existing_file(self):
+        original = self.write("Artiste", base=self.music)
+        album = os.path.dirname(self.write("artiste", "album", "01.flac"))
+        self.assertIsNone(self.library.place(album, "artiste", "album"))
+        self.assertEqual(files_under(self.music), ["Artiste", "Incoming/artiste/album/01.flac"])
+        with open(original, "rb") as saved:
+            self.assertEqual(saved.read(), b"x")
+
+    def test_capitalising_does_not_overwrite_a_normalised_album_match(self):
+        original = self.write("DJ NaZe", "Long live [DELUXE]", "01.flac", base=self.music)
+        album = os.path.dirname(self.write("dj naze", "long-live deluxe", "02.flac"))
+        self.assertIsNone(self.library.place(album, "dj naze", "long-live deluxe"))
+        self.assertEqual(files_under(self.music), ["DJ NaZe/Long live [DELUXE]/01.flac",
+                                                   "Incoming/dj naze/long-live deluxe/02.flac"])
+        with open(original, "rb") as saved:
+            self.assertEqual(saved.read(), b"x")
+
+    def test_album_duplicates_are_checked_before_and_after_folder_normalisation(self):
+        for number, existing_name in enumerate(("Işık", "ışık")):
+            with self.subTest(existing_name=existing_name):
+                artist = "Müzisyen " + str(number)
+                self.write(artist, existing_name, "01.flac", base=self.music)
+                album = os.path.dirname(self.write(artist, "ışık", "02.flac"))
+                self.assertIsNone(self.library.place(album, artist, "ışık"))
+                self.assertEqual(files_under(os.path.join(self.music, artist)), [existing_name + "/01.flac"])
+                self.assertEqual(files_under(album), ["02.flac"])
+
+    def test_artist_matching_also_checks_the_normalised_folder_name(self):
+        self.write("IŞıK", "Ancien", "01.flac", base=self.music)
+        album = os.path.dirname(self.write("ışık", "yeni albüm", "02.flac"))
+        self.assertEqual(self.library.place(album, "ışık", "yeni albüm"), "IŞıK/Yeni Albüm")
+        self.assertEqual(sorted(os.listdir(self.music)), ["Incoming", "IŞıK"])
+        self.assertEqual(files_under(os.path.join(self.music, "IŞıK")),
+                         ["Ancien/01.flac", "Yeni Albüm/02.flac"])
 
     def test_albums_are_the_folders_holding_tracks(self):
         self.write("Converge", "Jane Doe", "CD1", "01.flac")
@@ -63,9 +128,11 @@ class LayoutTest(MusicTestCase):
         self.write("Converge", "Jane Doe", "01.flac", base=self.music)
         album = os.path.dirname(self.write("x", "JANE DOE", "01.flac"))
         self.assertIsNone(self.library.place(album, "Converge", "JANE DOE"))           # déjà là
-        self.assertIsNone(self.library.place(album, "converge", "Autre"))              # minuscule
         self.assertIsNone(self.library.place(album, "Incoming", "Autre"))              # pas un artiste
-        self.assertEqual(self.library.place(album, "Converge", "Autre"), "Converge/Autre")
+        self.assertIsNone(self.library.place(album, "ıncoming", "Autre"))              # même dossier après nomenclature
+        self.assertIsNone(self.library.place(album, "", "Autre"))                      # artiste absent
+        self.assertIsNone(self.library.place(album, "Converge", ""))                   # album absent
+        self.assertEqual(self.library.place(album, "converge", "autre"), "Converge/Autre")
         self.assertEqual(files_under(os.path.join(self.music, "Converge")), ["Autre/01.flac", "Jane Doe/01.flac"])
 
 
@@ -101,6 +168,104 @@ class IncomingSorterTest(MusicTestCase):
         self.assertEqual(files_under(self.music), ["A.A. Williams/Forever Blue/01.flac",
                                                    "A.A. Williams/Songs From Isolation/01.flac"])
 
+    def test_trentemoller_lowercase_album_joins_the_existing_artist(self):
+        self.write("Trentemøller", "Fixion", "01.mp3", base=self.music)
+        self.write("Trentemøller", "trentemøller", "01 Swerve.mp3")
+        self.assertEqual(self.sorter.sort(), ["Trentemøller/Trentemøller"])
+        self.assertEqual(files_under(self.music), ["Trentemøller/Fixion/01.mp3",
+                                                   "Trentemøller/Trentemøller/01 Swerve.mp3"])
+        self.assertEqual(os.listdir(self.incoming), [])
+        self.assertEqual(self.scans, [1])
+
+    def test_lowercase_artist_and_album_are_capitalised_when_sorted(self):
+        self.write("new artist", "new album", "01.mp3")
+        self.assertEqual(self.sorter.sort(), ["New Artist/New Album"])
+        self.assertEqual(files_under(self.music), ["New Artist/New Album/01.mp3"])
+        self.assertEqual(os.listdir(self.incoming), [])
+
+    def test_ascii_artist_alias_joins_the_existing_latin_spelling(self):
+        self.write("Trentemøller", "Fixion", "01.mp3", base=self.music)
+        self.write("Trentemoller", "Dreamweaver", "02.mp3")
+        self.assertEqual(self.sorter.sort(), ["Trentemøller/Dreamweaver"])
+        self.assertEqual(sorted(os.listdir(self.music)), ["Incoming", "Trentemøller"])
+        self.assertEqual(files_under(self.music), ["Trentemøller/Dreamweaver/02.mp3", "Trentemøller/Fixion/01.mp3"])
+
+    def test_native_artist_key_takes_priority_over_latin_aliases(self):
+        self.write("Trentemøller", "Fixion", "01.mp3", base=self.music)
+        self.write("Trentemoller", "Autre", "01.mp3", base=self.music)
+        self.write("trente møller", "new album", "02.mp3")
+        self.assertEqual(self.sorter.sort(), ["Trentemøller/New Album"])
+        self.assertEqual(files_under(os.path.join(self.music, "Trentemoller")), ["Autre/01.mp3"])
+        self.assertEqual(files_under(os.path.join(self.music, "Trentemøller")),
+                         ["Fixion/01.mp3", "New Album/02.mp3"])
+
+    def test_exact_artist_name_takes_priority_over_an_ambiguous_native_key(self):
+        self.write("Trentemöller", "Premier", "01.mp3", base=self.music)
+        self.write("Trentemoller", "Autre", "01.mp3", base=self.music)
+        self.write("Trentemöller", "new album", "02.mp3")
+        self.assertEqual(self.sorter.sort(), ["Trentemöller/New Album"])
+        self.assertEqual(files_under(os.path.join(self.music, "Trentemoller")), ["Autre/01.mp3"])
+        self.assertEqual(files_under(os.path.join(self.music, "Trentemöller")),
+                         ["New Album/02.mp3", "Premier/01.mp3"])
+
+    def test_ambiguous_latin_artist_alias_stays_in_incoming(self):
+        self.write("Trentemöller", "Premier", "01.mp3", base=self.music)
+        self.write("Trentemoller", "Autre", "01.mp3", base=self.music)
+        self.write("Trentemøller", "new album", "02.mp3")
+        before = files_under(self.music)
+        self.assertEqual(self.sorter.sort(), [])
+        self.assertEqual(files_under(self.music), before)
+        self.assertEqual(sorted(os.listdir(self.music)), ["Incoming", "Trentemoller", "Trentemöller"])
+        self.assertTrue(self.library.is_artist("Trentemøller"))
+        self.assertEqual(self.scans, [])
+
+    def test_latin_alias_of_an_existing_album_is_not_overwritten(self):
+        self.write("Artiste", "Łona", "01.mp3", base=self.music)
+        self.write("Artiste", "Lona", "02.mp3")
+        before = files_under(self.music)
+        self.assertEqual(self.sorter.sort(), [])
+        self.assertEqual(files_under(self.music), before)
+        self.assertEqual(self.scans, [])
+
+    def test_one_blocked_album_does_not_stop_the_others_or_the_scan(self):
+        self.write("A", "Blocked", "01.mp3")
+        self.write("A", "Ready", "02.mp3")
+        self.write("B", "Ready", "03.mp3")
+        place = self.library.place
+
+        def sometimes_blocked(folder, artist, album):
+            if album == "Blocked":
+                raise PermissionError("permission denied")
+            return place(folder, artist, album)
+
+        with patch.object(self.library, "place", side_effect=sometimes_blocked):
+            self.assertEqual(self.sorter.sort(), ["A/Ready", "B/Ready"])
+        self.assertEqual(files_under(self.incoming), ["A/Blocked/01.mp3"])
+        self.assertEqual(self.scans, [1])
+        self.assertTrue(any("A/Blocked" in line and "permission denied" in line for line in self.logs))
+
+    def test_an_unreadable_artist_does_not_stop_the_following_artist(self):
+        self.write("A", "Blocked", "01.mp3")
+        self.write("B", "Ready", "02.mp3")
+        folders = self.sorter._folders
+
+        def sometimes_unreadable(path):
+            if path == os.path.join(self.incoming, "A"):
+                raise PermissionError("permission denied")
+            return folders(path)
+
+        with patch.object(self.sorter, "_folders", side_effect=sometimes_unreadable):
+            self.assertEqual(self.sorter.sort(), ["B/Ready"])
+        self.assertEqual(files_under(self.incoming), ["A/Blocked/01.mp3"])
+        self.assertEqual(self.scans, [1])
+
+    def test_cleanup_failure_still_scans_albums_already_moved(self):
+        self.write("A", "Ready", "01.mp3")
+        self.write("B", "Ready", "02.mp3")
+        with patch.object(self.sorter, "_remove_if_empty", side_effect=PermissionError("permission denied")):
+            self.assertEqual(self.sorter.sort(), ["A/Ready", "B/Ready"])
+        self.assertEqual(self.scans, [1])
+
     def test_waits_while_it_may_still_be_edited(self):
         self.write("Converge", "Jane Doe", "01.flac")
         self.now = time.time() + HOUR / 2
@@ -108,8 +273,7 @@ class IncomingSorterTest(MusicTestCase):
         self.assertEqual(self.scans, [])
 
     def test_what_does_not_fit_stays(self):
-        for parts in (["loose.mp3"], ["minuscule", "Album", "01.mp3"], ["Artiste", "album", "01.mp3"],
-                      ["Artiste", "Vide", "notes.txt"], ["Artiste", "Live", "Face A", "01.mp3"],
+        for parts in (["loose.mp3"], ["Artiste", "Vide", "notes.txt"], ["Artiste", "Live", "Face A", "01.mp3"],
                       ["__MACOSX", "Album", "._01.mp3"]):
             self.write(*parts)
         before = files_under(self.incoming)
@@ -120,12 +284,12 @@ class IncomingSorterTest(MusicTestCase):
         self.write("Converge", "Jane Doe", "01.flac", base=self.music)
         self.write("Converge", "Jane Doe", "02.flac")
         self.write("Converge", "Axe to Fall", "01.flac")
-        self.assertEqual(self.sorter.sort(), ["Converge/Axe to Fall"])
+        self.assertEqual(self.sorter.sort(), ["Converge/Axe To Fall"])
         self.assertEqual(files_under(self.incoming), ["Converge/Jane Doe/02.flac"])
 
     def test_off_when_wait_is_zero_or_no_music_dir(self):
         self.assertFalse(IncomingSorter(self.library, 0, None).enabled)
-        self.assertFalse(IncomingSorter(MusicTree("", ""), 1, None).enabled)
+        self.assertFalse(IncomingSorter(LibraryFiles("", ""), 1, None).enabled)
 
 
 if __name__ == "__main__":

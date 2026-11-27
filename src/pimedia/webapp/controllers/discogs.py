@@ -1,5 +1,5 @@
 """Discogs : session et paramètres HTTP, sans règle de catalogue ni de sélection."""
-from .base import ok
+from .base import get, ok, post
 from .library import item_id
 from ..entities import ImportedTrack
 
@@ -52,3 +52,19 @@ class DiscogsController:
 
     def versions(self, request, user, body):
         return ok(self.discovery.versions(user, body.get("release"), ImportedTrack.from_api(body.get("track"))).to_api())
+
+    def routes(self):
+        return [
+            get("/api/discogs/album", self.album),
+            get("/api/discogs/artist-link", self.artist_link),
+            get("/api/discogs/catalog", self.catalog),
+            get("/api/discogs/identity", self.identity),
+            get("/api/discogs/search", self.search),
+            get("/api/discogs/status", self.status),
+            get("/api/labels/discover", self.discover),
+            get("/api/labels/ranking", self.ranking),
+            get("/api/labels/tracks", self.tracks),
+            post("/api/discogs/artist-link", self.choose_artist),
+            post("/api/discogs/artist-refresh", self.refresh_artist),
+            post("/api/labels/versions", self.versions),
+        ]

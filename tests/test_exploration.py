@@ -7,9 +7,10 @@ import urllib.error
 from types import SimpleNamespace
 
 from pimedia.shared.text import normalize
-from pimedia.shared.external import MusicBrainzPacer
+from pimedia.shared.providers.metadata import Pacer, ProviderUnavailable as ExplorationUnavailable
+from pimedia.shared.providers.musicbrainz import MusicBrainz, parsing
 from pimedia.storage.database import Database
-from pimedia.webapp.exploration import Exploration, ExplorationUnavailable, MusicBrainzMetadata
+from pimedia.webapp.exploration import Exploration
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.exploration import ExplorationRepository
 from tests.fake_musicbrainz import (EDITION, GROUP, LABEL, MEMBER, OTHER_RELEASE, PRODUCER, RELEASE, SIDE_GROUP,
@@ -27,8 +28,10 @@ class MetadataTest(unittest.TestCase):
         self.http = FakeMusicBrainz()
         self.now = 100
         self.sleeps = []
-        self.metadata = MusicBrainzMetadata(self.repository, self.http, clock=lambda: self.now, sleep=self.sleeps.append)
-        self.folders = SimpleNamespace(album=lambda user, album_id: {"name": "Arrival", "artist": "ABBA"})
+        self.metadata = MusicBrainz(self.repository, self.http, clock=lambda: self.now, sleep=self.sleeps.append,
+                                    pacer=Pacer(0))
+        self.folders = SimpleNamespace(album=lambda user, album_id: {"name": "Arrival", "artist": "ABBA"},
+                                       folder_id=lambda user, album_id: "fdir-" + album_id)
         self.service = Exploration(self.metadata, self.folders, None)
 
     def test_editions_require_an_explicit_choice(self):
@@ -101,95 +104,102 @@ class MetadataTest(unittest.TestCase):
             "albums": [{"id": "local", "name": "Dissidaence Episode 2", "artist": "Vitalic"}], "songs": []})
         self.assertEqual(self.service.local(None, "Dissidænce Episode 2", "Vitalic")["albums"][0]["id"], "local")
 
+    def test_local_albums_carry_the_folder_id_used_by_listen_later(self):
+        library = SimpleNamespace(search=lambda user, title: {"albums": [{"id": "al1", "name": "Arrival", "artist": "ABBA"}],
+                                                              "songs": []})
+        folders = SimpleNamespace(folder_id=lambda user, album_id: "fdir-al1")
+        found = Exploration(self.metadata, folders, library).local("bob", "Arrival", "ABBA")
+        self.assertEqual(found["albums"][0]["folderId"], "fdir-al1")
+
     def test_cannot_choose_a_release_outside_candidates(self):
         with self.assertRaises(ValueError):
             self.service.album(None, "local", LABEL)
         self.assertEqual(len(self.http.urls), 1)
 
     def test_cache_survives_new_service_and_expires(self):
-        self.metadata.get("label/" + LABEL)
-        fresh = MusicBrainzMetadata(self.repository, self.http, clock=lambda: self.now)
-        fresh.get("label/" + LABEL)
+        self.metadata.artist_connections(SIDE_GROUP)
+        fresh = MusicBrainz(self.repository, self.http, clock=lambda: self.now, pacer=Pacer(0))
+        fresh.artist_connections(SIDE_GROUP)
         self.assertEqual(len(self.http.urls), 1)
         self.now += 8 * 86400
-        fresh.get("label/" + LABEL)
+        fresh.artist_connections(SIDE_GROUP)
         self.assertEqual(len(self.http.urls), 2)
 
     def test_failure_is_not_cached_and_retries_back_off(self):
         self.http.down = True
         for _ in range(3):
             with self.assertRaises(ExplorationUnavailable):
-                self.metadata.get("label/" + LABEL)
+                self.metadata.artist_connections(SIDE_GROUP)
         self.assertEqual(len(self.http.urls), 2)
         self.assertEqual(self.sleeps, [2])
         self.now += 61
         self.http.down = False
-        self.assertEqual(self.metadata.get("label/" + LABEL).data["name"], "Polar")
+        self.assertEqual(self.metadata.artist_connections(SIDE_GROUP).name, "Autre groupe")
 
     def test_cached_data_still_available_during_outage(self):
-        self.metadata.get("label/" + LABEL)
+        self.metadata.artist_connections(SIDE_GROUP)
         self.http.down = True
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("artist/" + GROUP)
-        self.assertEqual(self.metadata.get("label/" + LABEL).data["name"], "Polar")
+            self.metadata.artist_connections(GROUP)
+        self.assertEqual(self.metadata.artist_connections(SIDE_GROUP).name, "Autre groupe")
 
     def test_transient_503_recovers_without_an_error_for_the_reader(self):
         self.http.failures = [urllib.error.HTTPError("https://musicbrainz.org", 503, "busy", {}, None)]
-        response = self.metadata.get("label/" + LABEL)
-        self.assertEqual(response.data["name"], "Polar")
+        response = self.metadata.artist_connections(SIDE_GROUP)
+        self.assertEqual(response.name, "Autre groupe")
         self.assertFalse(response.stale)
         self.assertEqual((len(self.http.urls), self.sleeps), (2, [2]))
 
     def test_one_failed_request_does_not_block_another_entity(self):
         self.http.down = True
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
         self.http.down = False
-        self.assertEqual(self.metadata.get("artist/" + GROUP).data["name"], "ABBA")
+        self.assertEqual(self.metadata.artist_connections(GROUP).name, "ABBA")
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
         self.assertEqual(len(self.http.urls), 3)
 
     def test_retry_after_is_respected_without_a_long_sleep(self):
         self.http.failures = [urllib.error.HTTPError("https://musicbrainz.org", 503, "busy",
                                                      {"Retry-After": "120"}, None)]
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
         self.now += 61
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
         self.assertEqual((len(self.http.urls), self.sleeps), (1, []))
         self.now += 60
-        self.assertEqual(self.metadata.get("label/" + LABEL).data["name"], "Polar")
+        self.assertEqual(self.metadata.artist_connections(SIDE_GROUP).name, "Autre groupe")
 
     def test_stale_cache_survives_an_outage_without_resetting_its_age(self):
-        self.metadata.get("label/" + LABEL)
+        self.metadata.artist_connections(SIDE_GROUP)
         self.now += 8 * 86400
         self.http.down = True
-        result = self.metadata.get("label/" + LABEL)
+        result = self.metadata.artist_connections(SIDE_GROUP)
         self.assertTrue(result.stale)
-        self.assertEqual(result.data["name"], "Polar")
-        self.assertTrue(self.metadata.get("label/" + LABEL).stale)
+        self.assertEqual(result.name, "Autre groupe")
+        self.assertTrue(self.metadata.artist_connections(SIDE_GROUP).stale)
         self.assertEqual(len(self.http.urls), 3)
         entry = self.db.one("SELECT fetched_at FROM music_metadata")
         self.assertEqual(entry[0], 100)
         self.now += 61
         self.http.down = False
-        self.assertFalse(self.metadata.get("label/" + LABEL).stale)
+        self.assertFalse(self.metadata.artist_connections(SIDE_GROUP).stale)
 
     def test_cache_older_than_thirty_days_is_not_presented_as_usable(self):
-        self.metadata.get("label/" + LABEL)
+        self.metadata.artist_connections(SIDE_GROUP)
         self.now += 31 * 86400
         self.http.down = True
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
 
     def test_deleted_entity_is_not_retried_or_served_from_stale_cache(self):
-        self.metadata.get("label/" + LABEL)
+        self.metadata.artist_connections(SIDE_GROUP)
         self.now += 8 * 86400
         self.http.failures = [urllib.error.HTTPError("https://musicbrainz.org", 404, "missing", {}, None)]
         with self.assertRaises(ExplorationUnavailable):
-            self.metadata.get("label/" + LABEL)
+            self.metadata.artist_connections(SIDE_GROUP)
         self.assertEqual((len(self.http.urls), self.sleeps), (2, []))
 
     def test_album_and_profile_mark_stale_results(self):
@@ -224,7 +234,7 @@ class MetadataTest(unittest.TestCase):
     def test_only_musical_relations_are_exposed_and_exact_duplicates_are_removed(self):
         relation = {"type": "member of band", "direction": "backward",
                     "artist": {"id": MEMBER, "name": "Musicien"}, "begin": "1972"}
-        relations = Exploration._connections({"relations": [relation, relation,
+        relations = parsing.connections({"relations": [relation, relation,
             {"type": "married", "artist": {"id": PRODUCER, "name": "Vie privée"}},
             {"type": "collaboration", "direction": "forward", "artist": {"id": SIDE_GROUP, "name": "Projet"}},
             {"type": "instrumental supporting musician", "direction": "backward",
@@ -285,7 +295,7 @@ class MetadataTest(unittest.TestCase):
         def sleep(delay):
             sleeps.append(delay)
             now[0] += delay
-        pacer = MusicBrainzPacer(clock=lambda: now[0], sleep=sleep)
+        pacer = Pacer(MusicBrainz.interval, clock=lambda: now[0], sleep=sleep)
         for _ in range(3):
             pacer.wait()
         self.assertEqual(len(sleeps), 2)
@@ -298,7 +308,7 @@ class MetadataTest(unittest.TestCase):
         def request():
             try:
                 barrier.wait(timeout=5)
-                self.metadata.get("label/" + LABEL)
+                self.metadata.artist_connections(SIDE_GROUP)
             except Exception as error:
                 errors.append(error)
             finally:
@@ -329,7 +339,7 @@ class ExplorationHttpTest(WebAppTestCase):
     def setUp(self):
         super().setUp()
         self.http = FakeMusicBrainz()
-        self.app.exploration.metadata.fetcher = self.http
+        self.app.musicbrainz.http = self.http
 
     def test_authentication_on_every_route(self):
         for route in ("album?id=al1", "profile?kind=label&id=" + LABEL, "local?title=Arrival",
@@ -392,8 +402,8 @@ class ExplorationHttpTest(WebAppTestCase):
         bob = self.client("bob", "pw2")
         path = "/api/explore/album?id=al1&release=" + RELEASE
         self.assertEqual(bob.get(path).status, 200)
-        now = self.app.exploration.metadata.clock()
-        self.app.exploration.metadata.clock = lambda: now + 8 * 86400
+        now = self.app.musicbrainz.clock()
+        self.app.musicbrainz.clock = lambda: now + 8 * 86400
         self.http.down = True
         response = bob.get(path)
         self.assertEqual(response.status, 200, response.body)

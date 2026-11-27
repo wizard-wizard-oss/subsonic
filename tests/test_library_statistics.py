@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from pimedia.webapp.library_statistics import MAX_PROPERTIES_BYTES, SubsonicStatistics, parse_statistics
+from pimedia.webapp.library.statistics import MAX_PROPERTIES_BYTES, SubsonicStatistics, parse_statistics
 from tests.webapp_support import WebAppTestCase
 
 SCAN = 1794150239000

@@ -15,6 +15,12 @@
 .recommendation-form { display: grid; gap: 1rem; }
 .recommendation-form label { flex-wrap: wrap; }
 .recommendation-form select { max-width: 100%; }
+.recommendation-songs { min-width: 0; }
+.recommendation-songs-head { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.recommendation-songs-head h3 { margin: 0; }
+.recommendation-songs-scroll { overflow-x: auto; }
+.recommendation-songs-table .row-play, .recommendation-songs-table td.more .link-button { opacity: 1; }
+.recommendation-songs-table td.more .recommendation-remove { color: var(--danger); }
 @media (max-width: 480px) {
   .listen-later-card { padding: .75rem; gap: .75rem; }
   .listen-later-artwork { width: 48px; height: 48px; flex-basis: 48px; }
@@ -22,3 +28,24 @@
 
 .topnav a[href="#/listen-later"] { position: relative; }
 .topnav a.recommendations-unread::after { content: ""; position: absolute; top: 2px; right: 2px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
+
+/* Private threads use the existing dialog, typography and theme palette. */
+.recommendation-comment-field { display: grid !important; gap: .4rem; min-width: 0; }
+.recommendation-comment-input { display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; }
+.recommendation-comment-summary { display: grid; gap: .3rem; margin: .5rem 0; justify-items: start; min-width: 0; }
+.recommendation-comment-preview { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.recommendation-comments-open { white-space: normal; text-align: left; }
+.recommendation-comments-open.unread, .recommendation-unread-comments { color: var(--accent); font-weight: 600; }
+.recommendation-discussion { display: grid; gap: .75rem; min-width: 0; }
+.recommendation-discussion > p { margin: 0; overflow-wrap: anywhere; }
+.recommendation-comment-list { display: grid; align-content: start; gap: .75rem; padding: 0 .25rem; margin: 0; list-style: none; max-height: 45vh; overflow-y: auto; }
+.recommendation-comment { min-width: 0; border-left: 3px solid var(--line); padding: .5rem .75rem; background: var(--bg-raised); border-radius: .3rem; }
+.recommendation-comment.own { border-left-color: var(--accent); }
+.recommendation-comment-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: .75rem; }
+.recommendation-comment p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .4rem 0 0; }
+.recommendation-comment-form { display: grid; gap: .5rem; }
+.recommendation-comment-form > button, .recommendation-comments-older { justify-self: start; }
+.recommendation-discussions { display: grid; gap: .75rem; }
+.listen-later-archived { margin-top: 1.5rem; }
+.listen-later-archived > summary { cursor: pointer; margin-bottom: .75rem; font-weight: 600; }
+.recommendation-songs-table .recommendation-comment-summary { max-width: 22rem; }

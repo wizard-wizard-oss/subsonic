@@ -57,6 +57,10 @@ App.errorText = function (error) {
   return App.t(special[error.code] || error.code);
 };
 
+/* Jeton d'une requête rejouable (32 caractères hexadécimaux, format attendu par le serveur) : fonctionne aussi en HTTP
+   sur le réseau local, contrairement à crypto.randomUUID. */
+App.requestId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+
 App.api = {
   async request(method, path, body, extra = {}) {
     const options = {...extra, method, credentials: "same-origin", headers: {}};
@@ -179,15 +183,26 @@ App.bus = {
 };
 
 /* ---------- réglages ---------- */
-App.savePreference = async function (key, value) {
-  App.preferences[key] = value;
-  App.bus.emit("preferences", App.preferences);
-  try {
-    App.preferences = (await App.api.post("/api/preferences", {changes: {[key]: value}})).preferences;
-  } catch (error) {
-    App.toast(App.errorText(error), "error");
-  }
-};
+App.savePreference = (() => {
+  let pending = Promise.resolve();
+  return function (key, value) {
+    const userId = App.user && App.user.id, preferences = App.preferences;
+    preferences[key] = value;
+    App.bus.emit("preferences", preferences);
+    const current = () => App.user && App.user.id === userId && App.preferences === preferences;
+    // Les réponses complètes ne remplacent pas les choix optimistes plus récents.
+    // Sérialiser garde aussi le dernier choix d'une même case côté serveur.
+    pending = pending.then(async () => {
+      if (!current()) return;
+      try {
+        await App.api.post("/api/preferences", {changes: {[key]: value}});
+      } catch (error) {
+        if (current()) App.toast(App.errorText(error), "error");
+      }
+    });
+    return pending;
+  };
+})();
 
 /** Mémoire locale du navigateur (volume…) : peut être indisponible, la page marche sans. */
 App.local = {

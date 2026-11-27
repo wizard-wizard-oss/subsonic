@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 from pimedia.storage.database import Database
 from pimedia.webapp.config import WebConfig
-from pimedia.webapp.discogs import Discogs
+from pimedia.webapp.providers.discogs import Discogs
 from pimedia.webapp.extmusic import KEPT_SECONDS, ExternalMusic, SearchMemory
 from pimedia.webapp.label_discovery import LabelDiscovery, playable_tracks
 from pimedia.webapp.schema import MIGRATIONS

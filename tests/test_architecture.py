@@ -82,5 +82,42 @@ class DependencyRulesTest(unittest.TestCase):
         self.assert_never_imports("server", ["pimedia.webapp"])
         self.assert_never_imports("menu", ["pimedia.webapp"])
 
+    def test_library_access_does_not_depend_on_http_or_upload_workflows(self):
+        self.assert_never_imports("webapp/library", ["pimedia.webapp.app", "pimedia.webapp.controllers",
+                                                     "pimedia.webapp.uploads"])
+
+    def test_library_naming_does_not_depend_on_files_or_catalogue(self):
+        modules = imports_of("webapp/library")["webapp/library/naming.py"]
+        self.assertFalse(any(module.startswith("pimedia.webapp.") for module in modules), modules)
+        self.assertIn("pimedia.shared.text", modules)
+
+    def test_each_service_api_is_called_only_by_its_class(self):
+        owners = {"musicbrainz.org/ws/": "shared/providers/musicbrainz/", "api.deezer.com": "shared/providers/deezer.py",
+                  "open.spotify.com/oembed": "shared/providers/spotify.py", "ws.audioscrobbler.com": "webapp/providers/lastfm.py",
+                  "api.discogs.com": "webapp/providers/discogs.py", "itunes.apple.com": "server/podcasts/directories.py"}
+        for directory, _, names in os.walk(PACKAGE):
+            for name in (n for n in names if n.endswith(".py")):
+                path = os.path.join(directory, name)
+                relative = os.path.relpath(path, PACKAGE).replace(os.sep, "/")
+                with open(path, encoding="utf-8") as source:
+                    for line, value in runtime_strings(source.read()):
+                        for address, owner in owners.items():
+                            if address in value:
+                                self.assertTrue(relative.startswith(owner), "%s:%d appelle %s" % (relative, line, address))
+
+    def test_http_goes_through_the_provider_transport(self):
+        # Exceptions : le serveur Subsonic local et le flux audio en direct d'une radio, lus en continu.
+        allowed = {"shared/providers/http.py", "webapp/subsonic.py", "webapp/radios.py"}
+        for part in ("shared", "webapp"):
+            for path, modules in imports_of(part).items():
+                if path.replace(os.sep, "/") not in allowed:
+                    self.assertFalse(any(m in ("urllib.request", "requests", "http.client") for m in modules), path)
+
+    def test_services_never_import_controllers(self):
+        for path, modules in imports_of("webapp").items():
+            if path.replace(os.sep, "/").startswith("webapp/controllers/") or path == os.path.join("webapp", "app.py"):
+                continue
+            self.assertFalse(any(m.startswith("pimedia.webapp.controllers") for m in modules), path)
+
     def test_the_rule_is_really_checked(self):
         self.assertIn("pimedia.shared.external", imports_of("server")["server/external.py"])

@@ -8,6 +8,7 @@ import urllib.request
 from .feeds import TtlCache, USER_AGENT
 
 ITUNES_SEARCH = "https://itunes.apple.com/search"
+ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
 INDEX_API = "https://api.podcastindex.org/api/1.0/"
 MAX_AGE_DAYS = 400              # un podcast sans nouvel épisode depuis plus longtemps est considéré abandonné
 MIN_EPISODES = 3
@@ -69,7 +70,16 @@ def merge_cards(*groups):
 
 
 # ---------- accès réseau ----------
+def json_get(http, url, headers=None):
+    """Lecture JSON par le transport commun (shared/providers/http) ; une panne reste une DirectoryError pour les appelants."""
+    try:
+        return http.get_json(url, headers)
+    except (OSError, ValueError) as error:
+        raise DirectoryError(str(getattr(error, "reason", error))) from error
+
+
 class JsonHttp:
+    """Transport propre à YouTube, qui garde le sien pour l'instant (décision du 27/11/2026)."""
     def get(self, url, headers=None, timeout=12):
         request = urllib.request.Request(url, headers=dict({"User-Agent": USER_AGENT}, **(headers or {})))
         try:
@@ -89,8 +99,15 @@ class ItunesDirectory:
     def search(self, term, limit=30):
         query = urllib.parse.urlencode([("media", "podcast"), ("entity", "podcast"), ("country", self.country),
                                         ("limit", limit), ("term", term)])
-        data = self.http.get(ITUNES_SEARCH + "?" + query)
+        data = json_get(self.http, ITUNES_SEARCH + "?" + query)
         return [from_itunes(r) for r in data.get("results", []) if r.get("feedUrl")]
+
+    def track(self, track_id):
+        """(titre, artiste, image) d'un morceau d'Apple Music, ou None s'il est introuvable."""
+        results = json_get(self.http, ITUNES_LOOKUP + "?" + urllib.parse.urlencode([("id", track_id)])).get("results") or []
+        if not results:
+            return None
+        return results[0].get("trackName", ""), results[0].get("artistName", ""), results[0].get("artworkUrl100", "")
 
 
 class PodcastIndexDirectory:
@@ -106,7 +123,7 @@ class PodcastIndexDirectory:
 
     def _call(self, path, params):
         headers = index_auth_headers(self.config.get("podcastindex_key"), self.config.get("podcastindex_secret"))
-        data = self.http.get(INDEX_API + path + "?" + urllib.parse.urlencode(params), headers)
+        data = json_get(self.http, INDEX_API + path + "?" + urllib.parse.urlencode(params), headers)
         return [f for f in data.get("feeds", []) if is_active(f)]
 
     def trending(self, category, language="fr", limit=40):

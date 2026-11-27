@@ -145,6 +145,10 @@ function makeEventSource(jar) {
   w.location.hash = "#/artist/ar3";                          // lien par l'identifiant des tags : ramené au dossier
   check("artiste en cours d'une lettre pas encore construite : surligné", await until(() =>
         $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar3"));
+  check("artiste : biographie Last.fm récupérée par Subsonic et lien vers sa source", await until(() =>
+        $(".bio-source a") && $(".bio-source a").textContent === "Last.fm") &&
+        $(".artist-head .artist-bio .bio-text").textContent.includes("Icelandic singer") &&
+        $(".bio-source a").getAttribute("href") === "https://www.last.fm/music/Björk");
   w.location.hash = "#/";
   let reloaded = false;
   const app = w.eval("App"), listCalls = app.api.get;
@@ -169,6 +173,9 @@ function makeEventSource(jar) {
   check("accueil : derniers albums", await until(() => $$(".album-card").length >= 3));
   check("accueil : plus écoutés, avec « Écouté 12 fois »", await until(() => $(".most-played .play-count") &&
         $(".most-played .play-count").textContent === "Écouté 12 fois"));
+  check("accueil : style à la place des écoutes sur les derniers albums",
+    $$("#main > section:not(.most-played) .album-genre").map(n => n.textContent).join() === "Electronic,Pop,Pop" &&
+    $$(".album-card .play-count").every(n => n.closest(".most-played")) && !$(".most-played .album-genre"));
 
   // --- pochettes : la flèche existante lit l'album, la carte reste un lien séparé ---
   const homeAlbum = $$(".album-card").find(card => card.querySelector(".album-name").textContent === "Arrival");
@@ -210,13 +217,47 @@ function makeEventSource(jar) {
         $(".tabs .tab.active").textContent === "Plus écoutés"));
   check("albums : triés par écoutes", await until(() => $$(".album-card .album-name").map(n => n.textContent).join() ===
         "Arrival,Post,Waterloo"));
+  check("albums : compteurs conservés uniquement dans Plus écoutés",
+    $$(".album-card .play-count").map(n => n.textContent).join() === "Écouté 12 fois,Écouté 7 fois,Écouté 3 fois" &&
+    !$(".album-genre"));
   check("albums : lien Albums surligné", $$(".topnav a.active").map(a => a.getAttribute("href")).join() === "#/albums/newest");
+  w.location.hash = "#/albums/newest";
+  check("albums : style sur les nouveautés, sans nombre d'écoutes", await until(() =>
+    $$(".album-genre").map(n => n.textContent).join() === "Electronic,Pop,Pop") && !$(".play-count"));
+  const beforeAlbumPage = app.api.get;
+  app.api.get = async function(url, params) {
+    const data = await beforeAlbumPage.call(this, url,
+      url === "/api/albums" ? Object.assign({}, params, {page: 0}) : params);
+    return url === "/api/albums" ? Object.assign({}, data, {hasMore: params.page === 0}) : data;
+  };
+  for (const kind of ["frequent", "recent"]) {
+    w.location.hash = "#/albums/" + kind;
+    await until(() => $(".tabs .tab.active").getAttribute("href") === "#/albums/" + kind &&
+      $$(".album-card").length === 3 && !$("button.more").hidden);
+    $("button.more").click();
+    check("albums : pagination conserve " + (kind === "frequent" ? "les écoutes" : "le style"),
+      await until(() => $("button.more").hidden && $$(".album-card").length === 6) &&
+      $$(kind === "frequent" ? ".play-count" : ".album-genre").length === 6 &&
+      !$(kind === "frequent" ? ".album-genre" : ".play-count"));
+  }
+  app.api.get = async function(url, params) {
+    const data = await beforeAlbumPage.call(this, url, params);
+    return url === "/api/albums" ? Object.assign({}, data, {
+      albums: data.albums.map(a => Object.assign({}, a, {genre: ""}))}) : data;
+  };
+  w.location.hash = "#/albums/random";
+  check("albums : style absent, aucune mention ni écoutes de remplacement", await until(() =>
+    $(".tabs .tab.active").getAttribute("href") === "#/albums/random" && $$(".album-card").length === 3) &&
+    !$(".album-genre") && !$(".play-count"));
+  app.api.get = beforeAlbumPage;
   w.location.hash = "#/albums/genre";
   check("albums : genres en pastilles, avec leur nombre", await until(() => $$(".chips.big .chip").length === 2) &&
         $(".chips.big .chip").textContent === "Pop 2");
   $(".chips.big .chip").click();
   w.location.hash = $(".chips.big .chip").getAttribute("href");
   check("albums : un genre", await until(() => $$(".album-card").length === 2 && $(".section-head h2").textContent === "Pop"));
+  check("albums : style aussi dans la liste par genre", $$(".album-genre").every(n => n.textContent === "Pop") &&
+    $$(".album-genre").length === 2 && !$(".play-count"));
   w.location.hash = "#/albums/decade/1970";
   check("albums : années 1970", await until(() => $(".section-head h2") && $(".section-head h2").textContent === "Années 1970" &&
         $$(".album-card").length === 2));
@@ -238,6 +279,7 @@ function makeEventSource(jar) {
   check("artiste : « Créer un mix » mène au créateur", $(".artist-mix").getAttribute("href") === "#/mix/ar1");
   check("artiste : albums = ses dossiers, liens vers le dossier", $$(".album-card .album-name").map(n => n.textContent).join() ===
         "Waterloo,Arrival" && $(".album-card .album-link").getAttribute("href").startsWith("#/album/fdir-"));
+  check("artiste : style sous les albums", $$(".album-genre").map(n => n.textContent).join() === "Pop,Pop" && !$(".play-count"));
 
   // --- album, étoiles ---
   w.location.hash = "#/album/al1";
@@ -248,6 +290,76 @@ function makeEventSource(jar) {
         $("tr.song a.song-download").getAttribute("href") === "/api/download?song=s1");
   check("artiste surligné dans la barre", await until(() => $(".artist.current") && $(".artist.current").dataset.id === "fdir-ar1"));
   check("titres de l'album", $$("tr.song").length === 2);
+  // --- colonnes des morceaux : métadonnées propres à chaque piste et réglages séparés ---
+  const genreTable = w.eval(`Views.songTable([
+    {id: "style-1", title: "Premier", genre: "Jazz", disc: 1, track: 7,
+      artist: "Artiste", album: "Album", year: 2024, bitRate: 320, duration: 125, suffix: "flac", size: 1536000},
+    {id: "style-2", title: "Deuxième", genre: "Post-punk / Électro", disc: 1},
+    {id: "style-3", title: "Texte littéral", genre: "<img src=x onerror=alert(1)>", disc: 2},
+    {id: "style-4", title: "Sans style", disc: 2},
+    {id: "style-ext", title: "Ailleurs", ext: "soundcloud", extId: "style-ext", disc: 2}
+  ], {showAlbum: true, albumArtist: "Artiste", addedBy: true, onMove() {}})`);
+  const genreCells = () => Array.from(genreTable.querySelectorAll('td[data-song-column="genre"]'));
+  const discsSpanVisibleColumns = () => Array.from(genreTable.querySelectorAll(".disc-row td")).every(cell =>
+    cell.colSpan === Array.from(genreTable.querySelector("tr.song").children).filter(td => !td.hidden).length);
+  check("styles : propres à chaque morceau et visibles par défaut", app.preferences.browse_genre === true &&
+    genreCells().map(cell => cell.textContent).join("|") === "Jazz|Post-punk / Électro|<img src=x onerror=alert(1)>|—|—" &&
+    genreCells().every(cell => !cell.hidden));
+  check("styles : texte complet accessible, sans interpréter de HTML", !genreTable.querySelector("img[src=x]") &&
+    genreCells()[2].getAttribute("aria-label") === "Style : <img src=x onerror=alert(1)>" &&
+    genreCells()[2].querySelector(".song-genre").title === "Style : <img src=x onerror=alert(1)>");
+  check("styles : tag manquant signalé, y compris pour un titre d'ailleurs",
+    genreCells().slice(3).every(cell => cell.getAttribute("aria-label") === "Style non renseigné") &&
+    discsSpanVisibleColumns());
+  const columnToggle = (root, context, column) => root.querySelector(
+    'input[data-context="' + context + '"][data-column="' + column + '"]');
+  const clickColumnToggle = async (root, context, column) => {
+    const original = app.savePreference;
+    let saved;
+    app.savePreference = (key, value) => { saved = original(key, value); return saved; };
+    try { columnToggle(root, context, column).click(); await saved; }
+    finally { app.savePreference = original; }
+  };
+  $("#open-settings").click();
+  check("réglages : matrice des neuf champs, navigation et file séparées",
+    app.songColumns.join() === "track,artist,album,genre,year,bitrate,duration,format,size" &&
+    $$('.dialog input[data-column]').length === 18 &&
+    app.songColumns.every(column => columnToggle($(".dialog"), "browse", column) &&
+      columnToggle($(".dialog"), "queue", column)) && !columnToggle($(".dialog"), "browse", "title"));
+  check("réglages : choix initiaux conformes à la matrice",
+    app.songColumns.every(column => columnToggle($(".dialog"), "browse", column).checked ===
+      !["format", "size"].includes(column)) &&
+    app.songColumns.every(column => columnToggle($(".dialog"), "queue", column).checked ===
+      !["track", "format", "size"].includes(column)));
+  await clickColumnToggle($(".dialog"), "browse", "genre");
+  check("styles : masqués immédiatement dans les tableaux ouverts", genreCells().every(cell => cell.hidden) &&
+    $$('#main td[data-song-column="genre"]').every(cell => cell.hidden) && discsSpanVisibleColumns());
+  check("styles : choix enregistré pour la navigation uniquement", (await app.api.get("/api/me")).preferences.browse_genre === false &&
+    (await app.api.get("/api/me")).preferences.queue_genre === true);
+  const hiddenGenreTable = w.eval('Views.songTable([{id: "style-hidden", title: "Nouveau", genre: "Rock"}])');
+  check("styles : un nouveau tableau conserve le choix", hiddenGenreTable.querySelector('[data-song-column="genre"]').hidden);
+  hiddenGenreTable.destroy();
+  await clickColumnToggle($(".dialog"), "browse", "genre");
+  check("styles : réaffichés avec les séparateurs de disques alignés", genreCells().every(cell => !cell.hidden) &&
+    discsSpanVisibleColumns() && (await app.api.get("/api/me")).preferences.browse_genre === true);
+  await clickColumnToggle($(".dialog"), "browse", "format");
+  await clickColumnToggle($(".dialog"), "browse", "size");
+  const firstTrack = genreTable.querySelector("tr.song");
+  check("pistes : numéro du tag conservé et absence signalée sans numéro d'ordre",
+    firstTrack.querySelector('[data-song-column="track"]').textContent === "7" &&
+    Array.from(genreTable.querySelectorAll('tr.song [data-song-column="track"]')).slice(1)
+      .every(cell => cell.textContent === "—"));
+  check("colonnes : format, débit, durée et taille sont distincts et affichables",
+    firstTrack.querySelector('[data-song-column="format"]').textContent === "FLAC" &&
+    firstTrack.querySelector('[data-song-column="bitrate"]').textContent.includes("320") &&
+    firstTrack.querySelector('[data-song-column="duration"]').textContent === "2:05" &&
+    firstTrack.querySelector('[data-song-column="size"]').textContent !== "—" &&
+    !firstTrack.querySelector('[data-song-column="format"]').hidden &&
+    !firstTrack.querySelector('[data-song-column="size"]').hidden && discsSpanVisibleColumns());
+  await clickColumnToggle($(".dialog"), "browse", "format");
+  await clickColumnToggle($(".dialog"), "browse", "size");
+  key(d.body, "Escape");
+  genreTable.destroy();
   // --- radio d'un titre : API réelle du faux Subsonic, attente et erreur sans perdre la file ---
   const songRadio = $('tr.song[data-id="s2"] .song-radio');
   check("radio d'un titre : bouton nommé sur chaque morceau Subsonic", $$("tr.song .song-radio").length === 2 &&
@@ -484,6 +596,31 @@ function makeEventSource(jar) {
   check("la souris reste : file d'attente ouverte en bas", await until(() => !$("#queue").hidden) &&
         titlesInQueue() === "Dancing Queen,Knowing Me" && $(".queue-count").textContent.startsWith("2 titres"));
   check("file : titre en cours marqué", $$(".queue-row")[1].classList.contains("current"));
+  const queueBeforeColumns = w.eval('JSON.stringify({ids: App.player.queue.map(song => song.id), index: App.player.index})');
+  check("file : colonnes initiales indépendantes, titre toujours visible",
+    $$('#queue th[data-song-column]').every(cell => cell.hidden === ["track", "format", "size"].includes(cell.dataset.songColumn)) &&
+    $$('#queue td[data-song-column]').every(cell => cell.hidden === ["track", "format", "size"].includes(cell.dataset.songColumn)) &&
+    $$("#queue .col-title").every(cell => !cell.hidden) && !!$("#queue .current .col-title svg"));
+  $("#open-settings").click();
+  await clickColumnToggle($(".dialog"), "queue", "genre");
+  check("file : masquer un champ agit sur l'en-tête et les titres, sans changer la navigation",
+    $$('#queue [data-song-column="genre"]').every(cell => cell.hidden) &&
+    $$('#main [data-song-column="genre"]').every(cell => !cell.hidden) &&
+    w.eval('JSON.stringify({ids: App.player.queue.map(song => song.id), index: App.player.index})') === queueBeforeColumns &&
+    (await app.api.get("/api/me")).preferences.queue_genre === false);
+  for (const column of ["track", "format", "size"]) await clickColumnToggle($(".dialog"), "queue", column);
+  const queueSample = app.queuePanel.row({id: "queue-metadata", title: "Exemple", track: 7, genre: "Jazz",
+    artist: "Artiste", album: "Album", year: 2024, bitRate: 320, duration: 125, suffix: "flac", size: 1536000}, 0);
+  const sampleValue = column => queueSample.querySelector('[data-song-column="' + column + '"]').textContent;
+  check("file : piste, débit, format et taille ont leurs propres colonnes",
+    sampleValue("track") === "7" && sampleValue("bitrate").includes("320") && sampleValue("format") === "FLAC" &&
+    sampleValue("size") !== "—" && sampleValue("duration") === "2:05" &&
+    $$('#queue [data-song-column="format"], #queue [data-song-column="size"], #queue [data-song-column="track"]').every(cell => !cell.hidden));
+  check("file : une piste sans numéro ne prend pas son rang dans la file",
+    app.queuePanel.row({id: "queue-no-track", title: "Sans numéro"}, 4)
+      .querySelector('[data-song-column="track"]').textContent === "—");
+  for (const column of ["track", "format", "size", "genre"]) await clickColumnToggle($(".dialog"), "queue", column);
+  key(d.body, "Escape");
   const rows = $$(".queue-row");
   rows[0].dispatchEvent(new w.MouseEvent("dragstart", {bubbles: true}));
   rows[1].dispatchEvent(new w.MouseEvent("dragover", {bubbles: true, cancelable: true, clientY: 10}));
@@ -758,9 +895,18 @@ function makeEventSource(jar) {
   key(d.body, "Escape");
   w.location.hash = "#/search/post";
   check("recherche : album trouvé", await until(() => $$(".album-card").some(c => c.textContent.includes("Post"))));
+  check("recherche : style sans nombre d'écoutes", $(".album-genre").textContent === "Electronic" && !$(".play-count"));
+  await app.api.post("/api/favorite", {kind: "album", id: "al3", on: true});
+  w.location.hash = "#/favorites";
+  check("favoris : style sous l'album", await until(() => $(".album-genre") &&
+    $(".album-genre").textContent === "Electronic") && !$(".play-count"));
+  await app.api.post("/api/favorite", {kind: "album", id: "al3", on: false});
   w.location.hash = "#/";
   check("accueil : album commenté listé", await until(() => $$(".discussed-row").length === 1));
   check("accueil : mieux notés", $$(".album-card .stars").length >= 1);
+  check("accueil : style, étoiles et commentaires conservés sur les mieux notés",
+    $(".home-columns .album-genre").textContent === "Pop" && $(".home-columns .album-meta .stars") &&
+    $(".home-columns .album-meta .comment-count") && !$(".home-columns .play-count"));
 
   // --- Mix : mix rapides et créateur (comme sur le Pi) ---
   w.location.hash = "#/mix";
@@ -955,6 +1101,9 @@ function makeEventSource(jar) {
   check("playlist mélangée : le titre d'ailleurs après le titre Subsonic", await until(() => $$("#main tr.song").length === 2) &&
         $$("#main tr.song")[1].dataset.id === "sc-29912345" && $$("#main tr.song")[1].querySelector("td.album").textContent === "SoundCloud" &&
         !$$("#main tr.song")[1].querySelector(".song-download"));
+  check("playlist : style Subsonic affiché et style absent repérable pour le titre d'ailleurs",
+    $$("#main td.genre").map(cell => cell.textContent).join() === "Pop,—" &&
+    $$("#main td.genre").every(cell => !cell.hidden));
   check("radio d'un titre : proposée seulement pour le morceau Subsonic de la playlist",
         !!$$("#main tr.song")[0].querySelector(".song-radio") && !$$("#main tr.song")[1].querySelector(".song-radio"));
   const order = () => $$("#main tr.song").map(r => r.dataset.id).join();
@@ -1026,13 +1175,13 @@ function makeEventSource(jar) {
         $("#main .muted").textContent.includes("« Incoming »"));
   w.eval(`Views.upload.add([new File([new Uint8Array(2000)], "Essai.flac"), new File(["x"], "virus.exe"), new File([new Uint8Array(10)], "Autre.mp3")])`);
   check("envoi : format refusé expliqué tout de suite", await until(() => $$(".upload-row.failed .upload-state").some(s => s.textContent === "Format non accepté")));
-  check("envoi : fichiers envoyés un par un", await until(() => $$(".upload-row.done").length === 2, 5000));
-  check("envoi : Subsonic invité à scanner", await until(() => $(".upload-summary").textContent.startsWith("2 fichiers envoyés. Subsonic scanne"), 5000));
-  check("envoi : fichier seul signalé hors nomenclature", $$(".upload-row.done .upload-state").every(s => s.textContent.includes("à ranger")));
-  // un album en zip, rangé Artiste/Album (2 titres et une pochette) : décompressé sur le serveur, nomenclature respectée
-  const albumZip = "UEsDBBQAAAAAAHmVbF3sfd8UGAAAABgAAAAWAAAAQUJCQS9BcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAEFCQkEvQXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAeZVsXeka6EYDAAAAAwAAABYAAABBQkJBL0Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAeZVsXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvQXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAAB5lWxd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9BcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAHmVbF3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL0Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
+  check("envoi : titres seuls refusés avant l’envoi", await until(() => $$(".upload-row.failed").length === 3) &&
+    $$(".upload-row.failed .upload-state").filter(node => node.textContent.includes("fichiers audio seuls")).length === 2);
+  check("envoi : aucun titre seul envoyé ni scan lancé", $$(".upload-row.done").length === 0 && $(".upload-summary").textContent === "");
+  // Album reçu en minuscules : rangé Artiste/Album avec son initiale majuscule (2 titres et une pochette).
+  const albumZip = "UEsDBBQAAAAAAK+tcV3sfd8UGAAAABgAAAAWAAAAQUJCQS9hcnJpdmFsLzAxIEEuZmxhY2ZMYUMAAAAAAAAAAAAAAAAAAAAAAAAAAFBLAwQUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAEFCQkEvYXJyaXZhbC8wMiBCLmZsYWNmTGFDAAAAAAAAAAAAAAAAAAAAAAAAAABQSwMEFAAAAAAAr61xXeka6EYDAAAAAwAAABYAAABBQkJBL2Fycml2YWwvY292ZXIuanBnanBnUEsBAhQDFAAAAAAAr61xXex93xQYAAAAGAAAABYAAAAAAAAAAAAAAIABAAAAAEFCQkEvYXJyaXZhbC8wMSBBLmZsYWNQSwECFAMUAAAAAACvrXFd7H3fFBgAAAAYAAAAFgAAAAAAAAAAAAAAgAFMAAAAQUJCQS9hcnJpdmFsLzAyIEIuZmxhY1BLAQIUAxQAAAAAAK+tcV3pGuhGAwAAAAMAAAAWAAAAAAAAAAAAAACAAZgAAABBQkJBL2Fycml2YWwvY292ZXIuanBnUEsFBgAAAAADAAMAzAAAAM8AAAAAAA==";
   w.eval(`Views.upload.add([new File([Uint8Array.from(atob("${albumZip}"), c => c.charCodeAt(0))], "Album.zip")])`);
-  check("envoi : zip décompressé et album rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
+  check("envoi : album reçu en minuscules, initiale corrigée et rangé chez l'artiste", await until(() => $$(".upload-state").some(s =>
         s.textContent === "Décompressé : 3 fichiers — rangé dans ABBA/Arrival"), 5000));
   check("envoi : barre du lot entier, terminée", await until(() => !$(".upload-total").hidden &&
         $(".upload-total progress").value === 1 && $(".upload-total .upload-state").textContent === "Terminé", 5000));
@@ -1042,6 +1191,7 @@ function makeEventSource(jar) {
       row.children[2].textContent === "Album.zip" && row.children[3].textContent === "3" &&
       row.children[4].textContent.includes("ABBA/Arrival")), 5000));
   check("historique : seuls les envois réussis apparaissent", $$(".upload-history tbody tr").some(row =>
+    row.children[2].textContent === "Album.zip") && !$$(".upload-history tbody tr").some(row =>
     row.children[2].textContent === "Essai.flac") && !$$(".upload-history tbody tr").some(row =>
     row.children[2].textContent === "virus.exe"));
   w.location.hash = "#/news";
@@ -1104,19 +1254,37 @@ function makeEventSource(jar) {
   check("actualité : flux ajouté retiré par la personne, ses articles oubliés", await until(() =>
         $$(".news-feed").length === 4 && !$(".news-article")));
 
-  // --- Nouveautés : page pour les utilisateurs, tous les textes présents ---
+  // --- Help : thèmes, mises en avant et guides utilisateurs ---
   w.location.hash = "#/whatsnew";
-  check("nouveautés : page, lien du menu actif", await until(() => $("#main h1") &&
-        $("#main h1").textContent.startsWith("Nouveautés")) &&
+  check("help : page et lien du menu conservés", await until(() => $(".help-page") &&
+        $("#main h1").textContent === "Help") &&
         $('.topnav a[href="#/whatsnew"]').classList.contains("active"));
-  check("nouveautés : le principe puis six parties", !!$(".whatsnew-idea") && $$(".whatsnew-part").length === 6 &&
-        $$(".whatsnew-card").length === 34);
-  check("nouveautés : playlists (glisser-déposer, communautaires, partagées)",
-        ["Glisser-déposer", "Communautaires", "Partagées"].every(w => $$(".whatsnew-card h3").some(h => h.textContent.startsWith(w))));
-  check("nouveautés : aucun texte manquant", ![...$$("#main h2, #main h3, #main p")].some(n => /whatsnew\./.test(n.textContent)));
-  check("nouveautés : le quota YouTube expliqué", $$(".whatsnew-card").some(c => c.textContent.includes("120 recherches par heure")));
-  $$(".whatsnew-link").find(a => a.getAttribute("href") === "#/mix").click();
-  check("nouveautés : lien vers la page Mix", await until(() => w.location.hash === "#/mix"));
+  check("help : trois mises en avant et sept thèmes", $$("button.help-feature").length === 3 &&
+        $$("button.help-theme").length === 7);
+  check("help : paroles synchronisées en pas à pas", $("#help-guide-title").textContent.includes("paroles") &&
+        $$(".help-steps li").length === 3);
+  $('.help-feature[data-feature="chat"]').click();
+  check("help : la mise en avant ouvre le guide du salon",
+        $('.help-theme[data-theme="social"]').getAttribute("aria-pressed") === "true" &&
+        $("#help-guide-title").textContent.includes("salon"));
+  $('.help-feature[data-feature="press"]').click();
+  check("help : la presse mène à l’ajout d’un journal ou flux RSS",
+        $('.help-theme[data-theme="press"]').getAttribute("aria-pressed") === "true" &&
+        /RSS/.test($(".help-lesson").textContent));
+  $('.help-theme[data-theme="save"]').click();
+  check("help : playlists et import accessibles", $$(".help-guide-button").some(button =>
+        /partagées.*communautaires/i.test(button.textContent)) && $$(".help-guide-button").some(button =>
+        /Spotify.*Deezer.*Apple Music/.test(button.textContent)));
+  $('.help-theme[data-theme="elsewhere"]').click();
+  $('.help-guide-button[data-guide="g5"]').click();
+  check("help : limite des recherches YouTube expliquée", /120 recherches/.test($(".help-lesson").textContent));
+  $('.help-theme[data-theme="explore"]').click();
+  check("help : labels accessibles depuis une édition d’album", /album/.test($(".help-lesson").textContent) &&
+        /édition/.test($(".help-note").textContent));
+  check("help : aucun texte manquant", !/whatsnew\./.test($(".help-page").textContent));
+  $('.help-guide-button[data-guide="g4"]').click();
+  $('a.whatsnew-link[href="#/mix"]').click();
+  check("help : lien vers la page Mix", await until(() => w.location.hash === "#/mix"));
   w.location.hash = "#/";
 
   // --- Versions : numéro à côté du titre, pastille tant que la dernière version n'a pas été vue ---
@@ -1130,7 +1298,7 @@ function makeEventSource(jar) {
   check("versions : pastille retirée une fois vue", !$("#version-tag").classList.contains("fresh"));
   w.location.hash = "#/whatsnew";
   await until(() => $(".whatsnew-versions"));
-  check("versions : lien depuis Nouveautés", $(".whatsnew-versions").getAttribute("href") === "#/versions");
+  check("versions : lien depuis Help", $(".whatsnew-versions").getAttribute("href") === "#/versions");
   w.location.hash = "#/";
 
   // --- Importer une playlist : guide, lien Deezer, rapprochement, YouTube, création dans l'ordre ---
@@ -1180,8 +1348,8 @@ function makeEventSource(jar) {
 
   // --- Mon compte : photo (Subsonic, Gravatar), affichage, droits, Last.fm, import d'un lien ---
   const meImage = () => $("#me .avatar img") && $("#me .avatar img").getAttribute("src");
-  check("en haut : ma photo Subsonic à côté de mon nom, lien vers Mon compte", await until(() => meImage()) &&
-        meImage().startsWith("/api/avatar?user=bob&v=s") && $("#me").getAttribute("href") === "#/account");
+  check("en haut : ma photo Subsonic à côté de mon nom, menu vers Mon compte", await until(() => meImage()) &&
+        meImage().startsWith("/api/avatar?user=bob&v=s") && $("#nav-account").getAttribute("href") === "#/account");
   check("salon : photo pour qui en a une, initiale sinon", $$("#chat-panel .avatar[data-user=bob] img").length > 0 &&
         $$("#chat-panel .avatar[data-user=alice]").length > 0 && !$("#chat-panel .avatar[data-user=alice] img") &&
         $("#chat-panel .avatar[data-user=alice]").textContent === "A");
@@ -1193,6 +1361,12 @@ function makeEventSource(jar) {
         !$(".dialog"));
   check("Mon compte : cinq parties", $$(".account-part").length === 5 && $$("#main .rights-list li").length === 8 &&
         $$("#main .account-part select").length === 5 && !!$("#main .ext-link-form"));
+  check("Mon compte : même matrice de colonnes", columnToggle($("#main"), "browse", "genre").checked &&
+    $$('#main input[data-column]').length === 18);
+  await clickColumnToggle($("#main"), "browse", "genre");
+  check("Mon compte : le choix de masquer les styles est mémorisé",
+    (await app.api.get("/api/me")).preferences.browse_genre === false);
+  await clickColumnToggle($("#main"), "browse", "genre");
   check("Mon compte : photo venue de Subsonic, rien à retirer", await until(() => $(".account-photo")) &&
         $(".account-photo-side p").textContent.startsWith("Photo de votre compte Subsonic") &&
         !$$(".account-buttons button").some(b => b.textContent.startsWith("Retirer")));

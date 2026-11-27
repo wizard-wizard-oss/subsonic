@@ -16,18 +16,21 @@ class QueuePanel {
     this.undoButton = App.setIcon(el("button.link-button", {type: "button", onclick: () => player.undo()}),
                                   "undo", 14, false, t("player.undo"));
     this.body = el("tbody");
-    const columns = ["", "#", "cover", "title", "album", "artist", "duration", "genre", "year", "format", ""];
+    const track = App.songColumns.filter(key => key === "track");
+    this.metadataColumns = App.songColumns.filter(key => key !== "track");
+    const columnHeading = key => el("th.col-" + key, {
+      scope: "col", text: SongColumns.label(key), dataset: {songColumn: key}});
+    this.table = el("table.queue-table", {},
+      el("thead", {}, el("tr", {}, el("th.col-grip"), track.map(columnHeading), el("th.col-cover"),
+        el("th.col-title", {scope: "col", text: SongColumns.label("title")}),
+        this.metadataColumns.map(columnHeading), el("th.col-tool"))), this.body);
     this.root = el("section.queue-drawer", {id: "queue", hidden: true, "aria-label": t("player.queue")},
       el("header.queue-head", {},
         el("h2", {text: t("player.queue")}), this.count,
         el("div.queue-actions", {}, this.clearButton, this.undoButton),
         el("button.icon-button", {type: "button", title: t("settings.close"), onclick: () => this.close()},
            App.icon("close", 16))),
-      el("div.queue-scroll", {},
-        el("table.queue-table", {},
-          el("thead", {}, el("tr", {}, columns.map(c =>
-            el("th.col-" + (c === "#" ? "num" : c || "tool"), {text: c === "cover" ? "" : c && c !== "#" ? t("queue_cols." + c) : c})))),
-          this.body)));
+      el("div.queue-scroll", {}, this.table));
     document.body.appendChild(this.root);
     // la souris repart au-dessus du panneau (ni sur lui, ni sur le lecteur) : on ferme, sans précipitation
     this.root.addEventListener("mouseenter", () => this.stay());
@@ -36,6 +39,8 @@ class QueuePanel {
       if (this.isOpen && !this.root.contains(event.target) && !this.inPlayer(event.target)) this.close();
     });
     App.bus.on("queue", () => this.render());
+    App.bus.on("preferences", () => SongColumns.apply(this.table, "queue"));
+    SongColumns.apply(this.table, "queue");
   }
 
   inPlayer(node) {
@@ -83,10 +88,11 @@ class QueuePanel {
     this.undoButton.disabled = !player.canUndo;
     App.clear(this.body);
     if (!songs.length) {
-      this.body.appendChild(el("tr.empty", {}, el("td", {colSpan: 11, text: App.t("player.queue_empty")})));
-      return;
+      this.body.appendChild(el("tr.empty", {}, el("td", {text: App.t("player.queue_empty")})));
+    } else {
+      songs.forEach((song, i) => this.body.appendChild(this.row(song, i)));
     }
-    songs.forEach((song, i) => this.body.appendChild(this.row(song, i)));
+    SongColumns.apply(this.table, "queue");
   }
 
   row(song, i) {
@@ -99,25 +105,21 @@ class QueuePanel {
       ondragleave: () => row.classList.remove("drop-before", "drop-after"),
       ondrop: e => this.drop(e, i, row), ondragend: () => this.dragEnd()},
       el("td.col-grip", {title: App.t("player.drag"), text: "⋮⋮"}),
-      el("td.col-num", {}, current ? App.icon(player.playing ? "volume" : "play", 14) : String(i + 1)),
+      SongColumns.cell(song, "track", "td.col-track"),
       el("td.col-cover", {}, App.cover(song.coverId || song.imageUrl, 32)),
-      el("td.col-title", {text: song.title}),
-      el("td.col-album", {}, song.albumId
-        ? el("a", {href: "#/album/" + encodeURIComponent(song.albumId), text: song.album || ""}) : (song.album || "")),
-      el("td.col-artist", {text: song.artist || ""}),
-      el("td.col-duration", {text: song.duration ? App.duration(song.duration) : ""}),
-      el("td.col-genre", {text: song.genre || ""}),
-      el("td.col-year", {text: song.year || ""}),
-      el("td.col-format", {text: QueuePanel.format(song)}),
+      el("td.col-title", {}, current ? App.icon(player.playing ? "volume" : "play", 14) : null,
+        el("span", {text: song.title})),
+      this.metadataColumns.map(key => SongColumns.cell(song, key, "td.col-" + key)),
       el("td.col-tool", {}, current ? null : App.setIcon(el("button.link-button", {type: "button",
         title: App.t("player.remove"), onclick: e => { e.stopPropagation(); player.removeAt(i); }}), "close", 14)));
     return row;
   }
 
-  /** « FLAC 1 024 kbps », « YouTube », « Jamendo ». */
+  /** Résumé du lecteur : format et débit, ou nom de la source externe. */
   static format(song) {
-    if (song.ext) return song.ext === "youtube" ? "YouTube" : "Jamendo";
-    return [(song.suffix || "").toUpperCase(), song.bitRate ? song.bitRate + " kbps" : ""].filter(Boolean).join(" ");
+    if (song.ext) return App.t("ext.sources." + song.ext);
+    return [song.suffix ? SongColumns.format(song, "format") : "",
+            song.bitRate ? SongColumns.format(song, "bitrate") : ""].filter(Boolean).join(" ");
   }
 
   onKey(event, i) {

@@ -1,0 +1,5 @@
+/* Affichage seulement : le lecteur officiel et son chargement restent inchangés. */
+@media (max-width: 820px), (max-width: 1100px) and (hover: none) and (pointer: coarse) {
+  .video-window { top: auto; right: 12px; bottom: calc(var(--playerbar) + 12px); width: min(356px, calc(100vw - 24px));
+    height: 200px; z-index: 40; border: 0; border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+}

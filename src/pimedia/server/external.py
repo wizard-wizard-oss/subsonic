@@ -2,7 +2,7 @@
 leurs résultats sont gardés dans le cache du Pi (définitivement s'ils ne sont pas vides)."""
 import json
 
-from ..shared.external import FactsBuilder, JsonFetcher, LyricsFinder, MusicBrainz, Wikipedia  # noqa: F401
+from ..shared.external import FactsBuilder  # noqa: F401
 from .constants import FOREVER
 
 EMPTY_RESULT_TTL = 86400            # un résultat vide est retenté le lendemain

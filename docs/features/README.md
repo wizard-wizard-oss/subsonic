@@ -12,13 +12,15 @@ faux Subsonic, mpv et jsdom).
 ## Site web (édition PC)
 | Fiche | Résumé | Interface | Vérifié en vrai |
 |---|---|---|---|
+| [notifications](notifications.md) | messages privés de l’administration, pastille et lecture persistante | oui | oui (production, message à Mnu ; Chrome PC/mobile) |
 | [comptes-et-droits](comptes-et-droits.md) | connexion Subsonic, sessions, droits, réglages, page « Mon compte », photos (Gravatar) | oui | en partie (photos : Chromium) |
 | [barre-gauche](barre-gauche.md) | artistes + playlists, modes | oui | oui (liste d'artistes) |
 | [bibliotheque](bibliotheque.md) | accueil, artiste, album, albums, recherche, favoris | oui | en partie |
+| [tags-albums](tags-albums.md) | édition des tags, application groupée, MusicBrainz ou Discogs, écriture et réindexation | oui | fichiers de test et faux Subsonic |
 | [labels-et-collaborations](labels-et-collaborations.md) | crédits, labels, membres et leurs autres groupes / projets depuis l'album ou l'artiste (MusicBrainz) | oui | API oui (ABBA, Vitalic, Kyuss), interface jsdom |
 | [decouverte-labels](decouverte-labels.md) | découverte variée, Top sourcé, playlists mixtes, crédits, musiciens et discographies Discogs | oui | API Discogs/Last.fm, interface jsdom |
 | [navigation-labels](navigation-labels.md) | **brouillon** : index des labels de la bibliothèque, pages avec histoire/logo, catalogue et compléments YouTube | non | non implémenté |
-| [listen-later](listen-later.md) | artistes et albums à écouter, recommandations regroupées par conseillers | oui | simulations locales et Chrome |
+| [listen-later](listen-later.md) | artistes, albums et morceaux à écouter, recommandations regroupées, lecture de tous les morceaux et retrait individuel | oui | simulations locales et Chrome |
 | [notes-et-commentaires](notes-et-commentaires.md) | étoiles, cœur, commentaires d'album | oui | en partie |
 | [salon](salon.md) | discussion temps réel | oui | oui (Traefik) |
 | [lecteur](lecteur.md) | lecteur, file, raccourcis | oui | jsdom seulement |
@@ -31,8 +33,8 @@ faux Subsonic, mpv et jsdom).
 | [envoi-fichiers](envoi-fichiers.md) | envoi dans Incoming (fichiers, zip décompressé) + scan | oui | non (pas mis en route) |
 | [pochettes](pochettes.md) | crayon sur la pochette d'un album : recherche Last.fm ou adresse, écrite en cover.jpg dans le dossier | oui | non (faux Last.fm et Subsonic) |
 | [telechargement](telechargement.md) | zip d'album, titre | oui | oui |
-| [actualite](actualite.md) | flux RSS des webzines, « Dans la presse » sur la page artiste | oui | non (flux lus une fois) |
-| [nouveautes](nouveautes.md) | page « Nouveautés » qui explique le site aux utilisateurs | oui | jsdom + démo |
+| [actualite](actualite.md) | flux RSS, articles par artiste et sorties de la semaine par style MusicBrainz | oui | jsdom et tests ciblés |
+| [nouveautes](nouveautes.md) | Help : sept thèmes, 40 guides pas à pas, captures et accès aux fonctions existantes | oui | jsdom + navigateur local |
 | [versions](versions.md) | page « Versions » : historique daté, numéro et pastille près du titre | oui | jsdom + démo |
 | [serveur-sans-interface](serveur-sans-interface.md) | marque-pages, file partagée, radios Internet… | **non** | non |
 

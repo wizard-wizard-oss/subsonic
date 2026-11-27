@@ -1,0 +1,15 @@
+#nav-notifications { display: inline-flex; align-items: center; gap: 6px; }
+.notifications-intro { max-width: 65ch; }
+.notifications-list { display: grid; gap: 12px; margin-top: 20px; }
+.notification-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: var(--bg-raised); min-width: 0; }
+.notification-card.unread { border-left: 4px solid var(--accent); }
+.notification-card h2 { font-size: 18px; overflow-wrap: anywhere; }
+.notification-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notification-meta { color: var(--text-soft); margin: 8px 0; }
+.notification-compose { margin: 24px 0; max-width: 640px; }
+.notification-compose form { display: grid; gap: 12px; margin-top: 16px; }
+.notification-compose label { display: grid; gap: 5px; }
+.notification-compose input, .notification-compose select, .notification-compose textarea { width: 100%; min-width: 0; }
+.notification-compose textarea { min-height: 130px; resize: vertical; }
+.notification-compose button, .notification-read, .notifications-more { justify-self: start; min-height: 36px; }
+.notifications-status { overflow-wrap: anywhere; }

@@ -105,9 +105,9 @@ launcher:
 webapp:
 
   listen_later:
-    unread_label: "À écouter : nouveaux conseils reçus"
+    unread_label: "À écouter : nouveaux conseils ou commentaires"
     title: "À écouter"
-    intro: "Gardez les artistes et les albums à découvrir, et retrouvez les conseils reçus."
+    intro: "Gardez les artistes, albums et morceaux à découvrir, retrouvez vos conseils reçus et envoyés, et échangez vos impressions."
     bookmarks: "Mes marque-pages"
     recommendations: "Les recommandations reçues"
     add_bookmark: "Garder dans À écouter"
@@ -119,6 +119,34 @@ webapp:
     bookmark_removed: "Marque-page retiré"
     recommend: "Conseiller à quelqu’un"
     recipient: "Destinataire"
+    initial_comment: "Pourquoi ce conseil ? (facultatif)"
+    comment_placeholder: "Ce qui vous plaît, ce qui pourrait lui parler…"
+    new_comment: "Votre commentaire"
+    reply_placeholder: "Ce que vous en avez pensé, une question, une autre découverte…"
+    comment_limit: "Jusqu’à {count} caractères."
+    comment_invalid: "Le commentaire doit être du texte."
+    comment_too_long: "Ce commentaire est trop long."
+    comment_empty: "Écrivez un commentaire avant de l’envoyer."
+    comment_conflict: "Cet envoi a déjà été enregistré avec un autre texte. Rouvrez le fil avant de réessayer."
+    comments: "Commentaires de la recommandation"
+    comments_with: "Commentaires avec {name} ({count})"
+    unread_comments_with: "Nouveaux commentaires avec {name} ({count})"
+    loading_comments: "Chargement des commentaires…"
+    empty_comments: "Aucun commentaire pour le moment. Vous pouvez commencer l’échange."
+    post_comment: "Envoyer le commentaire"
+    older_comments: "Voir les commentaires précédents"
+    refresh_comments: "Actualiser les commentaires"
+    discussion_not_found: "Cette discussion n’est pas accessible."
+    discussion_context: "{title} — conseil de {sender} à {recipient}"
+    discussion_participants: "De {sender} à {recipient}"
+    already_sent: "Ce conseil existe déjà. Vous pouvez poursuivre l’échange dans ses commentaires."
+    sent_recommendations: "Mes recommandations envoyées"
+    archived_recommendations: "Les recommandations archivées"
+    empty_discussions_filter: "Aucun échange dans cette sélection."
+    empty_sent: "Vous n’avez pas encore envoyé de recommandation."
+    empty_archived: "Aucune recommandation archivée."
+    more_recommendations: "Voir les recommandations précédentes"
+    open_unread_comments: "Lire les nouveaux commentaires"
     send: "Envoyer le conseil"
     sent: "Conseil envoyé"
     no_recipient: "Un autre compte doit s’être connecté au site pour recevoir un conseil."
@@ -127,8 +155,15 @@ webapp:
     recommended_by: "Conseillé par {names}"
     dismiss: "Retirer des recommandations"
     search_listening: "Rechercher pour écouter"
-    empty_bookmarks: "Aucun marque-page dans cette sélection. Gardez un artiste ou un album depuis sa fiche."
+    play_song: "Écouter le morceau"
+    play_all: "Tout écouter"
+    recommended_songs: "Les morceaux recommandés"
+    advisers: "Conseillé par"
+    song_unavailable: "Ce morceau n’est plus disponible."
+    songs_skipped: "Morceaux indisponibles ignorés : {count}."
+    empty_bookmarks: "Aucun marque-page dans cette sélection. Gardez un artiste ou un album depuis sa fiche, ou un morceau reçu en recommandation."
     empty_recommendations: "Aucune recommandation reçue dans cette sélection."
+    older_recommendations_hidden: "Seules les recommandations reçues les plus récentes sont affichées. Retirez-en pour voir les plus anciennes."
     loading: "Chargement de vos découvertes…"
     retry: "Réessayer"
     filter: "Afficher"
@@ -136,9 +171,11 @@ webapp:
       all: "Tout"
       artist: "Les artistes"
       album: "Les albums"
+      song: "Les morceaux"
     kinds:
       artist: "Artiste"
       album: "Album"
+      song: "Morceau"
     sources:
       subsonic: "Bibliothèque"
       discogs: "Discogs"
@@ -158,13 +195,14 @@ webapp:
     forbidden: "Action refusée"
     missing_right: "Votre compte Subsonic n'a pas ce droit (à demander à l'administrateur de Subsonic)"
   nav:
+    menu: "Menu"
     listen_later: "À écouter"
     home: "Accueil"
     favorites: "Favoris"
     albums: "Albums"
     mix: "Mix"
     news: "Actualités"
-    whatsnew: "Nouveautés"
+    whatsnew: "Help"
     upload: "Envoyer"
     search: "Rechercher un artiste, un album, un titre…"
     artists: "Artistes"
@@ -175,6 +213,8 @@ webapp:
     chat: "Salon"
     shortcuts: "Raccourcis clavier"
     account: "Mon compte"
+    account_menu: "Menu du compte"
+    account_notifications: "Menu du compte : {count} notifications non lues"
   collection:
     scope: "Collection du serveur"
     title: "Votre bibliothèque en chiffres"
@@ -253,6 +293,30 @@ webapp:
       discogs: "Discogs"
       subsonic: "Subsonic / Last.fm"
       wikipedia: "Wikipédia"
+  song:
+    style_missing: "Style non renseigné"
+  song_columns:
+    settings: "Colonnes des morceaux"
+    help: "Parcourir : albums, playlists, recherche et favoris. Liste de lecture : la file du lecteur. Chaque case est enregistrée immédiatement pour votre compte."
+    show: "Afficher"
+    browse: "Parcourir"
+    queue: "Liste de lecture"
+    choice: "{context} : {column}"
+    value: "{column} : {value}"
+    title: "Titre"
+    track: "Piste #"
+    artist: "Artiste"
+    album: "Album"
+    genre: "Style"
+    year: "Année"
+    bitrate: "Débit"
+    duration: "Durée"
+    format: "Format"
+    size: "Taille du fichier"
+    added_by: "Ajouté par"
+    actions: "Actions"
+    bitrate_value: "{value} kbps"
+    size_value: "{value} Mio"
   search:
     artists: "Artistes"
     albums: "Albums"
@@ -445,6 +509,28 @@ webapp:
     invalid: "Ce mix n'existe pas"
     empty: "Aucun titre trouvé pour ce mix"
     no_lastfm: "Pas de suggestions : Last.fm n'est pas réglé dans Subsonic (clé dans les réglages du serveur)"
+  notifications:
+    title: "Notifications"
+    nav_count: "Notifications : {count} non lues"
+    intro: "Les messages de l’administration vous sont adressés personnellement. Ils restent ici après leur lecture."
+    from_admin: "Message de l’administration"
+    empty: "Vous n’avez aucune notification."
+    mark_read: "Marquer comme lu"
+    more: "Voir les notifications précédentes"
+    refresh: "Actualiser"
+    retry: "Réessayer"
+    compose: "Envoyer une notification à un membre"
+    choose_recipient: "Choisir un membre"
+    recipient: "Destinataire"
+    subject: "Objet"
+    message: "Message"
+    send: "Envoyer la notification"
+    sending: "Envoi…"
+    sent: "Notification envoyée à {name}."
+    invalid_message: "Saisissez un objet et un message dans les limites indiquées."
+    unknown_recipient: "Ce membre n’existe pas sur le site."
+    invalid_request: "Demande de notification invalide."
+    request_conflict: "Cette demande a déjà été utilisée pour un autre message."
   upload:
     title: "Envoyer de la musique"
     activity: "Envois"
@@ -458,9 +544,9 @@ webapp:
     history_result: "Résultat à la réception"
     history_empty: "Aucun envoi enregistré pour le moment."
     history_more: "Voir les envois précédents"
-    intro: "Glissez ici un zip organisé en Artiste/Album/titres (majuscule au début) : chaque album est rangé aussitôt chez son artiste, puis Subsonic l'ajoute à la bibliothèque. Ce qui ne peut pas être placé, et les titres envoyés seuls, attendent dans « {folder} »."
+    intro: "Envoyez uniquement des albums en ZIP, organisés en Artiste/Album/titres. Les fichiers audio seuls ne sont pas autorisés. Chaque album est rangé chez son artiste ; les dossiers qui nécessitent une vérification attendent dans « {folder} »."
     drop: "Déposez vos fichiers ici, ou cliquez pour les choisir"
-    formats: "mp3, flac, m4a, aac, ogg, opus, wav, aiff — 300 Mo au plus par fichier ; zip de 2 Go au plus"
+    formats: "Albums en ZIP uniquement — 2 Go au plus par archive, 300 Mo par titre à l’intérieur"
     waiting: "En attente"
     sending: "Envoi…"
     unpacking: "Décompression et rangement…"
@@ -481,6 +567,7 @@ webapp:
     missing: "Le dossier de musique n'existe pas dans le conteneur : vérifiez MUSIC_DIR dans le .env."
     not_writable: "Le site n'a pas le droit d'écrire dans le dossier de musique : APP_UID et APP_GID du .env doivent être ceux de son propriétaire (voir .env.example)."
     bad_type: "Format non accepté"
+    album_required: "Les fichiers audio seuls ne sont pas autorisés. Envoyez un album en ZIP organisé en Artiste/Album/titres."
     bad_size: "Fichier vide ou trop gros (300 Mo au plus par titre, zip de 2 Go au plus)"
     bad_zip: "Zip illisible (abîmé ou protégé par un mot de passe)"
     empty_zip: "Aucun fichier audio dans ce zip"
@@ -513,6 +600,149 @@ webapp:
     too_big: "Image trop grosse (10 Mo au plus)"
     not_image: "Ce n'est pas une image JPEG ou PNG"
     search_failed: "Last.fm ne répond pas, réessayez plus tard"
+  tags:
+    bad_request: "La demande de modification est invalide. Rechargez l’éditeur."
+    bad_value: "Vérifiez les valeurs : textes limités à 500 caractères, année sur quatre chiffres et numéros de 1 à 999."
+    bad_album: "Cet album contient des références de fichiers incohérentes."
+    bad_track: "Un fichier ne fait pas partie de l’album sélectionné."
+    not_found: "Cet album ou cette piste n’est plus disponible."
+    no_path: "Subsonic ne fournit pas le chemin de ces fichiers."
+    too_many_tracks: "L’éditeur accepte au maximum 500 pistes par album."
+    conflict: "Les fichiers ont changé depuis l’ouverture. Rechargez les informations avant d’enregistrer."
+    busy: "Une autre modification est en cours. Attendez sa fin avant de réessayer."
+    no_changes: "Aucune modification à enregistrer."
+    operation_not_found: "Le suivi de cette modification n’est plus disponible. Rechargez l’album pour vérifier les fichiers."
+    bad_source: "Choisissez MusicBrainz ou Discogs."
+    bad_search: "Indiquez un artiste et un album de 300 caractères au maximum."
+    bad_release: "L’édition demandée est invalide."
+    source_disabled: "Cette source de métadonnées n’est pas configurée."
+    source_unavailable: "La source ne répond pas. Réessayez ou choisissez l’autre source."
+    off: "Le dossier de musique n’est pas configuré pour l’édition."
+    unsafe_path: "L’emplacement d’un fichier ne permet pas une modification sûre."
+    file_unavailable: "Un fichier de l’album est introuvable ou inaccessible."
+    unsupported_format: "Ce format audio n’est pas modifiable dans cet éditeur."
+    not_writable: "Les droits de ce fichier ne permettent pas de modifier ses tags."
+    unreadable_file: "Les métadonnées de ce fichier ne peuvent pas être lues."
+    invalid_changes: "Les modifications demandées ne sont pas valides."
+    unsafe_backup: "Le dossier technique des sauvegardes doit être séparé de la musique."
+    recovery_required: "Une modification interrompue demande une vérification des sauvegardes avant toute nouvelle écriture."
+    backup_failed: "La sauvegarde des fichiers n’a pas pu être préparée."
+    no_space: "L’espace disponible ne permet pas de préparer les fichiers et leurs sauvegardes."
+    verification_failed: "La vérification des nouveaux tags a échoué. Les originaux sont conservés."
+    write_failed: "Les tags n’ont pas pu être enregistrés. Les sauvegardes sont conservées si une récupération est nécessaire."
+    scan_failed: "Les fichiers sont enregistrés, mais Subsonic n’a pas accepté la demande d’actualisation."
+    scan_unconfirmed: "Les fichiers sont enregistrés ; leur actualisation dans Subsonic reste à vérifier."
+    index_outdated: "Certaines informations indexées par Subsonic diffèrent des fichiers. L’éditeur montre les valeurs réelles qui seront modifiées."
+    verification_partial: "Subsonic n’expose pas l’artiste d’album dans son API. Ce champ a été vérifié dans les fichiers."
+    identity_changed: "Subsonic a regroupé cet album différemment. Vérifiez ses liens, commentaires et favoris."
+    edit_ui: "Modifier les informations"
+    title_ui: "Informations de l’album"
+    close_ui: "Fermer l’éditeur"
+    loading_ui: "Chargement des métadonnées…"
+    retry_ui: "Réessayer"
+    common_ui: "Informations communes"
+    album_style_ui: "Style de l’album"
+    advanced_ui: "Autres informations et pistes"
+    find_style_ui: "Rechercher le style"
+    source_styles_ui: "Styles proposés par {source}"
+    choose_style_ui: "Style à retenir pour l’album"
+    use_style_ui: "Utiliser ce style pour l’album"
+    no_styles_ui: "Aucun style fourni par {source} pour cette édition. Vous pouvez le saisir directement en haut."
+    style_imported_ui: "Style « {style} » ajouté au brouillon de l’album. Vérifiez les changements avant d’enregistrer."
+    source_advanced_ui: "Importer d’autres informations"
+    edition_selected_ui: "Édition « {title} » sélectionnée."
+    albumArtist_label_ui: "Artiste de l’album"
+    artist_label_ui: "Artiste de la piste"
+    track_artists_ui: "Artiste des pistes"
+    album_label_ui: "Album"
+    title_label_ui: "Titre"
+    year_label_ui: "Année"
+    genre_label_ui: "Style"
+    track_label_ui: "Nº"
+    disc_label_ui: "Disque"
+    scope_ui: "Appliquer à"
+    scope_all_ui: "Toutes les pistes"
+    scope_selection_ui: "La sélection"
+    scope_missing_ui: "Valeurs manquantes"
+    apply_ui: "Appliquer"
+    clear_ui: "Effacer"
+    mixed_ui: "Plusieurs valeurs"
+    common_value_ui: "Valeur commune"
+    empty_ui: "Non renseigné"
+    cleared_ui: "Effacé"
+    value_required_ui: "Saisissez une valeur avant de l’appliquer. Utilisez « Effacer » pour supprimer cette information."
+    select_first_ui: "Sélectionnez au moins une piste."
+    folders_help_ui: "Les tags seront écrits dans les fichiers audio. Les noms des dossiers et des fichiers resteront identiques."
+    artists_help_ui: "L’artiste de l’album et les artistes des pistes sont distincts : modifier le premier conserve les invités de chaque piste."
+    tracks_ui: "Pistes"
+    select_all_ui: "Sélectionner toutes les pistes modifiables"
+    select_track_ui: "Sélectionner la piste {number}"
+    track_field_ui: "{field}, piste {number}"
+    selection_ui: "{count} pistes sélectionnées"
+    selection_ui_one: "1 piste sélectionnée"
+    unsupported_ui: "Format non modifiable : {format}"
+    changed_tracks_ui: "{count} pistes modifiées"
+    changed_tracks_ui_one: "1 piste modifiée"
+    changed_fields_ui: "{count} champs"
+    changed_fields_ui_one: "1 champ"
+    unchanged_ui: "Aucune modification"
+    reset_ui: "Annuler les changements"
+    review_ui: "Vérifier les changements"
+    draft_help_ui: "Ces changements restent en brouillon. Cliquez sur « Vérifier les changements », puis sur « Enregistrer dans les fichiers » pour les conserver."
+    checking_ui: "Vérification des changements…"
+    review_title_ui: "Avant d’enregistrer"
+    diff_field_ui: "{title} · {field}"
+    back_ui: "Revenir à l’édition"
+    save_ui: "Enregistrer dans les fichiers"
+    save_help_ui: "Les tags sont les informations contenues dans les fichiers audio. Enregistrer y conserve vos corrections, puis met à jour la bibliothèque. Cela peut prendre un moment."
+    discard_question_ui: "Abandonner les changements non enregistrés ?"
+    close_operation_ui: "Le résultat de l’écriture n’est pas encore confirmé. L’opération continue sur le serveur si vous fermez l’éditeur."
+    keep_editing_ui: "Continuer l’édition"
+    discard_ui: "Abandonner les changements"
+    readonly_ui: "L’écriture des métadonnées n’est pas disponible sur ce site."
+    progress_ui: "Enregistrement des tags"
+    save_starting_ui: "Vérification des fichiers avant enregistrement…"
+    preparing_ui: "Préparation des fichiers : {completed} / {total}…"
+    preparing_help_ui: "Les fichiers sont préparés et vérifiés avec vos nouveaux tags. Cette étape peut prendre un moment."
+    saving_ui: "Enregistrement dans les fichiers : {completed} / {total}…"
+    saving_help_ui: "Les fichiers préparés sont mis en place. La bibliothèque sera ensuite actualisée."
+    scan_help_ui: "Vos tags sont enregistrés. La bibliothèque est en cours de mise à jour pour afficher les nouvelles informations."
+    saving_wait_ui: "L’écriture est en cours. Attendez son résultat avant de fermer l’éditeur."
+    saved_ui: "Métadonnées enregistrées dans les fichiers."
+    scan_pending_ui: "Actualisation de Subsonic en attente."
+    scan_started_ui: "Actualisation de Subsonic en cours…"
+    scan_updated_ui: "Bibliothèque Subsonic actualisée."
+    scan_unconfirmed_ui: "L’actualisation de Subsonic reste à confirmer."
+    scan_failed_ui: "L’actualisation de Subsonic n’a pas pu être confirmée. Les fichiers restent enregistrés."
+    operation_failed_ui: "L’écriture des métadonnées a échoué. Le brouillon est conservé."
+    poll_paused_ui: "Le suivi automatique est en pause. Vérifiez le résultat avant toute nouvelle modification."
+    poll_retry_ui: "Actualiser le suivi"
+    poll_resuming_ui: "Reprise du suivi…"
+    poll_resuming_help_ui: "Vérification de l’opération en cours, sans réécrire les fichiers."
+    search_title_ui: "Rechercher une édition"
+    source_ui: "Source"
+    search_artist_ui: "Artiste recherché"
+    search_ui: "Rechercher"
+    search_terms_ui: "Indiquez l’artiste et l’album à rechercher."
+    searching_ui: "Recherche d’éditions…"
+    sources_off_ui: "Les sources externes ne sont pas disponibles. L’édition manuelle reste possible."
+    no_candidates_ui: "Aucune édition trouvée. Ajustez l’artiste ou le nom de l’album."
+    choose_edition_ui: "Choisir une édition"
+    edition_ui: "Édition proposée"
+    source_track_count_ui: "{count} pistes"
+    source_track_count_ui_one: "1 piste"
+    loading_release_ui: "Chargement de l’édition…"
+    local_track_ui: "Fichier local"
+    proposed_track_ui: "Piste proposée"
+    mapping_check_ui: "{local} fichiers locaux et {proposed} pistes proposées : vérifiez chaque correspondance."
+    mapping_mismatch_ui: "{local} fichiers locaux pour {proposed} pistes proposées : choisissez chaque correspondance avant d’importer."
+    mapping_track_ui: "Correspondance pour {title}"
+    mapping_choose_ui: "Choisir la piste correspondante"
+    mapping_required_ui: "Associez chaque fichier à une piste différente de l’édition."
+    import_fields_ui: "Champs à importer dans le brouillon"
+    import_ui: "Importer dans le brouillon"
+    choose_fields_ui: "Choisissez au moins un champ à importer."
+    imported_ui: "Proposition ajoutée au brouillon. Vérifiez les changements avant d’enregistrer."
   listening:
     title: "Écouté en ce moment"
     empty: "Personne n'écoute rien pour l'instant."
@@ -676,128 +906,362 @@ webapp:
     import_see: "Voir dans Favoris"
     import_accounts: "Relier son compte YouTube ou SoundCloud (pour importer ses « J'aime » privés) : pas encore possible."
   whatsnew:
-    title: "Nouveautés : tout ce que le site fait en plus de Subsonic"
-    idea_title: "Le principe, en trois phrases"
-    idea_1: "Subsonic reste la maison de notre musique : vos étoiles, vos cœurs, vos playlists et vos écoutes y sont écrits avec votre compte, donc vous les retrouvez aussi dans les applis Subsonic du téléphone."
-    idea_2: "Le site, lui, ajoute de quoi écouter ensemble, papoter, se perdre dans des mix, explorer les labels et les discographies, garder des découvertes pour plus tard et les conseiller aux autres. Et aller chercher ailleurs le titre qui manque."
-    idea_3: "YouTube et SoundCloud passent par leurs lecteurs officiels, donc parfois avec les bloqueur de pub <b>mais Addblock fonctionne pas mal :-)<b/>."
-    open: "J'y vais"
-    versions: "Ce qui a changé, version par version"
-    together:
-      title: "Ensemble, c'est mieux"
+    title: "Help"
+    eyebrow: "Faites comme chez vous"
+    intro: "Écouter, échanger, explorer. Retrouvez les bons gestes et découvrez tout ce que l’application vous propose."
+    featured_title: "À essayer en premier"
+    themes_title: "Les guides, par thème"
+    themes_label: "Choisir un thème"
+    guides_label: "Choisir un guide"
+    steps_label: "Pas à pas"
+    open: "J’y vais"
+    versions: "Les dernières nouveautés"
+    footer: "Une question, une idée ou un disque à conseiller ? Retrouvons-nous dans le salon."
+    illustration_label: "Capture de l’application avec des données d’exemple"
+    import_guide: "Voir le guide d’export"
+    actions:
+      chat: "Ouvrir le salon"
+      lyrics: "Afficher les paroles"
+      queue: "Ouvrir la file"
+      shortcuts: "Ouvrir l’aide des raccourcis"
+      settings: "Ouvrir les réglages"
+      search: "Ouvrir la recherche"
+    preview:
+      chat_question: "Une découverte à partager ce soir ?"
+      chat_answer: "Commencez par cet album."
+      lyrics_previous: "Le couplet commence…"
+      lyrics_current: "Les mots suivent la musique."
+      lyrics_next: "La chanson continue."
+      press_source: "Votre journal musical"
+      press_title: "Un nouveau disque à découvrir"
+      press_path: "Actualités → Dans la presse"
+    featured:
       chat:
-        title: "Le salon"
-        text: "Touche C, et le panneau de droite s'ouvre : on discute en direct. Répondez, réagissez avec un emoji, appelez quelqu'un avec @ (ça le prévient), balancez un album d'un clic. Et on voit qui est là, et qui est en train d'écrire…"
-      listening:
-        title: "Écouté en ce moment"
-        text: "En haut du salon : ce que tout le monde écoute, là, maintenant. Pratique pour piquer les bonnes idées des autres — un clic et vous êtes sur l'album."
-      comments:
-        title: "On en parle sous l'album"
-        text: "Chaque album a son fil de discussion, et ses étoiles : la vôtre, et la moyenne de la bande."
-      recommendations:
-        title: "Conseiller une découverte à un ami"
-        text: "Un artiste ou un album à faire découvrir ? Sur sa fiche dans la bibliothèque ou dans Discogs, cliquez sur « Conseiller à quelqu’un » et choisissez un autre membre déjà connecté au site. Il retrouve votre conseil dans « À écouter », parmi ses recommandations reçues. Si plusieurs personnes lui conseillent le même disque ou artiste, leurs noms sont réunis sur une seule carte. À lui de le garder aussi en marque-page s’il en a envie."
-      news:
-        title: "Actualités : les flux RSS des webzines"
-        text: "Le site lit chaque heure les flux RSS des webzines (Les Inrocks, Mowno, New Noise…) et range leurs derniers articles dans la page Actualités. Il en manque un ? Collez l'adresse du webzine, ou de son flux RSS : le site trouve le flux tout seul, et il sert à tout le monde. Ceux qui vous barbent, décochez-les : ils disparaissent pour vous seulement. Cerise : sur la page d'un artiste, « Dans la presse » ressort les articles qui parlent de lui. On clique, et on lit l'article chez le webzine."
-    discover:
-      title: "Se perdre dans la musique"
-      mix:
-        title: "Mix en un clic"
-        text: "Au hasard, vos favoris, découverte, nouveautés : quatre boutons, zéro réflexion."
-      builder:
-        title: "Créateur de mix"
-        text: "Pour les maniaques : un artiste de départ, des styles, des époques, 30, 60 ou 100 titres, vos favoris d'abord, ou dans l'ordre chronologique. Choisissez de 1 à 4 niveaux d’artistes proches. Le mix reste dans ce cercle, avec les styles renseignés du départ ou ceux que vous choisissez : si les titres manquent, la sélection reste plus courte. Ça vous plaît ? Enregistrez-le en playlist."
-      radio:
-        title: "Radio d'un artiste ou d'un titre"
-        text: "Partez d'un artiste : ses titres, puis ceux qui lui ressemblent, puis les proches des proches… jusqu'à quatre niveaux. Ou, au bout d'un morceau de la bibliothèque, cliquez sur « Radio de ce titre » : ce morceau démarre, suivi de titres proches. Si Last.fm ne propose rien, on reste dans le même style, puis on pioche au hasard dans la bibliothèque."
-      similar:
-        title: "Artistes similaires, titres populaires"
-        text: "Sur chaque page d'artiste, merci Last.fm : ses voisins présents dans la bibliothèque et ses titres les plus connus. De quoi rebondir d’un groupe à l’autre, ou commencer par les morceaux que tout le monde connaît."
-      home:
-        title: "Accueil et Albums"
-        text: "Les derniers arrivés, les plus écoutés, les mieux notés par tout le monde, ceux dont on parle. Survolez une pochette : la petite flèche en haut à gauche lance l’album sans quitter la page ; le reste de la carte ouvre sa fiche. La page Albums permet de fouiller par décennie, par genre ou de A à Z. Quand les chiffres de Subsonic sont disponibles, l’accueil montre aussi la collection du serveur : artistes, albums, chansons, stockage, heures de musique et date du dernier scan."
-      discography:
-        title: "Les discographies Discogs"
-        text: "Depuis la fiche d’un artiste, choisissez sa fiche Discogs : votre choix est mémorisé pour votre compte, et sa discographie revient sous vos albums aux prochaines visites. Albums, EP, singles et participations, avec pochettes et dates : les rééditions sont regroupées, les disques retrouvés chez vous ont un lien vers la bibliothèque. Les boutons « Changer » et « Actualiser » permettent de corriger la fiche ou de relire le catalogue."
-      credits:
-        title: "Des crédits aux musiciens et à leurs groupes"
-        text: "Sur un album, « Crédits Discogs » propose de choisir l’édition pour retrouver ses labels, producteurs et musiciens. Les noms ouvrent leurs fiches et leurs discographies. Depuis un artiste, suivez aussi les membres du groupe vers leurs autres projets. Les crédits et relations MusicBrainz restent consultables, avec les périodes de participation connues. De quoi perdre le fil, dans le bon sens."
-      labels:
-        title: "Découvrir un label, ou explorer son Top"
-        text: "Depuis les labels d’un album, ouvrez un catalogue puis choisissez « Découvrir le label » pour varier artistes et époques, ou « Top du label » pour un classement par notes Discogs, auditeurs ou écoutes Last.fm. Le périmètre analysé est indiqué ; vous pouvez arrêter le classement et préparer les disques déjà analysés. Les titres sont cherchés dans votre bibliothèque, puis les versions YouTube manquantes sont proposées au choix. Écoutez les titres prêts ou enregistrez-les en playlist, même pendant la suite de la préparation."
-      bookmarks:
-        title: "Des marque-pages pour écouter plus tard"
-        text: "Un disque à essayer, un artiste à creuser ? Le bouton marque-page sur les fiches de la bibliothèque et de Discogs les garde dans « À écouter », sans toucher à vos cœurs. Vous y retrouvez vos marque-pages, séparés des recommandations reçues, avec un filtre artistes ou albums. « Rechercher pour écouter » prépare la recherche ; vous pouvez ensuite lancer un titre, le mettre en favori ou l’ajouter à une playlist. Un marque-page et une recommandation se retirent indépendamment."
-    playlists:
-      title: "Les playlists, version deluxe"
-      drag:
-        title: "Glisser-déposer"
-        text: "Attrapez un titre, ou carrément la pochette d'un album, et lâchez-le sur une playlist dans la barre de gauche : c'est ajouté. L'onglet Playlists s'ouvre tout seul pendant que vous glissez. Lâchez sur « + » et une nouvelle playlist naît. Sinon, l'icône liste au bout de chaque titre fait pareil. Et dans vos playlists, attrapez un titre par sa poignée ⋮⋮ pour changer l'ordre."
-      community:
-        title: "Communautaires : tout le monde ajoute"
-        text: "Cochez « Communautaire » en créant la playlist (ou plus tard, sur sa page) : toute la bande peut y glisser ses titres, et une colonne dit qui a ajouté quoi. Chacun ne retire que ses propres ajouts, et la personne qui l'a créée fait le ménage comme elle veut."
-      shared:
-        title: "Partagées : à écouter, pas à toucher"
-        text: "Une playlist rendue publique dans Subsonic (ou depuis votre appli Subsonic) apparaît chez tout le monde dans « Partagées » : on l'écoute, mais seul son auteur la modifie. Et pour faire tourner un album en vitesse : le bouton « Partager dans le salon » sur sa page."
-      mixed:
-        title: "Avec des titres d'ailleurs"
-        text: "Un titre YouTube ou SoundCloud se glisse dans une playlist comme les autres. Sur le site, tout est mélangé ; dans les applis Subsonic du téléphone, on ne voit que les titres de la bibliothèque."
-      import:
-        title: "Vos playlists de Deezer, Spotify ou Apple Music"
-        text: "Collez un lien Deezer ou envoyez l'export d'une playlist Spotify ou Apple Music : chaque titre est retrouvé dans la bibliothèque, ce qui manque est cherché sur YouTube, et vous vérifiez tout avant de créer la playlist. Un export Apple Music contient plusieurs playlists ? Vous choisissez laquelle importer. Le guide explique comment sortir sa playlist de chaque plateforme."
-    elsewhere:
-      title: "YouTube, Jamendo, SoundCloud : la musique qu'on n'a pas"
-      search:
-        title: "Ça commence par une recherche"
-        text: "Tapez un titre dans la recherche. Sous ce que la bibliothèque a trouvé, une partie « Ailleurs » s'ajoute : Jamendo répond tout de suite, et YouTube attend votre feu vert, avec un bouton. Pas de magie : un titre d'ailleurs, il faut d'abord le trouver."
-      sources:
-        title: "Deux caractères bien différents"
-        text: "Jamendo, c'est de la musique libre : le son arrive direct dans le lecteur, sans limite. YouTube, c'est l'immense catalogue, mais il se lit dans son lecteur officiel, une petite fenêtre vidéo à droite (c'est sa règle, pub comprise s'il en met une)."
-      what:
-        title: "Une fois trouvé, il fait tout comme les autres"
-        text: "Lecture, file d'attente, cœur, glisser-déposer dans une playlist, même communautaire : un titre d'ailleurs se comporte comme un titre de la bibliothèque. Il garde juste son étiquette « YouTube » ou « Jamendo » à la place de l'album."
-      quota:
-        title: "Des recherches YouTube à volonté (ou presque)"
-        text: "Les recherches YouTube passent maintenant par YouTube Music : plus de quota quotidien, et des résultats plus propres (artiste, album). Chacun a droit à 120 recherches par heure, chaque recherche est gardée et resservie à la personne suivante, et si YouTube Music fait des siennes, le site repasse tout seul par l'ancienne méthode, plus limitée."
-      refused:
-        title: "Vidéo boudeuse"
-        text: "Certaines vidéos refusent d'être lues ailleurs que sur YouTube. Le site tente alors une autre version du même titre ; sinon il vous propose de l'ouvrir sur YouTube et passe au suivant. Celles qui marchent remontent en tête des résultats (« déjà lue ici »)."
-      favorites:
-        title: "Importer depuis YouTube ou SoundCloud, en trois gestes"
-        text: "Sur YouTube ou SoundCloud, copiez le lien (bouton Partager, ou la barre d'adresse). Ici, ouvrez Favoris et collez-le dans la partie « D'ailleurs ». C'est tout : une vidéo, un titre SoundCloud, ou une playlist YouTube entière (jusqu'à 500 titres d'un coup, dans le même ordre) atterrit dans vos favoris, prête à être lue ou glissée dans vos playlists. Les vidéos que YouTube refuse de laisser lire ici sont comptées, pas ajoutées."
-      likes:
-        title: "Et mes « J'aime » YouTube ?"
-        text: "Ils sont privés : YouTube ne les montre à personne, même pas à nous. L'astuce : mettez ces titres dans une playlist « non répertoriée », et collez son lien."
-      fine_print:
-        title: "Les petits caractères"
-        text: "Les titres d'ailleurs vivent sur le site : vos applis Subsonic du téléphone ne les voient pas, ils ne se téléchargent pas et ne comptent pas dans vos écoutes Last.fm. Et si une vidéo disparaît de YouTube, elle disparaît aussi de chez nous (le site vérifie chaque mois)."
-    comfort:
-      title: "Les petits plus"
+        title: "On en parle ensemble ?"
+        text: "Ouvrez le salon, discutez en direct et faites circuler vos coups de cœur."
       lyrics:
-        title: "Karaoké : les paroles synchronisées"
-        text: "Lancez un titre, appuyez sur L (ou le bouton micro du lecteur) : les paroles prennent la place du salon. Quand elles sont synchronisées, la ligne chantée s'allume au milieu et défile pile en rythme, même si vous sautez un passage. Sinon, le texte défile tout seul à vue de nez. Micro pas fourni, chanter faux autorisé ; touche C pour revenir au salon."
-      queue:
-        title: "File d'attente"
-        text: "Laissez traîner la souris sur le lecteur : la file s'ouvre. Réordonnez à la souris, videz la suite, et « Annuler » rattrape les fausses manœuvres. Au bout d’un titre, « Lire juste après » le place à la suite du morceau en cours. Sur un album, le menu ⋯ permet aussi de placer tout le disque juste après, de l’ajouter à la file ou de le partager dans le salon."
-      shortcuts:
-        title: "Raccourcis clavier"
-        text: "Espace pour pause, N et P pour suivant et précédent, / pour chercher, C pour le salon, L pour les paroles, A pour la barre des artistes. Et ? pour tout voir."
-      download:
-        title: "Télécharger, envoyer"
-        text: "Selon ce que votre compte Subsonic permet : un album en zip ou un titre seul ; et envoyer de la musique (fichiers ou zip), rangée toute seule chez son artiste."
-      covers:
-        title: "Changer la pochette d’un album"
-        text: "La pochette ne vous plaît pas ? Si votre compte permet d’envoyer de la musique, un crayon apparaît au survol de la pochette de l’album. Cherchez une autre image sur Last.fm, ou collez son adresse, puis choisissez. Elle est enregistrée dans le dossier du disque ; l’ancienne est gardée en sauvegarde."
-    where:
-      title: "Qui garde quoi"
-      subsonic:
-        title: "Dans Subsonic, donc aussi sur le téléphone"
-        text: "Vos étoiles et vos cœurs, vos playlists avec leurs titres de la bibliothèque, vos écoutes (envoyées à Last.fm si vous avez relié votre compte dans Subsonic, Paramètres → Personnel)."
-      site:
-        title: "Seulement sur le site"
-        text: "Le salon et les commentaires, les Actualités, les favoris d’ailleurs et les titres d’ailleurs de vos playlists. Vos marque-pages d’artistes et d’albums, les recommandations reçues et vos choix de fiches Discogs restent aussi sur le site, liés à votre compte."
-    footer: "Une idée, un bug, un coup de cœur ? Dites-le dans le salon."
+        title: "Les paroles, en rythme"
+        text: "Quand elles sont synchronisées, la ligne chantée se surligne au fil du morceau."
+      press:
+        title: "À lire, puis à écouter"
+        text: "Ajoutez vos journaux et leurs flux RSS, puis retrouvez leurs articles sous les artistes."
+    themes:
+      listen:
+        title: "Écouter sa musique"
+        summary: "Lecteur, file et paroles"
+        description: "Les gestes essentiels pour profiter de chaque morceau."
+        guides:
+          g1:
+            title: "Lire un album entier, en aléatoire ou un morceau"
+            steps:
+              - "Ouvrez un album depuis sa pochette."
+              - "Choisissez Lire pour l’album entier, ou Aléatoire pour mélanger ses morceaux."
+              - "Pour un seul morceau, utilisez sa commande de lecture ; sur ordinateur, vous pouvez aussi double-cliquer sur sa ligne."
+            note: "La petite flèche sur une pochette lance aussi l’album sans quitter la page. Le lecteur permet de mettre en pause, de passer au morceau suivant, de déplacer la lecture et de régler le volume."
+          g2:
+            title: "Préparer et réorganiser la file"
+            steps:
+              - "Ouvrez la file avec le bouton du lecteur."
+              - "Utilisez Lire juste après ou Ajouter à la file."
+              - "Déplacez les titres, retirez-les ou annulez votre dernier geste."
+            note: "La file prépare l’écoute en cours. Une playlist conserve une sélection que vous pourrez retrouver. Sur ordinateur, les poignées et Alt + ↑ / ↓ permettent de réorganiser la file ; Annuler rattrape le dernier geste."
+          g3:
+            title: "Reprendre une écoute"
+            steps:
+              - "Votre dernière file revient à l’ouverture du site."
+              - "Retrouvez le morceau et sa position dans le lecteur."
+              - "Appuyez sur Lecture pour reprendre."
+            note: "Les titres d’ailleurs sont conservés dans ce navigateur. Sur un autre navigateur, Subsonic retrouve ses propres morceaux."
+          g4:
+            title: "Suivre les paroles synchronisées"
+            steps:
+              - "Lancez un morceau dans le lecteur."
+              - "Ouvrez les paroles avec le bouton micro ; sur ordinateur, la touche L fait aussi l’affaire."
+              - "Quand les paroles sont synchronisées, suivez la ligne chantée qui se surligne au rythme du morceau."
+            note: "Les paroles synchronisées suivent aussi vos sauts dans le morceau. Si seules des paroles simples sont disponibles, leur défilement est estimé. Certains morceaux n’ont pas de paroles disponibles."
+          g5:
+            title: "Anecdotes et raccourcis clavier"
+            steps:
+              - "Ouvrez les paroles pour retrouver les anecdotes disponibles au-dessus du texte."
+              - "Cliquez sur une anecdote pour passer à la suivante, ou laissez-les défiler."
+              - "Sur ordinateur, appuyez sur ? ou ouvrez l’aide des raccourcis depuis le menu."
+            note: "Espace : pause. N / P : suivant / précédent. ← / → : avancer ou reculer. L : paroles. C : salon. A : artistes et playlists. / : recherche. Échap : fermer un panneau ou une fenêtre."
+      social:
+        title: "Discuter et partager"
+        summary: "Salon et recommandations"
+        description: "Une découverte fait souvent naître une conversation."
+        guides:
+          g1:
+            title: "Discuter dans le salon"
+            steps:
+              - "Ouvrez le Salon avec son bouton ; sur ordinateur, la touche C fait aussi l’affaire."
+              - "Écrivez un message, répondez à quelqu’un ou ajoutez une réaction."
+              - "Depuis un album, choisissez Partager dans le salon pour envoyer sa fiche cliquable."
+            note: "Le salon est commun à tous : vous y voyez aussi les personnes présentes et celles qui écrivent. Vous pouvez modifier ou supprimer vos messages. Les échanges liés à une recommandation restent privés entre les deux participants."
+          g2:
+            title: "Mentions, recherche et notifications"
+            steps:
+              - "Écrivez @ pour mentionner une personne."
+              - "Retrouvez les messages dans la recherche ou l’onglet Mentions."
+              - "Activez les notifications de mentions dans vos réglages."
+            note: "Les badges signalent les messages non lus. Les notifications de mentions se règlent dans l’affichage du site ; votre navigateur doit aussi les autoriser."
+          g3:
+            title: "Voir les écoutes du moment"
+            steps:
+              - "Ouvrez le panneau du salon."
+              - "Regardez Écouté en ce moment, au-dessus des messages."
+              - "Cliquez sur une pochette pour ouvrir l’album."
+            note: "La section apparaît quand des écoutes sont signalées à Subsonic."
+          g4:
+            title: "Commenter sous un album"
+            steps:
+              - "Ouvrez la fiche d’un album."
+              - "Retrouvez sa discussion sous les morceaux."
+              - "Répondez, mentionnez quelqu’un ou réagissez."
+            note: "Chaque album possède son propre fil de discussion, distinct du salon général. Les commentaires et les notes dépendent des droits de votre compte."
+          g5:
+            title: "Conseiller et échanger en privé"
+            steps:
+              - "Sur un artiste, un album ou un morceau de la bibliothèque, choisissez Conseiller à quelqu’un. Le conseil est aussi proposé sur les fiches Discogs d’artistes et d’albums."
+              - "Choisissez un membre qui s’est déjà connecté au site et ajoutez un commentaire si vous le souhaitez."
+              - "Retrouvez le conseil dans À écouter et poursuivez l’échange privé avec cette personne."
+            note: "La discussion reste liée à cette recommandation : elle n’est publiée ni dans le salon ni sous l’album. Si plusieurs personnes conseillent la même référence, leurs noms sont regroupés, avec un fil privé par conseiller."
+          g6:
+            title: "Retrouver ses conseils et archives"
+            steps:
+              - "Ouvrez À écouter et consultez les recommandations reçues, avec le filtre artistes, albums ou morceaux."
+              - "Lancez les morceaux avec Tout écouter, ou commencez par une ligne ; gardez vos découvertes en marque-pages."
+              - "Retirez les conseils déjà traités, puis retrouvez-les dans les archives ; vos envois sont aussi consultables."
+            note: "Retirer une recommandation l’archive sans effacer les échanges. Les nouveaux commentaires restent accessibles, même dans les archives. Le marque-page personnel se retire indépendamment du conseil."
+      explore:
+        title: "Explorer de nouvelles musiques"
+        summary: "Mix, artistes et labels"
+        description: "Partez d’un disque que vous aimez. Voyez où il vous mène."
+        guides:
+          g1:
+            title: "Nouveautés, genres et décennies"
+            steps:
+              - "Partez de l’accueil et de ses sélections."
+              - "Ouvrez Albums pour parcourir genres, décennies ou ordre alphabétique."
+              - "Lancez un disque depuis sa pochette ou ouvrez sa fiche."
+            note: "L’accueil présente les derniers ajouts, les albums les plus écoutés, les mieux notés et ceux dont on parle. Quand Subsonic fournit ces informations, vous y retrouvez aussi les chiffres de la collection."
+          g2:
+            title: "Rechercher dans la bibliothèque"
+            steps:
+              - "Saisissez un nom d’artiste, d’album ou de morceau."
+              - "Repérez les résultats dans chaque catégorie."
+              - "Ouvrez une fiche ou lancez un titre."
+            note: "La recherche se prolonge dans Ailleurs pour les titres absents de la bibliothèque."
+          g3:
+            title: "Artistes similaires et titres populaires"
+            steps:
+              - "Ouvrez la page d’un artiste."
+              - "Commencez par ses titres populaires."
+              - "Explorez les artistes similaires présents dans la bibliothèque."
+            note: "Les titres populaires et les artistes similaires proviennent des informations Last.fm disponibles pour cet artiste. Les voisins proposés renvoient vers votre bibliothèque."
+          g4:
+            title: "Lancer une radio ou créer un mix"
+            steps:
+              - "Lancez une radio depuis la fiche d’un artiste ou la commande Radio de ce titre d’un morceau de la bibliothèque."
+              - "Pour affiner, ouvrez le créateur de mix : artiste de départ, styles, époques, 30, 60 ou 100 titres."
+              - "Choisissez de 1 à 4 niveaux d’artistes proches, vos favoris ou l’ordre chronologique, puis écoutez ou enregistrez en playlist."
+            note: "Les mix en un clic proposent aussi hasard, favoris, découverte et nouveautés. Un mix personnalisé reste dans les artistes et styles retenus ; s’il manque des titres, il peut être plus court. Une playlist enregistrée conserve la sélection obtenue."
+          g5:
+            title: "Biographies et discographies"
+            steps:
+              - "Ouvrez la biographie sur la fiche d’un artiste."
+              - "Choisissez la bonne identité Discogs pour sa discographie."
+              - "Explorez albums, singles et participations."
+            note: "Votre choix de fiche Discogs est mémorisé pour votre compte. Changer et Actualiser permettent de le corriger ou de relire le catalogue."
+          g6:
+            title: "Crédits, musiciens et autres groupes"
+            steps:
+              - "Ouvrez les crédits d’un album et choisissez son édition."
+              - "Cliquez sur le nom d’un musicien ou d’un producteur."
+              - "Suivez ses participations, ses groupes et ses autres projets."
+            note: "Discogs et MusicBrainz peuvent se compléter. Les crédits varient selon l’édition. Les membres d’un groupe sont présentés toutes périodes confondues : les crédits de l’album indiquent qui y a réellement participé."
+          g7:
+            title: "Découvrir un label et son Top"
+            steps:
+              - "Sur un album, ouvrez Crédits Discogs et choisissez l’édition correspondant à votre disque."
+              - "Cliquez sur un label, puis choisissez Découvrir le label pour varier les artistes et époques, ou Top du label pour un classement."
+              - "Vérifiez les titres retrouvés dans la bibliothèque, choisissez les versions YouTube manquantes, puis écoutez ou enregistrez la sélection."
+            note: "Pourquoi partir d’un album ? Un artiste peut publier chez plusieurs labels ; le label dépend de la sortie et de son édition. Le Top affiche sa source et le périmètre analysé : notes Discogs, auditeurs ou écoutes Last.fm. Vous pouvez arrêter l’analyse et garder les titres déjà prêts."
+      save:
+        title: "Garder et préparer ses écoutes"
+        summary: "Favoris, envies et playlists"
+        description: "Une envie pour demain, une sélection pour ce soir."
+        guides:
+          g1:
+            title: "Cœurs, étoiles ou marque-pages ?"
+            steps:
+              - "Le cœur garde un coup de cœur dans vos favoris."
+              - "Les étoiles donnent votre note à un album."
+              - "Le marque-page met une découverte de côté dans À écouter."
+            note: "Favoris et marque-pages restent indépendants. Vous pouvez vouloir essayer un album sans encore l’aimer."
+          g2:
+            title: "Retrouver ses envies dans À écouter"
+            steps:
+              - "Ajoutez un marque-page depuis une fiche musicale."
+              - "Ouvrez À écouter et filtrez artistes, albums ou morceaux."
+              - "Recherchez pour écouter, puis retirez l’envie quand vous le souhaitez."
+            note: "Les marque-pages d’artistes, d’albums et de morceaux sont personnels. Une recommandation reçue peut aussi devenir un marque-page ; supprimer l’un ne supprime pas l’autre."
+          g3:
+            title: "Créer et organiser une playlist"
+            steps:
+              - "Dans l’onglet Playlists, utilisez le bouton + pour créer votre playlist."
+              - "Ajoutez un morceau avec Ajouter à une playlist ; sur ordinateur, vous pouvez aussi glisser un titre ou la pochette d’un album sur une playlist."
+              - "Sur la page de votre playlist, déplacez les lignes avec leur poignée ou Alt + ↑ / ↓ sur ordinateur."
+            note: "Le créateur peut renommer ou supprimer la playlist et changer l’ordre des titres. Sur ordinateur, déposer un titre ou un album sur + crée directement une playlist avec ce contenu."
+          g4:
+            title: "Playlists partagées et communautaires"
+            steps:
+              - "Retrouvez les playlists publiques des autres dans Partagées : vous pouvez les écouter."
+              - "À la création de votre playlist ou sur sa fiche, cochez Communautaire pour permettre aux autres d’y ajouter des morceaux."
+              - "Repérez la colonne Ajouté par pour savoir qui a proposé chaque titre."
+            note: "Dans une playlist communautaire, chacun retire ses propres ajouts ; le créateur peut tout retirer et garde la main sur l’ordre. Rendre une playlist publique en lecture seule se fait dans Subsonic ou depuis une application Subsonic compatible."
+          g5:
+            title: "Importer Spotify, Deezer ou Apple Music"
+            steps:
+              - "Dans l’onglet Playlists, ouvrez Importer une playlist puis le guide correspondant à votre plateforme."
+              - "Collez le lien d’une playlist Deezer publique, ou envoyez le fichier exporté depuis Spotify ou Apple Music. Si l’export Apple contient plusieurs playlists, choisissez celle à importer."
+              - "Vérifiez les titres trouvés, les propositions à confirmer et les versions YouTube manquantes, puis créez votre playlist."
+            note: "Spotify passe par un export CSV, par exemple avec Exportify ; Apple Music utilise son export XML. M3U et listes de titres en texte sont aussi acceptés. Vous validez les correspondances avant la création : aucun accès direct à vos comptes Spotify ou Apple Music n’est nécessaire."
+          g6:
+            title: "Mélanger bibliothèque et titres d’ailleurs"
+            steps:
+              - "Trouvez un titre externe ou ajoutez-le par son lien."
+              - "Ajoutez-le à une playlist comme un titre de la bibliothèque."
+              - "Réorganisez la sélection pour écouter les deux ensemble."
+            note: "Les applications Subsonic du téléphone voient les titres de la bibliothèque. Les titres d’ailleurs restent sur le site."
+      elsewhere:
+        title: "Écouter la musique d’ailleurs"
+        summary: "YouTube, Jamendo, SoundCloud"
+        description: "Continuez la découverte au-delà de la bibliothèque."
+        guides:
+          g1:
+            title: "Chercher sur YouTube et Jamendo"
+            steps:
+              - "Lancez une recherche d’artiste ou de morceau."
+              - "Consultez Ailleurs et lancez la recherche YouTube si nécessaire."
+              - "Écoutez un résultat ou ajoutez-le à votre sélection."
+            note: "YouTube et SoundCloud utilisent leurs lecteurs officiels, avec leurs conditions de lecture et parfois des publicités. Jamendo propose une lecture audio dans le lecteur du site. La disponibilité des sources dépend de la configuration du site."
+          g2:
+            title: "Ajouter un lien YouTube ou SoundCloud"
+            steps:
+              - "Copiez le lien d’une vidéo YouTube ou d’un titre SoundCloud."
+              - "Collez-le dans Favoris, partie D’ailleurs, ou dans Mon compte."
+              - "Retrouvez le morceau dans vos favoris d’ailleurs."
+            note: "Le lien d’un profil ou d’une playlist SoundCloud ne remplace pas celui d’un titre."
+          g3:
+            title: "Importer une playlist YouTube"
+            steps:
+              - "Utilisez une playlist publique ou non répertoriée."
+              - "Copiez son lien puis collez-le dans Favoris → D’ailleurs."
+              - "Retrouvez les titres acceptés dans leur ordre."
+            note: "Les J’aime YouTube et À regarder plus tard sont privés : placez les titres à importer dans une playlist publique ou non répertoriée, puis collez son lien. Jusqu’à 500 titres sont acceptés ; les vidéos refusant la lecture intégrée sont signalées."
+          g4:
+            title: "Garder et ajouter à une playlist"
+            steps:
+              - "Utilisez le cœur pour garder un titre d’ailleurs."
+              - "Retrouvez-le dans Favoris → D’ailleurs."
+              - "Ajoutez-le à une playlist ou à la file."
+            note: "Ces favoris sont personnels et liés à votre compte sur le site."
+          g5:
+            title: "Comprendre les limites de lecture"
+            steps:
+              - "Si une vidéo refuse la lecture, une autre version peut être essayée."
+              - "Utilisez Ouvrir sur YouTube si le lecteur intégré est refusé."
+              - "Si la limite de recherche est atteinte, réessayez plus tard."
+            note: "La limite est de 120 recherches YouTube par heure et par personne. Les titres externes ne se téléchargent pas et ne comptent pas dans les écoutes Last.fm. Une vidéo supprimée ou devenue privée peut disparaître de votre sélection."
+      press:
+        title: "Suivre l’actualité musicale"
+        summary: "Journaux, flux RSS et sorties par style"
+        description: "Lisez vos journaux et suivez les albums et EP annoncés dans vos styles."
+        guides:
+          g1:
+            title: "Lire les journaux et webzines"
+            steps:
+              - "Ouvrez Actualités depuis la navigation."
+              - "Parcourez les derniers articles ou choisissez un journal."
+              - "Ouvrez l’article pour le lire sur le site du journal."
+            note: "Le site rassemble les liens et un début de résumé. Les articles se lisent chez leurs auteurs."
+          g2:
+            title: "Ajouter un journal ou un flux RSS"
+            steps:
+              - "Dans Actualités, choisissez Ajouter un flux."
+              - "Collez l’adresse du journal ou directement celle de son flux RSS."
+              - "Validez pour alimenter les actualités de tout le monde."
+            note: "Le flux ajouté sert à tout le monde et il est relu chaque heure. Si l’adresse du journal ne suffit pas, utilisez celle de son flux RSS ou Atom. Une adresse de rubrique peut permettre de suivre seulement sa partie musique."
+          g3:
+            title: "Choisir ses sources"
+            steps:
+              - "Retrouvez les pastilles des journaux dans Actualités."
+              - "Décochez ceux que vous souhaitez masquer."
+              - "Cliquez sur une pastille pour consulter ce journal seul."
+            note: "Masquer un journal ne le masque que pour vous, y compris dans Dans la presse. Retirer un flux, réservé à la personne qui l’a ajouté ou à l’administrateur, le retire pour tous et efface ses articles gardés."
+          g4:
+            title: "Retrouver la presse sous les groupes"
+            steps:
+              - "Ouvrez la page d’un artiste ou d’un groupe."
+              - "Descendez sous les albums, jusqu’à Dans la presse."
+              - "Ouvrez un article qui vous intéresse."
+            note: "La rubrique retrouve les articles collectés qui citent l’artiste dans leur titre, parmi les sources que vous affichez. Elle se remplit avec les flux suivis depuis leur ajout et n’apparaît pas si aucun article ne correspond ; les archives complètes des journaux ne sont pas recherchées."
+          g5:
+            title: "Suivre les sorties de la semaine"
+            steps:
+              - "Dans Actualités, ouvrez Sorties de la semaine et choisissez un style MusicBrainz."
+              - "Dès le lundi, consultez les albums et EP annoncés jusqu’au dimanche, vendredi compris."
+              - "Cliquez sur Suivre ce style pour le retrouver sur votre compte."
+            note: "Une sortie apparaît dès que MusicBrainz connaît sa date et son style. Les flèches permettent aussi de consulter les semaines à venir."
+      settings:
+        title: "Personnaliser et gérer"
+        summary: "Affichage et bibliothèque"
+        description: "Quelques réglages pour que l’application vous ressemble."
+        guides:
+          g1:
+            title: "Régler l’affichage et les colonnes"
+            steps:
+              - "Ouvrez la roue dentée ou Mon compte → Affichage."
+              - "Choisissez la densité, les pochettes et le comportement de la barre des artistes et playlists."
+              - "Réglez les colonnes de Parcourir et de la file séparément : style, année, durée, débit, format, taille…"
+            note: "Vos choix s’appliquent immédiatement sans interrompre l’écoute. Sur téléphone, le bouton de menu ouvre les artistes, les playlists et les liens ; le salon dispose de son propre volet. Les réglages de l’affichage sur ordinateur sont conservés."
+          g2:
+            title: "Personnaliser son profil"
+            steps:
+              - "Ouvrez Mon compte avec votre nom en haut à droite."
+              - "Choisissez une image ou récupérez votre photo Gravatar."
+              - "Retirez la photo du site pour revenir à celle de Subsonic."
+            note: "La photo choisie sur le site est liée à votre compte."
+          g3:
+            title: "Télécharger ou envoyer de la musique"
+            steps:
+              - "Téléchargez un titre ou un album depuis sa fiche."
+              - "Pour enrichir la bibliothèque, ouvrez Envoyer."
+              - "Choisissez vos fichiers ou une archive ZIP."
+            note: "Ces actions dépendent des droits de votre compte Subsonic."
+          g4:
+            title: "Pochettes et informations d’album"
+            steps:
+              - "Ouvrez la fiche d’un album."
+              - "Utilisez le crayon de sa pochette pour changer l’image, ou Modifier les informations pour corriger les tags."
+              - "Préparez vos corrections manuellement ou avec MusicBrainz ou Discogs, puis enregistrez-les dans les fichiers."
+            note: "Pour une pochette, cherchez une image sur Last.fm ou collez son adresse. Les informations modifiables et les blocages éventuels sont précisés par l’éditeur, selon vos droits et les fichiers. Les corrections de tags sont suivies d’une réindexation de Subsonic."
+          g5:
+            title: "Comprendre son compte et ses droits"
+            steps:
+              - "Ouvrez Mon compte pour voir ce que votre compte permet."
+              - "Retrouvez les liens Subsonic pour le mot de passe et Last.fm."
+              - "En cas de mot de passe oublié, contactez l’administrateur."
+            note: "Certains boutons sont réservés aux comptes autorisés à télécharger, envoyer ou modifier les informations."
+          g6:
+            title: "Site, téléphone et Last.fm : qui garde quoi ?"
+            steps:
+              - "Retrouvez cœurs, notes et titres de la bibliothèque de vos playlists dans Subsonic et ses applications compatibles."
+              - "Le salon, les commentaires, les Actualités, les marque-pages, les recommandations, les choix Discogs et les titres d’ailleurs restent sur le site."
+              - "Reliez Last.fm dans les réglages personnels Subsonic pour y transmettre les écoutes des morceaux de la bibliothèque."
+            note: "Le site complète votre bibliothèque Subsonic. Les titres d’ailleurs des playlists et leurs favoris sont liés à votre compte sur le site ; ils n’apparaissent pas dans les applications Subsonic."
+
   versions:
     title: "Versions du site"
     intro: "Ce qui a changé sur le site, de la plus récente à la plus ancienne. Le numéro à côté du titre du site montre la version en ligne : une pastille rouge dessus, c'est qu'il y a du nouveau depuis votre dernier passage ici."
@@ -986,6 +1450,26 @@ webapp:
     catalog_large: "Ce catalogue dépasse la limite de lecture. Consultez sa fiche Discogs."
     load_catalog: "Le catalogue doit être relu avant cette sélection. Rechargez la fiche du label."
     rank_restart: "Les chiffres conservés ont expiré. Relancez le classement depuis le début."
+  weekly:
+    title: "Sorties de la semaine"
+    style: "Rechercher un style MusicBrainz"
+    choose: "Choisissez un style MusicBrainz pour voir les albums et EP annoncés."
+    follow: "Suivre ce style"
+    unfollow: "Ne plus suivre ce style"
+    followed: "Mes styles suivis"
+    none: "Vous ne suivez encore aucun style."
+    previous: "Semaine précédente"
+    next: "Semaine suivante"
+    today: "Cette semaine"
+    upcoming: "Annoncé pour le {date}"
+    released: "Sorti le {date}"
+    empty: "Aucune sortie annoncée dans MusicBrainz pour ce style cette semaine."
+    loading: "Chargement…"
+    stale: "MusicBrainz est indisponible. Derniers résultats en mémoire."
+    retry: "Réessayer"
+    listen: "Rechercher pour écouter"
+    local: "Ouvrir l’album"
+    guide: "Voir le guide"
   news:
     title: "Actualités"
     intro: "Les derniers articles des webzines suivis par le site. Chacun peut en ajouter, pour tout le monde, et décocher ceux qu'il ne veut pas voir. Les articles s'ouvrent chez le webzine."

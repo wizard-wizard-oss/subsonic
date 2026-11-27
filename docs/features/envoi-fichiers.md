@@ -1,10 +1,40 @@
 # Envoi de musique et rangement dans la bibliothèque (site web)
 
 ## En bref
-Une personne qui a le droit Subsonic `upload` envoie un zip d'albums (ou des titres seuls) depuis la page « Envoyer ».
+Une personne qui a le droit Subsonic `upload` envoie uniquement un ZIP d’albums depuis la page « Envoyer ».
 Le site décompresse le zip, puis **range aussitôt** chaque album qui respecte la nomenclature à sa place dans la
 bibliothèque, chez son artiste. Ce qu'il ne sait pas placer attend dans `Incoming`, pour être rangé à la main. Subsonic
 scanne ensuite pour faire apparaître les nouveaux titres.
+
+## Albums uniquement et notifications (1.17)
+
+Les fichiers audio envoyés directement sont refusés côté navigateur et serveur, sans écriture de musique ni
+entrée d’historique. Un ZIP contenant des titres à sa racine ou sans dossier artiste est refusé intégralement
+avant de placer le moindre album. Les archives valides respectent Artiste/Album/titres, avec les dossiers
+de disques existants. Les limites de taille sont fournies au navigateur par le statut du serveur.
+
+Le MP3 de Baston 3000 (envoi 18 de Mnu) a été retiré de la bibliothèque le 27/11/2026 à la demande de
+l’utilisateur. Copie de récupération hors musique dans `/data/removed-uploads/upload-18/`, empreinte
+SHA-256 vérifiée et scan Subsonic demandé. L’historique d’origine est conservé. Le destinataire est
+celui de cet envoi ; le message utilise les [notifications privées](notifications.md).
+
+## Fiabilité du rangement et de l’attribution (1.17)
+
+Le rattrapage isole les erreurs de lecture, de déplacement ou de nettoyage par album et par artiste.
+Un refus de droits est journalisé avec le dossier concerné ; les autres albums continuent à être traités.
+Les déplacements réussis déclenchent le scan même si le nettoyage d’un dossier vidé échoue.
+`IncomingSorterTest` couvre ces trois cas. Aucun droit du disque n’est modifié automatiquement.
+
+Après une correction de tags, le cache des chemins utilisé pour afficher l’auteur est également invalidé :
+voir [Tags d’albums](tags-albums.md). L’historique d’envoi reste inchangé.
+
+Diagnostic de production du 27/11/2026 : Baston 3000 est un MP3 seul envoyé par Mnu, à la racine d’Incoming,
+avec un artiste et un titre mais sans tag album. Ses droits sont corrects (664, propriétaire du site) ;
+le téléchargement individuel via Subsonic répond 200 avec les comptes thomas et Mnu. Subsonic annonce
+un album générique « Incoming » avec un titre, mais `getAlbum` n’en renvoie aucune piste et `getSong`
+n’expose pas d’`albumId`. La fiche album ne peut donc pas fournir son téléchargement. Il faut compléter
+le nom d’album et ranger le fichier sous Artiste/Album pour constituer un véritable album. Aucun déplacement
+ni modification de tags de ce titre n’a été effectué pendant ce diagnostic.
 
 ## Historique des envois (1.10)
 La page « Envoyer » affiche un tableau partagé entre tous les comptes connectés : date, compte connecté,
@@ -35,7 +65,7 @@ d’une attente du DOM. Sauvegarde et image de retour arrière consignées dans 
 Validation : `UploadHistoryTest` (attribution, accès, ZIP, échecs, persistance, pagination et envois simultanés) et parcours jsdom PC
 (tableau, auteur, résultat et retour sur la page).
 
-## La nomenclature (`pimedia/webapp/layout.py`)
+## La nomenclature (`pimedia/webapp/library/naming.py`)
 La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous-dossier par album :
 
 ```
@@ -45,28 +75,42 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
 <racine>/Incoming/                           ce qui attend d'être rangé à la main
 ```
 
-- L'artiste et l'album **commencent par une majuscule** (ou un chiffre, un signe : « 38 Spesh », « ...Et Après »).
+- Les nouveaux dossiers d'artistes et d'albums reçoivent **une majuscule à chaque mot** (séparateur : espace ou
+  tiret), sans abaisser les autres lettres : « jean-michel jarre » devient « Jean-Michel Jarre », « DJ NaZe »
+  reste « DJ NaZe ». Les chiffres, accents et signes sont conservés (« 38 Spesh », « ...Et Après »).
 - Un sous-dossier d'album n'est accepté que s'il s'agit d'un **disque** : `CD1`, `CD 2`, `Disc 1`, `Disk 2`, `Disque 3`
   (majuscules indifférentes). « Face A » ou « Bonus » ne le sont pas.
 - **Un seul dossier par artiste** : un artiste déjà présent est retrouvé **sans tenir compte des majuscules, des
   accents, des espaces ni de la ponctuation** (« Dalek » rejoint « Dälek », « DJ NaZe » rejoint « DJ Naze »,
-  « A.A.Williams » rejoint « A.A. Williams ») ; le nom du dossier existant est gardé.
+  « A.A.Williams » rejoint « A.A. Williams ») ; la recherche précède la mise en majuscules des initiales et le nom
+  du dossier existant est gardé, même si sa casse ne suit pas la règle des nouveaux dossiers.
   Depuis la 1.7.9, les ligatures sont également équivalentes (`Œdipe` / `Oedipe`, `æ` / `ae`) via la comparaison
-  commune `shared.text.normalize`. Le nettoyage des chemins d’envoi reste distinct de cette clé de comparaison.
+  commune `shared.text.normalize` (utilisée par `LibraryNaming.comparison_key` pour le rangement).
+  `LibraryNaming.normalize_artist` et `normalize_album` appliquent la nomenclature aux nouveaux dossiers ;
+  `LibraryFiles.find_matching_folder` retrouve les
+  dossiers existants en comparant les clés, sans changer leurs noms. AnyASCII 0.3.3 complète les lettres latines
+  non décomposables (`ø/o`, `ł/l`, `đ/d`) ; les noms exacts et les clés Unicode natives sont prioritaires.
+  Une correspondance ambiguë attend dans Incoming. Les autres alphabets restent en Unicode : les écritures
+  arabes ne sont pas transformées en noms latins pour décider automatiquement d’un rangement.
+  Le nettoyage des chemins d’envoi reste distinct de cette clé de comparaison.
+  Décision du 18/11/2026 : les futurs rapprochements entre alphabets (par exemple arabe/latin) issus d’une
+  même translittération seront proposés pour validation explicite, sans fusion ni rangement automatique sur
+  cette seule base. La génération et l’interface de ces suggestions ne sont pas encore implémentées.
 - **Rien n'est jamais écrasé** : un album déjà présent chez l'artiste (même nom, aux mêmes détails près) n'est
   pas rangé, il attend dans Incoming.
-- Aucun nom n'est corrigé automatiquement (pas de majuscule ajoutée, pas d'accent retiré).
-- Les noms de dossiers restent ceux d'origine : les accents et la ponctuation (`Mon$rock`, `[Deluxe]`, `!!!`) sont
-  conservés. La simplification des noms sert uniquement à retrouver un artiste ou un album déjà présent ; elle ne
-  renomme jamais le dossier existant.
+- La seule correction automatique des noms est la mise en majuscules des initiales des nouveaux dossiers.
+  Les accents et la ponctuation (`Mon$rock`, `[Deluxe]`, `!!!`) sont conservés. La simplification des noms sert
+  uniquement à retrouver un artiste ou un album déjà présent ; elle ne renomme jamais le dossier existant.
+  Aucune recherche de l'orthographe officielle sur un service externe et aucune modification des tags audio.
 - **Compilations** : le dossier `Compilations` se range comme un artiste (`Compilations/Album/titre`) : un zip
   `Compilations/Mon album/…` rejoint le dossier existant. Il a un raccourci en haut de la barre (`barre-gauche.md`).
 
 ## Ce qui se passe, de A à Z
 1. Le lien **« Envoyer »** (ou **« Envois »** sans droit `upload`) est accessible à tous les comptes connectés.
    L'historique est commun ; le formulaire reste réservé aux comptes qui peuvent envoyer et à une racine accessible.
-2. Page `#/upload` : on glisse des fichiers (ou clic pour choisir). Formats : **zip** (2 Go au plus), mp3, flac, m4a, aac,
-   ogg, oga, opus, wav, aiff, aif (300 Mo au plus). Un format ou une taille refusés sont expliqués tout de suite.
+2. Page `#/upload` : on glisse des albums **ZIP** (2 Go au plus), ou clic pour choisir. Les formats audio
+   mp3, flac, m4a, aac, ogg, oga, opus, wav, aiff et aif restent acceptés à l’intérieur (300 Mo par titre).
+   Les fichiers audio seuls, formats inconnus et tailles refusées sont expliqués tout de suite.
 3. **Barres de progression** : une par fichier (l'envoi, puis une barre animée « Décompression et rangement… » pendant que
    le serveur travaille : il ne dit pas où il en est), et une pour le lot entier (« Fichier 2 sur 5 — 40 % », puis
    « Terminé »). Un fichier à la fois.
@@ -78,17 +122,18 @@ La racine de la musique (`MUSIC_DIR`) contient un dossier par artiste et un sous
    sans perdre les accents combinés ; les anciens noms CP437 restent pris en charge. 4 Go décompressés au plus,
    300 Mo par titre. Zip abîmé, chiffré, ou sans aucun titre : refusé, rien ne reste.
 6. **Rangement immédiat** : chaque dossier qui contient des titres est un album (le dossier au-dessus pour un dossier de
-   disque) ; le dossier qui contient l'album est l'artiste. Si la nomenclature est respectée, l'album est déplacé d'un coup
-   dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié), le dossier de l'artiste étant créé s'il n'existe pas.
-7. **Ce qui reste** rejoint Incoming tel qu'il était organisé dans le zip (fusionné avec les dossiers déjà là, jamais
-   d'écrasement : « titre (2).flac »). Des titres à la racine du zip sont réunis dans un dossier au nom du zip. Le zip est
-   effacé.
-8. **Titre seul** (pas de zip) : il n'a ni artiste ni album, il attend à la racine d'Incoming.
+   disque) ; le dossier qui contient l'album est l'artiste. L'artiste existant est recherché avec la comparaison commune.
+   Les initiales des mots du nouvel album et, si nécessaire, du nouvel artiste sont mises en majuscules, puis l'album
+   est déplacé d'un coup dans `<racine>/Artiste/Album` (Subsonic n'en voit jamais une moitié).
+7. **Ce qui reste** rejoint Incoming tel qu’il était organisé dans le ZIP (fusionné avec les dossiers déjà là,
+   sans écrasement : « titre (2).flac »). Si un titre est à la racine du ZIP ou dans un album sans artiste,
+   toute l’archive est refusée avant placement. Le ZIP temporaire est effacé.
+8. **Titre seul** (pas de ZIP) : refusé avant réception avec le message expliquant la règle des albums.
 9. La page affiche le résultat de chaque fichier : « Décompressé : 12 fichiers — rangé dans Converge/Jane Doe — à ranger à
    la main dans Incoming : … ».
 10. En fin de lot (`POST /api/upload/finish`), le site lance `startScan` : avec le compte de la personne, sinon avec un
     administrateur connu du site (jusqu'à 3). Le scan est réservé aux administrateurs de Subsonic.
-11. **Rattrapage d'Incoming** (`pimedia/webapp/incoming.py`, toutes les 10 minutes) : un album corrigé à la main sur place,
+11. **Rattrapage d'Incoming** (`pimedia/webapp/library/incoming.py`, toutes les 10 minutes) : un album corrigé à la main sur place,
     en `Incoming/Artiste/Album`, est rangé de la même façon une fois resté `INCOMING_WAIT_HOURS` heures sans changement
     (1 par défaut ; 0 = jamais), puis Subsonic scanne (avec un administrateur connu du site). Le dossier d'artiste vidé
     quitte Incoming. Ce qui a été rangé est écrit dans le journal du conteneur.
@@ -105,11 +150,12 @@ Bibliothèque de départ : `Dälek/Absence/`, `Converge/Axe to Fall/`.
 | `Mes envois/Chat Pile/Cool World/01.flac` | `<racine>/Chat Pile/Cool World/` | dossier en trop autour, ignoré |
 | `Converge/Jane Doe/…` + `Dälek/Precipice/…` | les deux rangés | chaque album est traité à part |
 | `Converge/axe to fall/01.flac` | `Incoming/Converge/axe to fall/` | album déjà présent |
-| `converge/Jane Doe/01.flac` | `Incoming/converge/Jane Doe/` | pas de majuscule |
+| `converge/jane doe/01.flac` | `<racine>/Converge/Jane Doe/` | artiste existant conservé, initiales de l'album mises en majuscules |
+| `jean-michel jarre/nouvel album/01.flac` | `<racine>/Jean-Michel Jarre/Nouvel Album/` | nouvel artiste et album : majuscule à chaque mot |
 | `Converge/Live/Face A/01.flac` | `Incoming/Converge/Live/Face A/` | « Face A » n'est pas un disque, et « Converge » est un artiste connu : doute |
-| `Jane Doe/01.flac` | `Incoming/Jane Doe/` | album sans artiste |
+| `Jane Doe/01.flac` | ZIP refusé | album sans dossier artiste |
 | `01.flac` à la racine de `Jane Doe.zip` | `Incoming/Jane Doe/01.flac` | idem |
-| un mp3 envoyé seul | `Incoming/titre.mp3` | idem |
+| un MP3 envoyé seul | refusé | seuls les albums en ZIP sont autorisés |
 
 **Dossiers en trop** : un dossier au-dessus de l'artiste est ignoré seulement s'il ne contient rien d'autre que le suivant
 et ne porte pas le nom d'un artiste de la bibliothèque. Sans cette règle, `Converge/Live/Face A` passerait pour l'artiste
@@ -127,10 +173,12 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
   `apache-exemple.conf`). Détails : `docs/DEPLOIEMENT.md`.
 
 ## Où est le code
-- `pimedia/webapp/layout.py` : nomenclature (`is_disc`, `capitalised`, `normalised`, `tracks_fit`, `find_albums`) et
-  `MusicTree.place` (ranger un album chez son artiste).
+- `pimedia/webapp/library/naming.py` : `LibraryNaming`, règles de noms d’artistes et d’albums, et clés de comparaison
+  déléguées à la normalisation Unicode commune.
+- `pimedia/webapp/library/files.py` : accès aux fichiers (`is_disc`, `tracks_fit`, `find_albums`) et
+  `LibraryFiles.place` (ranger un album chez son artiste).
 - `pimedia/webapp/uploads.py` : réception, décompression, rangement des albums du zip, scan.
-- `pimedia/webapp/incoming.py` : rattrapage d'Incoming (tâche lancée par `app.py`).
+- `pimedia/webapp/library/incoming.py` : rattrapage d'Incoming (tâche lancée par `app.py`).
 - `pimedia/webapp/controllers/uploads.py`, `controllers/base.py` (`raw_writer`), `config.py` (`music_dir`, `incoming_name`,
   `incoming_wait_hours`).
 - Page : `web-pc/static/js/upload.js`, styles `web-pc/static/css/views.css` (`.upload-*`), textes `i18n/fr.yaml`
@@ -138,7 +186,20 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
 - `compose.yaml`, `docker/web/Dockerfile`, `.env.example`, `deploy/pc/*-exemple.conf`.
 
 ## Tests
-- `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, majuscules), jamais d'écrasement,
+
+Correctif 1.10.3 préparé localement le 17/11/2026 : les 725 tests Python complets et les trois parcours PC jsdom
+(389 contrôles) passent sous Python 3.12.14 et jsdom 25.0.1. Docker local indisponible. AnyASCII 0.3.3 est testé
+comme dépendance PC ; les clés natives, les ambiguïtés et les destinations déjà occupées sont couvertes.
+Version 1.10.3 publiée le 18/11/2026 sur https://music2.foos.fr depuis le commit `c52cf40` ; les 219 fichiers
+applicatifs et AnyASCII 0.3.3 sont vérifiés. Le rattrapage a placé automatiquement `Trentemøller/Trentemøller` :
+dix MP3, 104194801 octets et empreintes SHA-256 identiques. Scan terminé et dix titres au nouveau chemin vérifiés
+par l’API Subsonic ; l’album apparaît aussi dans les nouveautés. La recherche ID3 (`search3`) ne le renvoie pas
+encore lors du contrôle après scan, point laissé à examiner séparément. Sauvegarde et image de retour arrière
+consignées dans `docs/DEPLOIEMENT.md`.
+
+- `tests/test_library_naming.py` : initiales, caractères latins non décomposables, arabe, autres alphabets et signes conservés.
+- `tests/test_incoming.py` : nomenclature, rangement, artiste retrouvé (accents, casse reçue quelconque),
+  initiales des nouveaux artistes et albums, jamais d'écrasement,
   rattrapage d'Incoming et son délai.
 - `tests/test_webapp_upload.py` : envoi HTTP, droits, refus, zip (rangement immédiat, dossiers en trop, cas laissés dans
   Incoming, chemins piégés, zip abîmé), scan ; conservation des accents et de la ponctuation, UTF-8 sans marqueur,
@@ -154,5 +215,6 @@ L'API Subsonic n'a **pas d'envoi de fichiers** : le site écrit directement dans
 - Tests lancés sur macOS et dans Docker (Linux) ; sur macOS le disque ignore les majuscules (« converge » et « Converge »
   sont le même dossier), pas sur le serveur.
 - Pas de progression réelle du traitement côté serveur (barre animée seulement) ; pas de reprise d'un envoi coupé.
-- Les tags ID3 ne sont ni lus ni corrigés : seuls les noms de dossiers comptent (`docs/ETAT.md` point 3 quater).
+- L'envoi et le rangement ne modifient pas les tags audio : seuls les noms de dossiers comptent. La correction
+  est une action distincte dans [l'éditeur de tags d'album](tags-albums.md), avec le droit « Modifier pochettes et tags ».
 - Aucun quota par personne ni contrôle de l'espace disque.

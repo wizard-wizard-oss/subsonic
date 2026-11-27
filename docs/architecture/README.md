@@ -55,16 +55,76 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
 2. Le Pi (`server/`, `menu/`) n'importe **jamais** `webapp`.
 3. Rien n'empêche encore `webapp` d'importer `server` (c'est le « partagé de fait » ci-dessus) : à resserrer quand le
    déplacement vers `shared/` sera fait.
+4. Les services de `webapp/` n'importent jamais `controllers/` (erreurs de droits : `webapp/errors.py`).
+5. Chaque adresse d'API externe n'est appelée que par sa classe (MusicBrainz, Deezer, Spotify, Last.fm, Discogs, iTunes).
+6. Pas d'`urllib.request` hors du transport `shared/providers/http.py` dans `shared/` et `webapp/` (exceptions déclarées :
+   le client Subsonic et le flux audio des radios).
+7. `tests/test_code_size.py` : 40 lignes par fonction et 300 par fichier dans `webapp/` et `shared/` ; les exceptions
+   existantes sont figées et ne peuvent que diminuer. `tests/test_webapp_routes.py` fige la table des routes.
+
+## Services externes (remise à plat du 27/11/2026)
+- Socle commun dans `shared/providers/` : `http.py` (seul transport, adresses publiques vérifiées), `cache.py` et
+  `metadata.py` (`PublicMetadata` : cache par préfixe, cadence par service, une reprise, copie de moins de 30 jours servie
+  pendant une panne, jamais pour un rafraîchissement demandé ni pour une entité supprimée).
+- Une classe par service : `shared/providers/` pour ceux des deux éditions (MusicBrainz, Wikipédia, paroles, Deezer,
+  Spotify), `webapp/providers/` pour ceux du site seul (Discogs, Last.fm, Gravatar).
+- YouTube garde ses transports pour l'instant (`JsonHttp`, YouTube Music ; décision du 27/11). iTunes, PodcastIndex et
+  Jamendo passent par le transport commun (`json_get` garde leurs erreurs `DirectoryError`).
 
 ## Couches dans chaque édition
-L'exploration des labels et collaborations (07/11/2026) est propre au site (`webapp/exploration*`, dépôt et contrôleur).
-Elle réutilise `shared/external.JsonFetcher` ; ses appels MusicBrainz, comme ceux des anecdotes des deux éditions,
-partagent désormais un régulateur par processus (1,05 seconde entre départs). Aucun module n'a changé de zone.
+L'exploration des labels et collaborations est propre au site (`webapp/exploration*`) ; toutes ses requêtes passent par
+la classe `shared/providers/musicbrainz`, qui garde aussi la cadence (1,05 seconde entre départs).
+Les fonctionnalités récentes sont rangées en paquets (`webapp/tags/`, `notifications/`, `recommendations/`,
+`listen_later/`, `weekly_releases/`) ; chaque contrôleur déclare ses routes (`routes()`), `app.py` assemble seulement.
 
 Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement), assemblés à **un seul endroit**
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
 
 ## Où chercher quoi
+
+### Accès à la bibliothèque du site
+
+Le package `pimedia/webapp/library/` regroupe le noyau d’accès à la bibliothèque. Le transport Subsonic reste dans
+`webapp/subsonic.py`, le SQL dans les dépôts `webapp/storage/`, et les contrôleurs HTTP dans `webapp/controllers/`.
+
+| Module | Responsabilité |
+|---|---|
+| `catalog.py` — `Library` | Consultation du catalogue par l’API Subsonic : albums, titres, recherche et données propres au site. |
+| `folders.py` — `Folders` | Navigation par dossiers via Subsonic et résolution des identifiants de dossiers/ID3. |
+| `artists.py` — `ArtistIndexes` | Index des artistes et raccourcis, avec le dépôt et les événements existants. |
+| `statistics.py` — `SubsonicStatistics` | Lecture limitée aux compteurs déjà calculés par Subsonic. |
+| `files.py` — `LibraryFiles` | Arborescence, recherche des dossiers existants et placement des albums sur le disque. |
+| `incoming.py` — `IncomingSorter` | Albums en attente, délai sans modification, rangement puis demande de scan. |
+| `naming.py` — `LibraryNaming` | Noms conformes pour les nouveaux artistes/albums et clés de comparaison déléguées à `shared.text.normalize`. |
+| `cache.py` — `TtlCache` | Cache mémoire réutilisé par les accès Subsonic et les services consommateurs. |
+
+`Uploads` reçoit et décompresse les fichiers puis appelle `LibraryFiles`, comme `IncomingSorter`. Tous deux utilisent
+donc le même placement et la même politique de nommage. Les fonctionnalités telles que les pochettes et les
+playlists restent dans leurs services et consomment ces accès. `app.py` assemble les objets, dont la politique de
+nommage injectable dans `LibraryFiles`. Les sous-modules s’importent explicitement ; `__init__.py` reste descriptif.
+Aucun déplacement de zone Pi/web/shared ni modification de base. AnyASCII 0.3.3 est une dépendance PC utilisée
+uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi restent sans cette dépendance.
+
+### Autres fonctionnalités
+
+- Affichage mobile (1.15) : `web-pc/static/js/mobile/bootstrap.js` assemble un adaptateur de navigation selon
+  l’écran et la session. `navigation.js` réutilise les artistes, playlists, routes et fil du salon existants,
+  avec restauration à la sortie du mode mobile. CSS conditionnelles dans `static/css/mobile/` ; aucune règle
+  métier, donnée ou route dupliquée, aucun changement du moteur YouTube ni de l’édition Pi.
+
+- Tags d'albums (1.11) : `album_tags.py` organise l'édition ; entités/limites dans
+  `tag_entities.py`, seul `audio_tags.py` écrit les fichiers. `tag_sources.py` appelle le fournisseur choisi.
+  `MusicBrainzMetadata` est extrait d'`exploration.py` vers `musicbrainz.py` ; le réexport conserve les imports
+  existants et l'assemblage injecte la même instance dans exploration/tags. Discogs conserve son client et ses
+  projections typées enrichies. Régulation/cache existants réutilisés ; aucun déplacement Pi/web/shared ni
+  copie SQL des tags. `library_scan.py` mutualise les scans envois/corrections. Contrôleur et JS/CSS dédiés.
+
+- Commentaires des recommandations (1.14) : entité RecommendationComment et projections typées dans
+  recommendation_entities.py, SQL dans storage/recommendation_comments.py (insertion commune à l'envoi initial),
+  règles de participants/validation dans Recommendations, contrôleur existant et un composant JS de fil pour les
+  conseils reçus, envoyés et archivés. Migration web 21 ; EventHub/LiveEvents et protection CSRF réutilisés.
+  Les discussions restent privées et indépendantes du salon et des commentaires publics d'albums ; aucune
+  dépendance vers le Pi ou nouveau catalogue musical.
 - Pastille À écouter (1.9.2) : Recommendations publie dans EventHub vers le seul destinataire ; le composant existant utilise LiveEvents, sans nouvelle connexion SSE. Les accusés de lecture passent par le dépôt et le contrôleur existants.
 - À écouter et recommandations (1.9) : résolution commune dans webapp/listening_targets.py, règles dans listen_later.py et recommendations.py, entités et dépôts SQL dédiés. Contrôleur commun, assemblage app.py. Zone web uniquement ; recherche et lecture existantes réutilisées.
 - Versions YouTube des labels (1.8.1) : `webapp/youtube_versions.py` orchestre les liens puis la recherche ;
@@ -81,3 +141,15 @@ Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement
 - Fonctionnalités, ce qui existe / n'existe pas : `docs/features/` (une fiche par fonctionnalité).
 - Où en est-on, décisions : `docs/ETAT.md`. Reprise par une autre IA : `docs/REPRISE.md`.
 - Déployer : `docs/DEPLOIEMENT.md`.
+
+- Notifications de service (1.17) : entités/limites dans `notification_entities.py`, SQL dans
+  `storage/notifications.py`, règles dans `notifications.py`, adaptation HTTP dans `controllers/notifications.py`.
+  Assemblage dans `app.py`, migration web 22, diffusion ciblée par EventHub/LiveEvents existants. Composant
+  `static/js/notifications.js` et styles propres, navigation mobile existante réutilisée. Aucune dépendance
+  externe ni couplage avec les auteurs d’envois ou l’édition Pi.
+
+### Sorties de la semaine · édition web
+
+Actualités charge la vue `weekly-releases.js` pour `#/news/releases`. Help ouvre cette vue depuis le guide presse. Le navigateur envoie le lundi sélectionné et le genre au contrôleur `controllers/weekly_releases.py`. Le service `weekly_releases.py` valide le genre et calcule le dimanche. Le client `musicbrainz.py` interroge MusicBrainz, réutilise le cache public et convertit les réponses en entités de `weekly_release_entities.py`. Le service conserve les sorties datées dans la semaine. La recherche d’une semaine est rafraîchie après une heure.
+
+Pour suivre ou quitter un style, le contrôleur transmet l’utilisateur authentifié au même service. Seul `storage/weekly_releases.py` lit et écrit les abonnements dans `release_subscriptions` (migration 23). La vue interroge séparément le contrôleur d’exploration existant pour identifier les albums accessibles sur Subsonic. Les dépendances sont assemblées dans `app.py`.

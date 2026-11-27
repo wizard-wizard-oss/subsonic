@@ -1,6 +1,7 @@
 """HTTP endpoints for listening bookmarks and recommendations."""
-from .base import ok
-from ..recommendations import READ_BATCH_SIZE
+from .base import get, int_param, ok, post
+from ..recommendations.service import READ_BATCH_SIZE
+from ..recommendations.entities import COMMENT_MAX_LENGTH
 
 
 class ListenLaterController:
@@ -8,9 +9,11 @@ class ListenLaterController:
         self.bookmarks, self.recommendations = bookmarks, recommendations
 
     def all(self, request, user):
+        received = self.recommendations.received(user)
         return ok(dict(bookmarks=[entry.to_api() for entry in self.bookmarks.all(user)],
-                       recommendations=[group.to_api() for group in self.recommendations.received(user)],
-                       readBatchSize=READ_BATCH_SIZE))
+                       recommendations=[group.to_api() for group in received.groups],
+                       recommendationsHaveMore=received.has_more,
+                       readBatchSize=READ_BATCH_SIZE, commentMaxLength=COMMENT_MAX_LENGTH))
 
     def add(self, request, user, body):
         entry = self.bookmarks.add(user, body.get("kind"), body.get("source"), body.get("sourceId"))
@@ -21,15 +24,47 @@ class ListenLaterController:
 
     def recommend(self, request, user, body):
         entry = self.recommendations.send(user, body.get("recipient"), body.get("kind"),
-                                          body.get("source"), body.get("sourceId"))
-        return ok(dict(recommendation=entry.to_api()))
+                                          body.get("source"), body.get("sourceId"), body.get("comment", ""))
+        return ok(entry.to_api())
 
     def dismiss(self, request, user, body):
-        return ok(dict(removed=self.recommendations.remove(user, body.get("kind"),
+        return ok(dict(removed=self.recommendations.archive(user, body.get("kind"),
                                                                body.get("source"), body.get("sourceId"))))
 
     def status(self, request, user):
-        return ok(dict(unread=self.recommendations.has_unread(user)))
+        return ok(self.recommendations.status(user).to_api())
 
     def mark_read(self, request, user, body):
-        return ok(dict(unread=self.recommendations.mark_read(user, body.get("tokens"))))
+        return ok(dict(unread=self.recommendations.mark_read(user, body.get("ids"))))
+
+    def discussions(self, request, user):
+        return ok(self.recommendations.discussions(user, request.param("scope", "sent"),
+                                                   int_param(request, "before", strict=True)).to_api())
+
+    def discussion(self, request, user):
+        return ok(self.recommendations.discussion(user, int_param(request, "id", strict=True),
+                                                  int_param(request, "before", strict=True), int_param(request, "after", strict=True)).to_api())
+
+    def comment(self, request, user, body):
+        comment = self.recommendations.comment(user, body.get("recommendationId"), body.get("body"),
+                                               body.get("requestId"))
+        return ok(dict(comment=comment.to_api()))
+
+    def read_comments(self, request, user, body):
+        return ok(dict(unread=self.recommendations.mark_comments_read(user, body.get("recommendationId"),
+                                                                      body.get("commentId"))))
+
+    def routes(self):
+        return [
+            get("/api/listen-later", self.all),
+            get("/api/recommendation/comments", self.discussion),
+            get("/api/recommendation/discussions", self.discussions),
+            get("/api/recommendation/status", self.status),
+            post("/api/listen-later/add", self.add),
+            post("/api/listen-later/remove", self.remove),
+            post("/api/recommendation/comment", self.comment),
+            post("/api/recommendation/comments/read", self.read_comments),
+            post("/api/recommendation/read", self.mark_read),
+            post("/api/recommendation/remove", self.dismiss),
+            post("/api/recommendation/send", self.recommend),
+        ]

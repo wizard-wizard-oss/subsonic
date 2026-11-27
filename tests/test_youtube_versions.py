@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from pimedia.webapp.discogs_entities import DiscogsVideo
+from pimedia.webapp.providers.discogs_entities import DiscogsVideo
 from pimedia.webapp.entities import ImportedTrack
 from pimedia.webapp.extmusic import ExtMusicError
 from pimedia.webapp.youtube_matching import match_score, search_query

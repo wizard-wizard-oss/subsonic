@@ -1,7 +1,7 @@
 """Envoi de fichiers audio (ou d'un zip, décompressé) dans le dossier Incoming de Subsonic."""
 from ...server.transport import Reply
 from ..uploads import UploadError
-from .base import int_param, ok
+from .base import get, int_param, ok, post, post_raw
 
 
 class UploadController:
@@ -28,3 +28,11 @@ class UploadController:
     def finish(self, request, user, body):
         """Après un lot de fichiers : Subsonic scanne pour les faire apparaître."""
         return ok({"scanning": self.uploads.scan(user)})
+
+    def routes(self):
+        return [
+            get("/api/upload/history", self.history),
+            get("/api/upload/status", self.status, right="upload"),
+            post_raw("/api/upload", self.upload, right="upload"),
+            post("/api/upload/finish", self.finish, right="upload"),
+        ]

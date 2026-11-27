@@ -37,6 +37,16 @@ Voir [`decouverte-labels.md`](decouverte-labels.md). Aucun format de stockage ni
   chacun retire ce qu'il a ajouté). Colonne Album : la source ; pas de téléchargement. Le compteur de la barre compte
   les deux. Une playlist supprimée sur le site emporte ses titres d'ailleurs.
 
+## Colonnes des morceaux (1.12)
+
+Les playlists utilisent les neuf colonnes de « Parcourir », choisies dans Réglages ou Mon compte → Affichage
+par la même grille que Subsonic. Le style individuel est visible initialement ; un « — » signale une donnée
+absente, sans reprendre celle de l’album. Le choix est immédiat et conservé par compte, indépendamment des
+colonnes de la file du lecteur. Piste # montre le tag réel de la piste ; le déplacement conserve les
+poignées et l’ordre de la playlist. Les titres d’ailleurs gardent leur source dans Album.
+Voir [Bibliothèque](bibliotheque.md#colonnes-des-morceaux-comme-dans-subsonic-112).
+Tests : `tests/test_song_styles.py` et `tests/e2e_webapp.js`.
+
 ## Où
 `pimedia/webapp/playlists.py`, `storage/community.py`, `controllers/playlists.py`, `schema.py` (migrations 7, 13, 14) ;
 page : `web-pc/static/js/playlists.js`, `dnd.js`, `views.js` (`songTable`, pochettes glissables), `dialogs.js` (`newPlaylist`).

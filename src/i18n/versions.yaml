@@ -1,9 +1,146 @@
 # Versions du site (page « Versions », #/versions), la plus récente EN PREMIER.
 # À compléter à CHAQUE modification du site, AVANT de déployer (deploy/pc/push.sh le rappelle). Écrit pour les personnes
-# qui utilisent le site, pas pour les développeurs. Évolution d'une fonctionnalité existante ou correction : troisième
-# niveau (1.7.1, 1.7.2…). Fonctionnalité distincte : mineure ; grand changement : majeure.
+# qui utilisent le site, pas pour les développeurs. Nouvelle fonctionnalité ou enrichissement fonctionnel : mineure.
+# Correction de bug uniquement : troisième numéro. Grand changement ou rupture de compatibilité : majeure.
+# Règle confirmée par l'utilisateur le 22/11/2026 ; conserver les numéros déjà publiés.
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
+
+- version: "1.19.2"
+  date: 2026-11-27
+  title: "Corrections et fiabilité"
+  changes:
+    - "Sorties de la semaine : un album déjà gardé « À écouter » s'affiche bien comme gardé, et un clic le retire."
+    - "Pendant une panne de MusicBrainz, Discogs ou Last.fm, les informations récentes déjà chargées restent affichées."
+    - "Éditeur de tags : un fichier modifié ailleurs pendant l'enregistrement ne bloque plus l'éditeur, et un fichier qu'il ne peut pas réécrire n'est plus proposé comme modifiable."
+    - "Envoi d'albums : un ZIP sans dossiers artiste/album est refusé tout de suite, sans être décompressé."
+    - "L'envoi de notifications fonctionne aussi en accédant au site par le réseau local."
+    - "La page « À écouter » reste en place quand vous ouvrez une discussion."
+
+- version: "1.19.1"
+  date: 2026-11-27
+  title: "Charger les styles des sorties de la semaine"
+  changes:
+    - "Le catalogue des styles se charge en une seule requête MusicBrainz. Les styles déjà suivis restent accessibles."
+
+- version: "1.19"
+  date: 2026-11-27
+  title: "Les sorties de la semaine par style"
+  changes:
+    - "Dans Actualités, consultez dès le lundi les albums et EP annoncés sur MusicBrainz pour la semaine et suivez vos styles préférés."
+    - "Retrouvez le mode d’emploi dans Help, rubrique Suivre l’actualité musicale."
+
+- version: "1.18"
+  date: 2026-11-27
+  title: "Un menu sous votre photo"
+  changes:
+    - "Cliquez sur votre photo pour retrouver Mon compte, Notifications et Se déconnecter dans un seul menu."
+    - "Une pastille rouge sur la photo signale vos notifications non lues, même lorsque le menu est fermé. La photo reste accessible sur téléphone."
+
+- version: "1.17"
+  date: 2026-11-27
+  title: "Messages privés de l’administration et envois d’albums"
+  changes:
+    - "Retrouvez les messages de l’administration dans Notifications, avec une pastille pour les messages non lus. Les administrateurs peuvent prévenir un membre depuis cette page."
+    - "Les envois sont réservés aux albums en ZIP organisés en Artiste/Album/titres. Les fichiers audio seuls sont refusés avec une explication."
+    - "L’auteur d’un envoi est relu après une correction de tags ; un dossier bloqué dans Incoming ne bloque plus les suivants."
+
+- version: "1.16"
+  date: 2026-11-26
+  title: "Help : les bons gestes, par thème"
+  changes:
+    - "Retrouvez les explications dans sept thèmes : écouter, partager, explorer, garder ses découvertes, musique d’ailleurs, presse musicale et réglages."
+    - "Le salon, les paroles synchronisées et les journaux sont mis en avant. Chaque guide présente les étapes et les liens pour essayer, avec des captures de l’application pour les gestes moins visibles."
+    - "Comprenez comment importer vos playlists, explorer un label depuis une édition d’album et retrouver les articles sous les artistes."
+
+- version: "1.15.2"
+  date: 2026-11-26
+  title: "Un menu d’aide plus court"
+  changes:
+    - "Le menu et le titre de la page d’aide s’appellent désormais Help, pour rester compacts sur mobile."
+
+- version: "1.15.1"
+  date: 2026-11-26
+  title: "Identifier la présentation de l’application"
+  changes:
+    - "Le menu Nouveautés devient Découvrir l’application pour retrouver plus facilement les explications sur les fonctions du site. Le titre de la page porte le même nom."
+
+- version: "1.15"
+  date: 2026-11-26
+  title: "Retrouver sa musique sur téléphone"
+  changes:
+    - "Sur petit écran, le bouton de menu ouvre les artistes, les playlists et les liens de navigation. Fermez-le avec le même bouton, la croix ou un appui à l’extérieur."
+    - "Le salon s’ouvre dans un volet et le lecteur ainsi que l’accueil s’adaptent à la largeur du téléphone."
+    - "La navigation sur ordinateur et ses réglages restent inchangés."
+
+- version: "1.14.2"
+  date: 2026-11-26
+  title: "Retrouver la biographie du bon artiste"
+  changes:
+    - "Les biographies Last.fm sont désormais prioritaires sur Wikipédia, pour éviter des confusions comme celle entre le groupe Jungle et le style musical du même nom."
+    - "Wikipédia reste disponible en secours lorsqu’aucune biographie n’est fournie, d’abord en français puis en anglais."
+
+- version: "1.14"
+  date: 2026-11-22
+  title: "Échanger autour des recommandations"
+  changes:
+    - "Accompagnez un conseil d’un commentaire pour expliquer pourquoi vous recommandez cet artiste, cet album ou ce morceau."
+    - "Le destinataire peut répondre et vous pouvez poursuivre l’échange dans un fil privé, accessible à vous deux."
+    - "Retrouvez vos recommandations envoyées et les nouveaux commentaires dans À écouter. Retirer un conseil le conserve parmi les recommandations archivées, avec ses commentaires."
+
+- version: "1.13"
+  date: 2026-11-21
+  title: "Conseiller un morceau à un ami"
+  changes:
+    - "Depuis les listes de morceaux de la bibliothèque, conseillez un titre précis à un autre membre avec « Conseiller à quelqu’un »."
+    - "Le morceau arrive dans ses recommandations À écouter, avec un bouton pour l’écouter directement. Il peut le garder en marque-page et filtrer sa liste sur les morceaux."
+    - "Les morceaux reçus forment une liste avec « Tout écouter » pour les enchaîner. Retirez chaque morceau qui ne vous intéresse plus avec sa croix."
+
+- version: "1.12.1"
+  date: 2026-11-20
+  title: "Suivre l’enregistrement des tags"
+  changes:
+    - "Une barre indique la progression pendant la préparation et l’enregistrement des fichiers audio, puis signale la mise à jour de la bibliothèque."
+    - "L’éditeur explique que les changements restent en brouillon jusqu’à « Enregistrer dans les fichiers ». Le suivi reste actif pour les opérations longues et peut reprendre après une coupure de connexion."
+
+- version: "1.12"
+  date: 2026-11-20
+  title: "Choisir les colonnes des morceaux comme dans Subsonic"
+  changes:
+    - "Dans Réglages ou Mon compte, choisissez les informations à afficher : piste, artiste, album, style, année, débit, durée, format et taille du fichier."
+    - "Les choix de parcours et de liste de lecture sont séparés et conservés pour votre compte. Ils s’appliquent immédiatement, sans interrompre la lecture."
+    - "Le style de chaque morceau permet de vérifier ses tags ; un tiret signale une information manquante. Le titre et les commandes restent toujours accessibles."
+
+- version: "1.11.1"
+  date: 2026-11-18
+  title: "Retrouver le style d’un album plus simplement"
+  changes:
+    - "Le style de l’album est visible dès l’ouverture. Les autres informations et les pistes restent disponibles dans une section repliée."
+    - "Les éditions trouvées sont affichées directement, avec leurs informations et les styles proposés, au lieu d’une liste déroulante. Les meilleurs résultats passent en premier."
+    - "Vous pouvez reprendre uniquement un style pour tout l’album, sans faire correspondre chaque piste. Les changements restent vérifiables avant l’enregistrement."
+
+- version: "1.11"
+  date: 2026-11-18
+  title: "Corriger les informations des albums"
+  changes:
+    - "Avec le droit « Modifier pochettes et tags », corrigez les informations d’un album et de ses pistes, appliquez une valeur à plusieurs morceaux et vérifiez les changements avant d’enregistrer."
+    - "Recherchez une édition avec MusicBrainz ou Discogs, puis choisissez les informations à reprendre. Les artistes des pistes et l’artiste de l’album restent distincts."
+    - "Les corrections restent dans les fichiers audio et sont réindexées par Subsonic. Les noms et l’organisation des dossiers restent identiques."
+
+- version: "1.10.3"
+  date: 2026-11-18
+  title: "Les envois retrouvent leurs artistes"
+  changes:
+    - "Les albums envoyés ou en attente dans Incoming rejoignent leur artiste même si le nom reçu est en minuscules. Le dossier de l’artiste garde son nom."
+    - "Les nouveaux dossiers d’artistes et d’albums reçoivent une majuscule à chaque mot, en conservant les accents et les autres majuscules."
+    - "Les variantes latines comme ø/o sont reconnues. Si plusieurs dossiers correspondent, l’album reste dans Incoming pour être vérifié."
+
+- version: "1.10.2"
+  date: 2026-11-17
+  title: "Le style sous les albums"
+  changes:
+    - "Les listes d’albums affichent le style musical à la place du nombre d’écoutes, lorsqu’il est renseigné."
+    - "Le nombre d’écoutes reste visible dans « Plus écoutés », sur l’accueil et dans Albums, ainsi que sur la fiche de chaque album."
 
 - version: "1.10.1"
   date: 2026-11-12
