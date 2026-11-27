@@ -1,6 +1,6 @@
 """Salon global et commentaires d'albums ; flux d'événements temps réel."""
 from ..events import EventStreamReply
-from .base import int_param, ok
+from .base import get, int_param, ok, post
 
 
 def number(value):
@@ -48,3 +48,18 @@ class ChatController:
     def events(self, request, user):
         request.set_timeout(None)
         return EventStreamReply(self.hub, user)
+
+    def routes(self):
+        return [
+            get("/api/chat/history", self.history),
+            get("/api/chat/mentions", self.mentions),
+            get("/api/chat/online", self.online),
+            get("/api/chat/search", self.search),
+            get("/api/events", self.events),
+            post("/api/chat/delete", self.delete),
+            post("/api/chat/edit", self.edit),
+            post("/api/chat/post", self.post),
+            post("/api/chat/react", self.react),
+            post("/api/chat/read", self.read),
+            post("/api/chat/typing", self.typing),
+        ]

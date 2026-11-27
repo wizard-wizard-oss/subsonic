@@ -1,5 +1,5 @@
 """Paroles du titre en cours (affichées à droite, à la place du salon)."""
-from .base import ok
+from .base import get, ok
 
 
 class LyricsController:
@@ -10,3 +10,8 @@ class LyricsController:
         duration = request.param("duration", "0")
         return ok(self.lyrics.find(request.param("artist"), request.param("title"), request.param("album"),
                                    float(duration) if duration.replace(".", "", 1).isdigit() else 0))
+
+    def routes(self):
+        return [
+            get("/api/lyrics", self.find),
+        ]

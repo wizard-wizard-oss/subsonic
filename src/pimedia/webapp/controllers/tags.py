@@ -1,6 +1,6 @@
 """Entrées HTTP de l'édition de tags ; les règles résident dans AlbumTags."""
-from .base import ok
-from ..tags.entities import AlbumTagPatch, reference
+from .base import get, ok, post
+from ..tags.entities import TAG_BODY_LIMIT, TAG_EDIT_RIGHT, AlbumTagPatch, reference
 
 
 class TagController:
@@ -29,3 +29,14 @@ class TagController:
 
     def operation(self, request, user):
         return ok(self.tags.operation(user, request.param("id")).to_api())
+
+    def routes(self):
+        return [
+            get("/api/tags/album", self.album, right=TAG_EDIT_RIGHT),
+            get("/api/tags/operation", self.operation, right=TAG_EDIT_RIGHT),
+            get("/api/tags/release", self.release, right=TAG_EDIT_RIGHT),
+            get("/api/tags/search", self.search, right=TAG_EDIT_RIGHT),
+            get("/api/tags/status", self.status, right=TAG_EDIT_RIGHT),
+            post("/api/tags/preview", self.preview, right=TAG_EDIT_RIGHT, body_limit=TAG_BODY_LIMIT),
+            post("/api/tags/save", self.save, right=TAG_EDIT_RIGHT, body_limit=TAG_BODY_LIMIT),
+        ]

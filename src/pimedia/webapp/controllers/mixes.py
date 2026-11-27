@@ -1,6 +1,6 @@
 """Mix et radios (titres calculés par le serveur à partir de Subsonic et de Last.fm, les mêmes pour tous)."""
 from ..mixes import MixError, MixOptions
-from .base import ok
+from .base import get, ok, post
 from .library import item_id
 
 SIMPLE_MIXES = ("random", "favorites", "discover", "newest")
@@ -42,3 +42,12 @@ class MixController:
         if not songs:
             raise MixError("mix.empty")
         return ok({"songs": songs, "name": self.mixes.mix_name(user, options)})
+
+    def routes(self):
+        return [
+            get("/api/mix", self.simple),
+            get("/api/mix/genres", self.genres),
+            get("/api/radio/artist", self.artist_radio),
+            get("/api/radio/song", self.song_radio),
+            post("/api/mix/build", self.build),
+        ]

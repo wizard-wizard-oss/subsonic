@@ -1,5 +1,5 @@
 """Musique d'ailleurs : sources disponibles, recherche, vidéo refusée et autre version, favoris de chacun."""
-from .base import ok
+from .base import get, ok, post
 
 
 class ExtMusicController:
@@ -38,3 +38,16 @@ class ExtMusicController:
     def add_link(self, request, user, body):
         """{link} : vidéo ou playlist YouTube, titre SoundCloud."""
         return ok(self.favorites.add_link(user, body.get("link")))
+
+    def routes(self):
+        return [
+            get("/api/ext/favorites", self.favorite_list),
+            get("/api/ext/known", self.known),
+            get("/api/ext/search", self.search),
+            get("/api/ext/status", self.status),
+            post("/api/ext/alternative", self.alternative),
+            post("/api/ext/favorite", self.favorite),
+            post("/api/ext/link", self.add_link),
+            post("/api/ext/played", self.played),
+            post("/api/ext/unplayable", self.unplayable),
+        ]

@@ -13,8 +13,8 @@ PARTS = ("webapp", "shared")
 MAX_FUNCTION_LINES = 40
 MAX_FILE_LINES = 300
 DATA_FILES = {"webapp/schema.py"}                 # la liste des migrations est une donnée, jamais modifiée
-KNOWN_FUNCTIONS = {("webapp/app.py", "__init__"), ("webapp/app.py", "_routes"), ("webapp/mixes.py", "build")}
-KNOWN_FILES = {"webapp/app.py", "webapp/entities.py", "webapp/mixes.py"}
+KNOWN_FUNCTIONS = {("webapp/mixes.py", "build")}
+KNOWN_FILES = {"webapp/entities.py", "webapp/mixes.py"}
 
 
 def python_files():

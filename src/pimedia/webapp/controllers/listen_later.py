@@ -1,5 +1,5 @@
 """HTTP endpoints for listening bookmarks and recommendations."""
-from .base import int_param, ok
+from .base import get, int_param, ok, post
 from ..recommendations.service import READ_BATCH_SIZE
 from ..recommendations.entities import COMMENT_MAX_LENGTH
 
@@ -53,3 +53,18 @@ class ListenLaterController:
     def read_comments(self, request, user, body):
         return ok(dict(unread=self.recommendations.mark_comments_read(user, body.get("recommendationId"),
                                                                       body.get("commentId"))))
+
+    def routes(self):
+        return [
+            get("/api/listen-later", self.all),
+            get("/api/recommendation/comments", self.discussion),
+            get("/api/recommendation/discussions", self.discussions),
+            get("/api/recommendation/status", self.status),
+            post("/api/listen-later/add", self.add),
+            post("/api/listen-later/remove", self.remove),
+            post("/api/recommendation/comment", self.comment),
+            post("/api/recommendation/comments/read", self.read_comments),
+            post("/api/recommendation/read", self.mark_read),
+            post("/api/recommendation/remove", self.dismiss),
+            post("/api/recommendation/send", self.recommend),
+        ]

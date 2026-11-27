@@ -1,5 +1,5 @@
 """Exploration : lecture seulement, session obligatoire, paramètres validés avant l'accès aux sources."""
-from .base import ok
+from .base import get, ok
 from .library import item_id
 from ..exploration import mbid
 
@@ -26,3 +26,12 @@ class ExplorationController:
 
     def local(self, request, user):
         return ok(self.exploration.local(user, request.param("title"), request.param("artist")))
+
+    def routes(self):
+        return [
+            get("/api/explore/album", self.album),
+            get("/api/explore/artists", self.artists),
+            get("/api/explore/connections", self.connections),
+            get("/api/explore/local", self.local),
+            get("/api/explore/profile", self.profile),
+        ]

@@ -1,5 +1,5 @@
 """HTTP pour la consultation par semaine et les abonnements."""
-from .base import int_param, ok
+from .base import get, int_param, ok, post
 
 
 class WeeklyReleasesController:
@@ -18,3 +18,10 @@ class WeeklyReleasesController:
     def follow(self, request, user, body):
         self.releases.follow(user, body.get("genre"), body.get("enabled"))
         return ok()
+
+    def routes(self):
+        return [
+            get("/api/news/releases", self.week),
+            get("/api/news/releases/genres", self.genres),
+            post("/api/news/releases/follow", self.follow),
+        ]
