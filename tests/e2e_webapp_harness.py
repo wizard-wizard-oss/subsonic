@@ -71,7 +71,7 @@ def main():
         source.http = ext_http
     app.ext_favorites.http = ext_http
     app.extmusic.youtube.music = youtube_music_down()
-    app.imports.reader.http = FakeHttp({"playlist/77/tracks": DEEZER_TRACKS, "playlist/77": DEEZER_PLAYLIST})   # Deezer simulé
+    app.imports.reader.deezer.http = FakeHttp({"playlist/77/tracks": DEEZER_TRACKS, "playlist/77": DEEZER_PLAYLIST})   # Deezer simulé
     server = app.make_server(os.environ.get("PI_MEDIA_DEMO_BIND", "127.0.0.1"),
                              int(os.environ.get("PI_MEDIA_DEMO_PORT", 0)))
     threading.Thread(target=server.serve_forever, args=(0.05,), daemon=True).start()
