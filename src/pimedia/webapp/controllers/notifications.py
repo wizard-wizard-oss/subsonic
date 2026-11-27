@@ -7,10 +7,10 @@ class NotificationController:
         self.notifications = notifications
 
     def page(self, request, user):
-        return ok(self.notifications.page(user, int_param(request, "before", strict=True)))
+        return ok(self.notifications.page(user, int_param(request, "before", strict=True)).to_api())
 
     def status(self, request, user):
-        return ok(self.notifications.status(user))
+        return ok(self.notifications.status(user).to_api())
 
     def recipients(self, request, user):
         return ok(dict(usernames=self.notifications.recipients(user)))
@@ -20,4 +20,4 @@ class NotificationController:
                                           body.get("requestId")).to_api())
 
     def mark_read(self, request, user, body):
-        return ok(self.notifications.mark_read(user, body.get("id")))
+        return ok(self.notifications.mark_read(user, body.get("id")).to_api())

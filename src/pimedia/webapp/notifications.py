@@ -2,8 +2,9 @@
 import re
 import time
 
-from .controllers.base import MissingRight
-from .notification_entities import BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH, NotificationError
+from .errors import MissingRight
+from .notification_entities import (BODY_MAX_LENGTH, PAGE_SIZE, TITLE_MAX_LENGTH, NotificationError, NotificationPage,
+                                    NotificationStatus)
 
 
 class Notifications:
@@ -47,13 +48,11 @@ class Notifications:
         if before is not None and (type(before) is not int or not 0 < before < 2 ** 63):
             raise NotificationError("notifications.invalid_request")
         entries = self.repository.page(user.id, before, PAGE_SIZE + 1)
-        return dict(entries=[entry.to_api() for entry in entries[:PAGE_SIZE]],
-                    before=entries[PAGE_SIZE - 1].id if len(entries) > PAGE_SIZE else None,
-                    unread=self.repository.unread(user.id),
-                    limits=dict(title=TITLE_MAX_LENGTH, body=BODY_MAX_LENGTH))
+        return NotificationPage(tuple(entries[:PAGE_SIZE]), entries[PAGE_SIZE - 1].id if len(entries) > PAGE_SIZE else None,
+                                self.repository.unread(user.id))
 
     def status(self, user):
-        return dict(unread=self.repository.unread(user.id))
+        return NotificationStatus(self.repository.unread(user.id))
 
     def mark_read(self, user, identity):
         if type(identity) is not int or not 0 < identity < 2 ** 63:

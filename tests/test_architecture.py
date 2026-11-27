@@ -113,5 +113,11 @@ class DependencyRulesTest(unittest.TestCase):
                 if path.replace(os.sep, "/") not in allowed:
                     self.assertFalse(any(m in ("urllib.request", "requests", "http.client") for m in modules), path)
 
+    def test_services_never_import_controllers(self):
+        for path, modules in imports_of("webapp").items():
+            if path.replace(os.sep, "/").startswith("webapp/controllers/") or path == os.path.join("webapp", "app.py"):
+                continue
+            self.assertFalse(any(m.startswith("pimedia.webapp.controllers") for m in modules), path)
+
     def test_the_rule_is_really_checked(self):
         self.assertIn("pimedia.shared.external", imports_of("server")["server/external.py"])

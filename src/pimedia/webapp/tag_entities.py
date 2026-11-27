@@ -48,6 +48,19 @@ def tag_value(name, value):
 
 
 @dataclass(frozen=True)
+class TagEditorStatus:
+    """L'éditeur peut-il écrire ici ; sinon pourquoi (reprise inachevée, dossier absent), et ses sources et limites."""
+    writable: bool
+    reason: str | None
+    providers: dict
+    formats: tuple
+    limits: dict
+
+    def to_api(self):
+        return dict(writable=self.writable, reason=self.reason, providers=self.providers, formats=list(self.formats),
+                    limits=self.limits)
+
+@dataclass(frozen=True)
 class TagValues:
     title: str = ""
     artist: str = ""

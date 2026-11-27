@@ -8,16 +8,7 @@ CSRF_HEADER = "X-Requested-With"
 CSRF_VALUE = "pmw"
 
 
-class Unauthorized(Exception):
-    pass
-
-
-class Forbidden(Exception):
-    pass
-
-
-class MissingRight(Forbidden):
-    """Le compte Subsonic n'a pas ce droit (télécharger, écouter, playlists, noter et commenter…)."""
+from ..errors import Forbidden, MissingRight, Unauthorized  # noqa: F401  (réexportées pour les contrôleurs)
 
 
 def session_token(request):

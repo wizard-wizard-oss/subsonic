@@ -26,7 +26,8 @@ from .chat import Chat, ChatError
 from .covers import MAX_IMAGE_BYTES, CoverError, Covers
 from .config import WebConfig, default_data_dir
 from .controllers.auth import AuthController
-from .controllers.base import Forbidden, Guard, MissingRight, Unauthorized
+from .controllers.base import Guard
+from .errors import Forbidden, MissingRight, Unauthorized
 from .controllers.chat import ChatController
 from .controllers.covers import CoverController
 from .controllers.tags import TagController

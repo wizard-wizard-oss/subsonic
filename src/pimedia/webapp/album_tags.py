@@ -11,9 +11,9 @@ from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 
 from .audio_tags import AudioFileEdit, AudioTagError, SUPPORTED_FORMATS
-from .controllers.base import MissingRight
+from .errors import MissingRight
 from .subsonic import Credentials
-from .tag_entities import (AlbumTagSnapshot, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
+from .tag_entities import (AlbumTagSnapshot, TagEditorStatus, MAX_ALBUM_TRACKS, TAG_EDIT_RIGHT, TagDifference, TagError, TagOperation, TagPreview,
                            TagReleaseProposal, TagTrack, TagValues, reference, tag_limits)
 from .tag_matching import propose_mapping, rank_candidates
 from .tag_sources import SourceMatches
@@ -61,9 +61,8 @@ class AlbumTags:
 
     def status(self, user):
         self._check_right(user)
-        return dict(writable=not self._recovery_error and bool(self.audio.music_dir) and os.path.isdir(self.audio.music_dir),
-                    reason=self._recovery_error,
-                    providers=self.sources.status(), formats=list(SUPPORTED_FORMATS), limits=tag_limits())
+        writable = not self._recovery_error and bool(self.audio.music_dir) and os.path.isdir(self.audio.music_dir)
+        return TagEditorStatus(writable, self._recovery_error, self.sources.status(), tuple(SUPPORTED_FORMATS), tag_limits())
 
     def _read_song(self, user, song, album_path):
         identity = reference(str(song["id"]))

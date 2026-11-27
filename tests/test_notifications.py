@@ -27,6 +27,14 @@ class NotificationsHttpTest(WebAppTestCase):
         self.assertEqual(response.status, 200, response.body)
         return response.json()
 
+    def test_service_answers_with_entities(self):
+        self.send()
+        bob = self.app.users.by_name("bob")
+        page, status = self.app.notifications.page(bob), self.app.notifications.status(bob)
+        self.assertEqual(type(page).__name__, "NotificationPage")
+        self.assertEqual(status.to_api(), {"unread": 1})
+        self.assertEqual(set(page.to_api()), {"entries", "before", "unread", "limits"})
+
     def test_admin_can_send_and_only_recipient_can_read(self):
         entry = self.send()
         page = self.bob.get("/api/notifications").json()

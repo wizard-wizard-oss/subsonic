@@ -28,6 +28,25 @@ class Notification:
 
 
 @dataclass(frozen=True)
+class NotificationStatus:
+    unread: int
+
+    def to_api(self):
+        return dict(unread=self.unread)
+
+
+@dataclass(frozen=True)
+class NotificationPage:
+    entries: tuple
+    before: int | None
+    unread: int
+
+    def to_api(self):
+        return dict(entries=[entry.to_api() for entry in self.entries], before=self.before, unread=self.unread,
+                    limits=dict(title=TITLE_MAX_LENGTH, body=BODY_MAX_LENGTH))
+
+
+@dataclass(frozen=True)
 class NotificationDelivery:
     notification: Notification
     created: bool

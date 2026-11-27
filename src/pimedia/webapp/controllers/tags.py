@@ -8,7 +8,7 @@ class TagController:
         self.tags = tags
 
     def status(self, request, user):
-        return ok(self.tags.status(user))
+        return ok(self.tags.status(user).to_api())
 
     def album(self, request, user):
         return ok(self.tags.snapshot(user, reference(request.param("id"))).to_api())

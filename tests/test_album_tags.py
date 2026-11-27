@@ -79,6 +79,11 @@ class AlbumTagsHttpTest(WebAppTestCase):
             time.sleep(0.01)
         self.fail("L'opération locale ne termine pas")
 
+    def test_status_is_an_entity(self):
+        status = self.app.album_tags.status(self.app.users.by_name("alice"))
+        self.assertEqual(type(status).__name__, "TagEditorStatus")
+        self.assertEqual(set(status.to_api()), {"writable", "reason", "providers", "formats", "limits"})
+
     def test_reads_api_keeps_folder_headers_and_completes_missing_album_artist(self):
         snapshot = self.snapshot()
         self.assertEqual((snapshot["name"], snapshot["artist"]), ("Arrival", "ABBA"))
