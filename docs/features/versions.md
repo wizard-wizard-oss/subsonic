@@ -5,7 +5,7 @@ Page **« Versions »** (`#/versions`) : ce qui a changé sur le site, **version
 chacune avec son numéro (« majeure.mineure » ou « majeure.mineure.correction »), sa **date de mise en ligne**, un titre et la liste des changements, écrits
 pour les personnes qui utilisent le site. Le numéro de la dernière version (ex. `v1.2`) est affiché **à côté du titre du
 site** (lien vers la page) ; une **pastille rouge** dessus et la mention « Nouveau » sur les versions pas encore vues
-signalent une mise à jour. Ouvrir la page la marque comme vue. Lien aussi en haut de la page « Help ».
+signalent une mise à jour. Ouvrir la page la marque comme vue. Lien aussi en haut de la page « Nouveautés ».
 
 ## Tenir l'historique (à CHAQUE modification du site)
 - Le contenu est dans **`src/i18n/versions.yaml`** : ajouter une entrée **en tête** avant de déployer, **à chaque fois**.
@@ -31,7 +31,7 @@ signalent une mise à jour. Ouvrir la page la marque comme vue. Lien aussi en ha
 ## Tests
 `tests/test_versions.py` (vrai fichier bien tenu, ordre 1.10 > 1.9, fichiers mal tenus refusés),
 `tests/test_webapp.py` (`/api/versions`), `tests/e2e_webapp.js` (numéro et pastille, page, pastille retirée, lien
-depuis Help). Vu à l'écran sur la démo.
+depuis Nouveautés). Vu à l'écran sur la démo.
 
 ## N'existe pas / limites
 - « Déjà vue » est retenu **par navigateur** (stockage local), pas par compte : sur un autre ordinateur, la pastille

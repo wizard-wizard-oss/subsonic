@@ -304,23 +304,7 @@ tr.song[draggable="true"], .album-card[draggable="true"] { cursor: grab; }
 .news-show { margin: 0 6px 0 0; vertical-align: middle; cursor: pointer; }
 .news-hidden a { opacity: .5; text-decoration: line-through; }
 
-/* Nouveautés : ce que le site fait en plus de Subsonic (page pour les utilisateurs) */
-.whatsnew-idea { max-width: 780px; padding: 18px 22px; margin: 8px 0 28px; border-radius: var(--radius);
-                 background: var(--bg-raised); border: 1px solid var(--line); border-left: 4px solid var(--accent); }
-.whatsnew-idea h2 { margin: 0 0 8px; font-size: 18px; }
-.whatsnew-idea p { margin: 8px 0; line-height: 1.55; color: var(--text-soft); }
-.whatsnew-part { margin-bottom: 30px; }
-.whatsnew-part-title { display: flex; align-items: center; gap: 10px; font-size: 19px; margin: 0 0 12px; }
-.whatsnew-part-title .icon { color: var(--accent); }
-.whatsnew-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.whatsnew-card { display: flex; flex-direction: column; padding: 14px 16px; border-radius: var(--radius);
-                 background: var(--bg-raised); border: 1px solid var(--line); }
-.whatsnew-card h3 { margin: 0 0 6px; font-size: 15px; }
-.whatsnew-card p { margin: 0; line-height: 1.5; color: var(--text-soft); font-size: 14px; flex: 1; }
-.whatsnew-link { margin-top: 10px; color: var(--accent); font-size: 13px; font-weight: 600; }
-.whatsnew-link:hover { text-decoration: underline; }
-.whatsnew-footer { margin: 8px 0 24px; }
-.whatsnew-versions { display: inline-block; margin: 0 0 18px; }
+/* Historique des versions du site */
 .version-intro { max-width: 780px; margin: 0 0 24px; line-height: 1.5; }
 .version { max-width: 780px; padding: 14px 18px; margin-bottom: 14px; border-radius: var(--radius);
            background: var(--bg-raised); border: 1px solid var(--line); }

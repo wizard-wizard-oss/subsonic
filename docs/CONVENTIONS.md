@@ -36,6 +36,12 @@ Projet durable : code propre et testé dès la première ligne, pas de « on ver
 - JavaScript sans outil de build, un fichier par composant.
 
 ## Qualité
+- **Modifications de texte uniquement** (menus, titres, messages, aide, traductions et documentation) :
+  ne pas relancer de tests unitaires, d’intégration ou de parcours navigateur pour ce seul changement.
+  Adapter les attentes textuelles des tests existants si nécessaire, sans les exécuter ni créer de nouveaux
+  tests dédiés. Se limiter à la relecture du diff et à la validité du format si le fichier est structuré
+  (par exemple YAML). Les changements de comportement ou de logique appellent les tests ciblés adaptés.
+  Consigne confirmée par l’utilisateur le 26/11/2026.
 - Chaque fonctionnalité arrive avec ses tests (unitaires + intégration + parcours jsdom pour la page).
 - Écritures protégées (en-tête CSRF), entrées validées côté serveur, erreurs renvoyées comme clés de texte.
 - Commentaires et noms clairs, petites fonctions, pas de duplication.

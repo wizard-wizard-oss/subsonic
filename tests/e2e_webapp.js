@@ -1253,19 +1253,37 @@ function makeEventSource(jar) {
   check("actualité : flux ajouté retiré par la personne, ses articles oubliés", await until(() =>
         $$(".news-feed").length === 4 && !$(".news-article")));
 
-  // --- Nouveautés : page pour les utilisateurs, tous les textes présents ---
+  // --- Help : thèmes, mises en avant et guides utilisateurs ---
   w.location.hash = "#/whatsnew";
-  check("nouveautés : page, lien du menu actif", await until(() => $("#main h1") &&
-        $("#main h1").textContent.startsWith("Nouveautés")) &&
+  check("help : page et lien du menu conservés", await until(() => $(".help-page") &&
+        $("#main h1").textContent === "Help") &&
         $('.topnav a[href="#/whatsnew"]').classList.contains("active"));
-  check("nouveautés : le principe puis six parties", !!$(".whatsnew-idea") && $$(".whatsnew-part").length === 6 &&
-        $$(".whatsnew-card").length === 34);
-  check("nouveautés : playlists (glisser-déposer, communautaires, partagées)",
-        ["Glisser-déposer", "Communautaires", "Partagées"].every(w => $$(".whatsnew-card h3").some(h => h.textContent.startsWith(w))));
-  check("nouveautés : aucun texte manquant", ![...$$("#main h2, #main h3, #main p")].some(n => /whatsnew\./.test(n.textContent)));
-  check("nouveautés : le quota YouTube expliqué", $$(".whatsnew-card").some(c => c.textContent.includes("120 recherches par heure")));
-  $$(".whatsnew-link").find(a => a.getAttribute("href") === "#/mix").click();
-  check("nouveautés : lien vers la page Mix", await until(() => w.location.hash === "#/mix"));
+  check("help : trois mises en avant et sept thèmes", $$("button.help-feature").length === 3 &&
+        $$("button.help-theme").length === 7);
+  check("help : paroles synchronisées en pas à pas", $("#help-guide-title").textContent.includes("paroles") &&
+        $$(".help-steps li").length === 3);
+  $('.help-feature[data-feature="chat"]').click();
+  check("help : la mise en avant ouvre le guide du salon",
+        $('.help-theme[data-theme="social"]').getAttribute("aria-pressed") === "true" &&
+        $("#help-guide-title").textContent.includes("salon"));
+  $('.help-feature[data-feature="press"]').click();
+  check("help : la presse mène à l’ajout d’un journal ou flux RSS",
+        $('.help-theme[data-theme="press"]').getAttribute("aria-pressed") === "true" &&
+        /RSS/.test($(".help-lesson").textContent));
+  $('.help-theme[data-theme="save"]').click();
+  check("help : playlists et import accessibles", $$(".help-guide-button").some(button =>
+        /partagées.*communautaires/i.test(button.textContent)) && $$(".help-guide-button").some(button =>
+        /Spotify.*Deezer.*Apple Music/.test(button.textContent)));
+  $('.help-theme[data-theme="elsewhere"]').click();
+  $('.help-guide-button[data-guide="g5"]').click();
+  check("help : limite des recherches YouTube expliquée", /120 recherches/.test($(".help-lesson").textContent));
+  $('.help-theme[data-theme="explore"]').click();
+  check("help : labels accessibles depuis une édition d’album", /album/.test($(".help-lesson").textContent) &&
+        /édition/.test($(".help-note").textContent));
+  check("help : aucun texte manquant", !/whatsnew\./.test($(".help-page").textContent));
+  $('.help-guide-button[data-guide="g4"]').click();
+  $('a.whatsnew-link[href="#/mix"]').click();
+  check("help : lien vers la page Mix", await until(() => w.location.hash === "#/mix"));
   w.location.hash = "#/";
 
   // --- Versions : numéro à côté du titre, pastille tant que la dernière version n'a pas été vue ---

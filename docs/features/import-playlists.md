@@ -2,7 +2,7 @@
 
 ## Ce que ça fait, de A à Z
 Page **« Importer une playlist »** (`#/import`, bouton ⬇ dans l'onglet Playlists de la barre de gauche, carte dans
-« Help ») ; droit Subsonic « playlist » requis. Faite le 27/10/2026 (demandée).
+« Nouveautés ») ; droit Subsonic « playlist » requis. Faite le 27/10/2026 (demandée).
 1. **Lire la playlist** (`POST /api/import/read`) :
    - **lien Deezer** (playlist publique) : `deezer.com/…/playlist/<id>`, ou lien court de l'application
      (`link.deezer.com/s/…`, `deezer.page.link/…`, seuls liens suivis) ; API publique de Deezer, sans clé, pages de 100 ;

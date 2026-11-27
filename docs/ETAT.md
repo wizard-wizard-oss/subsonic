@@ -1,5 +1,26 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+**Help structuré par thèmes, 1.16 (26/11/2026, déployée et vérifiée)** : nom **Help** conservé dans
+le menu et le titre à la demande de l’utilisateur. Trois mises en avant (salon, paroles synchronisées,
+presse) puis sept thèmes et 39 guides de trois étapes. Captures des composants réels avec des données
+d’exemple ; liens et actions vers les fonctions existantes. Explications détaillées pour les labels liés
+aux éditions d’albums, les imports, les flux RSS et les recommandations privées. Navigation accessible,
+styles dédiés adaptés à la largeur disponible ; aucun effet sur la lecture ou les préférences en consultant
+les guides. Textes séparés du rendu, aucun service ni stockage ajouté. Validation : 12 groupes Help, parcours PC
+(367 contrôles), parcours mobile et cinq tests de versions réussis ; navigateur de 320 à 1440 px,
+clair/sombre, sans débordement de Help ni erreur JavaScript. Détails : [Help](features/nouveautes.md).
+Publication le 26/11/2026 depuis une livraison isolée de la production 1.15.2, par
+`deploy/pc/push.sh` (empreinte `e01ea663204e`). Seuls les 12 fichiers applicatifs Help
+diffèrent de la production précédente. Les 245 fichiers exécutés et 64 ressources HTTPS, dont les
+six captures, correspondent à cette livraison. Menu et titre Help, sept thèmes, 39 guides et
+117 étapes confirmés par HTTPS. Conteneur sain, configuration et volume de données conservés ;
+SQLite intègre au schéma 21, clés étrangères valides. Les recherches et autres écritures reçues
+pendant la publication sont conservées. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.16-20261126T221729Z/` ; image précédente `pimedia-web:pre-1.16-20261126t221729z`.
+Aucune migration. Le retour de code peut conserver la base courante.
+Validation de la livraison exacte : 12 groupes Help, parcours PC général, parcours mobile complet
+et cinq tests de versions réussis.
+
 **Menu Help, 1.15.2 (26/11/2026, déployée et vérifiée)** : à la demande de l’utilisateur, « Help »
 remplace « Découvrir l’application » dans le menu et le titre de la page pour raccourcir le libellé sur mobile.
 Route, cartes et liens conservés ; seules les traductions, la note de version et le commentaire du composant

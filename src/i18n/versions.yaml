@@ -6,6 +6,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.16"
+  date: 2026-11-26
+  title: "Help : les bons gestes, par thème"
+  changes:
+    - "Retrouvez les explications dans sept thèmes : écouter, partager, explorer, garder ses découvertes, musique d’ailleurs, presse musicale et réglages."
+    - "Le salon, les paroles synchronisées et les journaux sont mis en avant. Chaque guide présente les étapes et les liens pour essayer, avec des captures de l’application pour les gestes moins visibles."
+    - "Comprenez comment importer vos playlists, explorer un label depuis une édition d’album et retrouver les articles sous les artistes."
+
 - version: "1.15.2"
   date: 2026-11-26
   title: "Un menu d’aide plus court"

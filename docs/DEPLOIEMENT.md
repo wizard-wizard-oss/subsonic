@@ -1,5 +1,19 @@
 # Déployer le projet
 
+Publication 1.16 le 26/11/2026 : Help est organisé en sept thèmes et 39 guides pas à pas,
+avec mises en avant du salon, des paroles synchronisées et des journaux.
+Publication le 26/11/2026 depuis une livraison isolée de la production 1.15.2, par
+`deploy/pc/push.sh` (empreinte `e01ea663204e`). Seuls les 12 fichiers applicatifs Help
+diffèrent de la production précédente. Les 245 fichiers exécutés et 64 ressources HTTPS, dont les
+six captures, correspondent à cette livraison. Menu et titre Help, sept thèmes, 39 guides et
+117 étapes confirmés par HTTPS. Conteneur sain, configuration et volume de données conservés ;
+SQLite intègre au schéma 21, clés étrangères valides. Les recherches et autres écritures reçues
+pendant la publication sont conservées. Sauvegarde code/configuration/SQLite :
+`../pimedia-backups/pre-1.16-20261126T221729Z/` ; image précédente `pimedia-web:pre-1.16-20261126t221729z`.
+Aucune migration. Le retour de code peut conserver la base courante.
+Validation de la livraison exacte : 12 groupes Help, parcours PC général, parcours mobile complet
+et cinq tests de versions réussis.
+
 Publication 1.15.2 le 26/11/2026 : le menu et le titre de la page d’aide deviennent « Help »,
 plus court sur mobile, à la demande de l’utilisateur. Correction de texte sur la 1.15.1, sans tests relancés.
 Mise à jour ciblée et reconstruction Docker ; HTTPS confirme le nouveau libellé, la version et la santé du site.
