@@ -2,8 +2,10 @@
 tags, sorties de la semaine). Les appelants reçoivent des entités, jamais le JSON du service."""
 import re
 import time
+from dataclasses import replace
 from urllib.parse import urlencode
 
+from ...text import normalize
 from ..metadata import ProviderUnavailable, PublicMetadata
 from . import parsing
 from .entities import (ArtistConnections, MusicArtist, MusicProfile, MusicWork, Release, ReleaseGenre, Result,
@@ -14,6 +16,10 @@ GENRE_CATALOG_TTL = 86400
 WEEKLY_TTL = 3600
 SEARCH_LIMIT = 25
 PAGE_SIZE = 25
+MAX_LIMIT = 100                 # plus grande page acceptée par la recherche MusicBrainz
+IDS_PER_QUERY = 20              # identifiants regroupés dans une même recherche
+MAX_TAGS = 10
+ALBUM_OR_EP = "(primarytype:album OR primarytype:ep)"
 
 
 class MusicBrainz(PublicMetadata):
@@ -153,13 +159,53 @@ class MusicBrainz(PublicMetadata):
         return {"names": list(names)}
 
     def weekly_groups(self, genre, monday, sunday, limit, offset):
-        query = (f"tag:{parsing.search_phrase(genre)} AND (primarytype:album OR primarytype:ep) "
-                 f"AND firstreleasedate:[{monday} TO {sunday}]")
+        return self._groups(f"tag:{parsing.search_phrase(genre)}", monday, sunday, limit, offset)
+
+    def _groups(self, selection, start, end, limit=MAX_LIMIT, offset=0):
+        """Albums et EP dont la première sortie tombe entre start et end, parmi la sélection donnée."""
+        query = f"{selection} AND {ALBUM_OR_EP} AND firstreleasedate:[{start} TO {end}]"
         response = self._get("release-group", ttl=WEEKLY_TTL, query=query, limit=limit, offset=offset)
         rows = response.data["release-groups"]
         albums = tuple(album for album in map(parsing.weekly_group, rows) if album is not None)
-        end = offset + len(rows)
-        return WeeklyReleasePage(albums, end if rows and end < response.data["count"] else None, response.stale)
+        last = offset + len(rows)
+        return WeeklyReleasePage(albums, last if rows and last < response.data["count"] else None, response.stale)
+
+    # ---------- radar des sorties ----------
+    def groups_by_artists(self, artist_ids, start, end, offset=0):
+        """Sorties de plusieurs artistes en une requête (IDS_PER_QUERY au plus)."""
+        ids = [parsing.mbid(identity) for identity in artist_ids][:IDS_PER_QUERY]
+        return self._groups("(" + " OR ".join("arid:" + identity for identity in ids) + ")", start, end,
+                            offset=offset)
+
+    def groups_by_artist_name(self, name, start, end):
+        """Artiste sans MBID connu : le nom crédité doit être exactement le même (« Air » n'est pas « Air Supply »)."""
+        page = self._groups("artist:" + parsing.search_phrase(name), start, end)
+        return replace(page, albums=tuple(a for a in page.albums if normalize(a.artist) == normalize(name)),
+                       next_offset=None)
+
+    def label_groups(self, label_id, start, end):
+        """Nouveautés d'un label : ses éditions de la période, gardées si leur groupe sort pour la première fois."""
+        query = (f"laid:{parsing.mbid(label_id)} AND {ALBUM_OR_EP} AND date:[{start} TO {end}]")
+        response = self._get("release", ttl=WEEKLY_TTL, query=query, limit=MAX_LIMIT)
+        groups = [(r.get("release-group") or {}) for r in response.data.get("releases", [])]
+        ids = list(dict.fromkeys(g["id"] for g in groups
+                                 if g.get("id") and str(g.get("primary-type", "")).lower() in ("album", "ep")))
+        albums, stale = [], response.stale
+        for index in range(0, len(ids), IDS_PER_QUERY):
+            chunk = [parsing.mbid(identity) for identity in ids[index:index + IDS_PER_QUERY]]
+            page = self._groups("(" + " OR ".join("rgid:" + identity for identity in chunk) + ")", start, end)
+            albums += page.albums
+            stale = stale or page.stale
+        return WeeklyReleasePage(tuple(albums), None, stale)
+
+    def search_labels(self, name):
+        response = self._get("label", query="label:" + parsing.search_phrase(name), limit=SEARCH_LIMIT)
+        found = (parsing.label(raw) for raw in response.data.get("labels", []))
+        return Result(tuple(label for label in found if label is not None), response.stale)
+
+    def artist_tags(self, artist_id):
+        """Tags votés d'un artiste, du plus voté au moins voté (gardés 7 jours)."""
+        return parsing.tags(self._get("artist/" + parsing.mbid(artist_id), inc="tags").data)[:MAX_TAGS]
 
 
 def describe_release(title, year):

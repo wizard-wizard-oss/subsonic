@@ -14,7 +14,6 @@ TREND_LABEL_ALBUMS = 30                   # albums dont on cherche le label, par
 TREND_STYLES = 5                          # styles des tendances par compte
 SIMILAR_PER_ARTIST = 5                    # proches Last.fm gardés par artiste des tendances
 DISCOVERIES_PER_USER = 60                 # proches (découvertes) par compte
-ARTISTS_PER_QUERY = 20                    # artistes regroupés dans une requête MusicBrainz
 
 KINDS = ("style", "label", "artist", "similar")
 ORIGINS = ("manual", "trends", "discovery")
