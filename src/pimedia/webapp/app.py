@@ -5,8 +5,8 @@ import types
 
 from ..i18n import Texts
 from ..server.transport import Reply, Router, HttpApp, ThreadedServer, make_request_handler
-from ..server.podcasts.directories import JsonHttp
 from ..server.webfiles import WebFiles
+from ..shared.providers.deezer import Deezer
 from ..shared.providers.http import HttpClient
 from ..shared.providers.lyrics import LyricsFinder
 from ..shared.providers.wikipedia import Wikipedia
@@ -214,7 +214,7 @@ class WebApplication:
         self.playlists = Playlists(self.subsonic, CommunityRepository(self.db), self.users,
                                    PlaylistExtRepository(self.db), self.ext_favorites)
         self.imports = PlaylistImport(self.subsonic, self.extmusic, self.playlists, self.ext_favorites,
-                                      DeezerReader(JsonHttp()))
+                                      DeezerReader(Deezer(http)))
         self.tag_sources = TagSources(self.musicbrainz, self.discogs)
         self.audio_tags = AudioTags(self.config.music_dir, os.path.join(self.data_dir, "audio-tag-backups"))
         self.album_tags = AlbumTags(self.folders, self.subsonic, self.audio_tags, self.tag_sources,

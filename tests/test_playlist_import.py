@@ -3,6 +3,7 @@ import plistlib
 import unittest
 
 from pimedia.server.extmusic.ytmusic import YouTubeMusicSearch
+from pimedia.shared.providers.deezer import Deezer
 from pimedia.webapp.entities import ImportedTrack
 from pimedia.webapp.import_readers import (MAX_TRACKS, DeezerReader, ImportFailed, NeedsChoice, deezer_playlist_id,
                                            read_file, seconds)
@@ -97,7 +98,7 @@ class ReadersTest(unittest.TestCase):
         followed = []
         http = FakeHttp({"playlist/77/tracks?index=0": dict(DEEZER_TRACKS, next="..."), "playlist/77/tracks": DEEZER_TRACKS,
                          "playlist/77": DEEZER_PLAYLIST, "playlist/5": {"error": {"code": 800}}})
-        reader = DeezerReader(http, lambda link: followed.append(link) or "https://www.deezer.com/fr/playlist/77?host=1")
+        reader = DeezerReader(Deezer(http), lambda link: followed.append(link) or "https://www.deezer.com/fr/playlist/77?host=1")
         name, tracks = reader.read("https://link.deezer.com/s/abcDEF123")
         self.assertEqual((name, len(tracks), followed), ("En mode 70", 8, ["https://link.deezer.com/s/abcDEF123"]))   # 2 pages
         self.assertIn("index=4", http.calls[-1][0])
@@ -135,7 +136,7 @@ class ImportHttpTest(WebAppTestCase):
         self.http = FakeHttp({"youtube/v3/videos": VIDEOS, "playlist/77/tracks": DEEZER_TRACKS, "playlist/77": DEEZER_PLAYLIST})
         for source in self.app.extmusic.service.sources.values():
             source.http = self.http
-        self.app.imports.reader.http = self.http
+        self.app.imports.reader.deezer.http = self.http
         self.app.extmusic.youtube.music = YouTubeMusicSearch(FakeYouTubeMusic({"songs": MUSIC_SONGS}))
         self.bob = self.client("bob", "pw2")
 

@@ -10,6 +10,8 @@ import urllib.request
 from urllib.parse import parse_qs, urlsplit
 
 from pimedia.entities import Track
+from pimedia.shared.providers.deezer import Deezer
+from pimedia.shared.providers.spotify import Spotify
 from pimedia.server.links import LinkError, LinkResolver
 from pimedia.server.phone_files import PhoneFiles, UploadError, title_from_filename
 from pimedia.server.podcasts.directories import DirectoryError
@@ -85,6 +87,13 @@ class FakeHttp:
                 return answer
         raise DirectoryError("inconnu")
 
+    def get_json(self, url, headers=None):
+        """Comme HttpClient.get_json : une panne prévue (DirectoryError) devient une erreur réseau."""
+        try:
+            return self.get(url, headers)
+        except DirectoryError as error:
+            raise OSError(str(error)) from error
+
 
 LIBRARY = [Track.from_api({"id": "s9", "title": "L.A. Woman", "artist": "The Doors"}),
            Track.from_api({"id": "s8", "title": "Riders on the Storm", "artist": "The Doors"})]
@@ -94,7 +103,7 @@ class LinkResolverTest(unittest.TestCase):
     def resolver(self, routes, library=LIBRARY, youtube=()):
         self.http = FakeHttp(routes)
         return LinkResolver(self.http, lambda text: [t for t in library if any(w in t.title.lower() for w in text.lower().split())],
-                            lambda text: list(youtube))
+                            lambda text: list(youtube), deezer=Deezer(self.http), spotify=Spotify(self.http))
 
     def test_youtube_link_prefers_the_library(self):
         r = self.resolver({"youtube.com/oembed": {"title": "The Doors - L.A. Woman (Official Audio)", "author_name": "The Doors - Topic"}})

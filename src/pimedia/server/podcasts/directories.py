@@ -8,6 +8,7 @@ import urllib.request
 from .feeds import TtlCache, USER_AGENT
 
 ITUNES_SEARCH = "https://itunes.apple.com/search"
+ITUNES_LOOKUP = "https://itunes.apple.com/lookup"
 INDEX_API = "https://api.podcastindex.org/api/1.0/"
 MAX_AGE_DAYS = 400              # un podcast sans nouvel épisode depuis plus longtemps est considéré abandonné
 MIN_EPISODES = 3
@@ -91,6 +92,13 @@ class ItunesDirectory:
                                         ("limit", limit), ("term", term)])
         data = self.http.get(ITUNES_SEARCH + "?" + query)
         return [from_itunes(r) for r in data.get("results", []) if r.get("feedUrl")]
+
+    def track(self, track_id):
+        """(titre, artiste, image) d'un morceau d'Apple Music, ou None s'il est introuvable."""
+        results = self.http.get(ITUNES_LOOKUP + "?" + urllib.parse.urlencode([("id", track_id)])).get("results") or []
+        if not results:
+            return None
+        return results[0].get("trackName", ""), results[0].get("artistName", ""), results[0].get("artworkUrl100", "")
 
 
 class PodcastIndexDirectory:

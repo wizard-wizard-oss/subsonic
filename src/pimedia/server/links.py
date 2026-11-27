@@ -8,7 +8,10 @@ import urllib.parse
 
 from ..entities import Track
 from .extmusic.sources import song_parts
-from .podcasts.directories import DirectoryError
+from ..shared.providers.deezer import Deezer, DeezerNotFound
+from ..shared.providers.metadata import ProviderUnavailable
+from ..shared.providers.spotify import Spotify
+from .podcasts.directories import DirectoryError, ItunesDirectory
 from .podcasts.relevance import normalize, words_of
 
 YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -48,8 +51,11 @@ def numeric_id_after(path, marker):
 
 
 class LinkResolver:
-    def __init__(self, http, search_library, search_youtube):
-        self.http = http                         # JsonHttp : get(url) -> JSON
+    def __init__(self, http, search_library, search_youtube, deezer=None, itunes=None, spotify=None):
+        self.http = http                         # JsonHttp : oEmbed YouTube (YouTube garde son transport)
+        self.deezer = deezer or Deezer()
+        self.itunes = itunes or ItunesDirectory(http)
+        self.spotify = spotify or Spotify()
         self.search_library = search_library     # texte -> [Track]
         self.search_youtube = search_youtube     # texte -> [Track] (vide si YouTube n'est pas activé)
 
@@ -85,23 +91,32 @@ class LinkResolver:
         return SongInfo(data.get("title") or "Vidéo YouTube", artist, video, data.get("thumbnail_url") or "")
 
     def _deezer(self, track_id):
-        data = self._get("https://api.deezer.com/track/" + track_id)
-        if not data.get("title"):
+        try:
+            track = self.deezer.track(track_id)
+        except ProviderUnavailable:
+            raise LinkError("Service injoignable pour le moment")
+        except DeezerNotFound:
             raise LinkError("Titre Deezer introuvable")
-        return SongInfo(data["title"], (data.get("artist") or {}).get("name", ""), image=(data.get("album") or {}).get("cover_medium", ""))
+        return SongInfo(track.title, track.artist, image=track.image)
 
     def _apple(self, track_id):
-        results = self._get("https://itunes.apple.com/lookup?id=" + track_id).get("results") or []
-        if not results:
+        try:
+            found = self.itunes.track(track_id)
+        except DirectoryError:
+            raise LinkError("Service injoignable pour le moment")
+        if not found:
             raise LinkError("Titre Apple Music introuvable")
-        return SongInfo(results[0].get("trackName", ""), results[0].get("artistName", ""), image=results[0].get("artworkUrl100", ""))
+        title, artist, image = found
+        return SongInfo(title, artist, image=image)
 
     def _spotify(self, parts):
-        clean = urllib.parse.urlunsplit(("https", "open.spotify.com", parts.path, "", ""))
-        data = self._get("https://open.spotify.com/oembed?url=" + urllib.parse.quote(clean, safe=""))
-        if not data.get("title"):
+        try:
+            title, image = self.spotify.track(parts.path)
+        except ProviderUnavailable:
+            raise LinkError("Service injoignable pour le moment")
+        except LookupError:
             raise LinkError("Titre Spotify introuvable")
-        return SongInfo(data["title"], image=data.get("thumbnail_url") or "")    # Spotify ne donne pas l'artiste
+        return SongInfo(title, image=image)    # Spotify ne donne pas l'artiste
 
     # --- le titre à jouer ---
     def resolve(self, url):
