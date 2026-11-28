@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-## Favoris 1.28 publiée · correctif photos 1.28.1 (28/11/2026)
+## Favoris 1.28.1 publiée et vérifiée (28/11/2026)
 
 Retour utilisateur après la 1.27.1 : albums difficiles à retrouver et souhait de portraits ronds pour les
 artistes. Diagnostic en lecture seule du compte concerné : Subsonic renvoie 225 albums favoris par dossiers,
@@ -26,6 +26,12 @@ et inaccessible, même image disponible sur le CDN Fastly existant. Normalisatio
 liens dans LastFm, réutilisée par ArtistPortraits, sans élargissement des origines CSP ni acceptation d’URL arbitraires.
 La liste de favoris reçoit du serveur la limite de recherches parallèles pour qu’un portrait lent ne
 bloque plus les autres. Aucun nouveau fournisseur, aucune migration, aucun favori réel modifié.
+Publication vérifiée du correctif : commit applicatif `34fda4b`, image `ecfdfd122442`, HTTPS 1.28.1 et
+conteneur sain, schéma 32 intègre, 340 fichiers applicatifs et 88 ressources publiques conformes.
+Le service réel `ArtistPortraits.get` renvoie bien la photo Subsonic de Red Axes sur le CDN actuel.
+36 tests fournisseurs/portraits et le parcours jsdom de parallélisme passent, avec contrôles de sécurité.
+Sauvegarde `../pimedia-backups/pre-1.28.1-20261128T134901Z/`, image de retour arrière
+`pimedia-web:pre-1.28.1-20261128T134901Z`. Aucun nouvel appel de recherche spécifique aux favoris.
 
 ## Publication 1.27.1 vérifiée (28/11/2026)
 
