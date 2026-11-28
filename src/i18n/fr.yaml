@@ -357,6 +357,9 @@ webapp:
     actions: "Actions"
     bitrate_value: "{value} kbps"
     size_value: "{value} Mio"
+  favorites:
+    count: "{shown} sur {total}"
+
   search:
     artists: "Artistes"
     albums: "Albums"

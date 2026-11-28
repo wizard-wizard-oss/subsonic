@@ -27,6 +27,38 @@ class FavoritesServiceTest(unittest.TestCase):
         self.assertEqual(len(data["albums"]), 1)
         self.assertEqual((data["albums"][0]["genre"], data["albums"][0]["songCount"]), ("Jazz", 12))
 
+    def test_new_tag_only_album_precedes_old_directory_favorites(self):
+        self.raw["getStarred"]["starred"] = {"album": [
+            {"id": "dir%d" % i, "title": "Ancien album %d" % i, "starred": "2026-01-01T00:00:00Z"}
+            for i in range(225)]}
+        self.raw["getStarred2"]["starred2"] = {"album": {
+            "id": "14192", "name": "Towards Rebirth", "artist": "Ripper", "starred": "2026-11-28T13:27:56.960Z"}}
+        self.folders.album_id_for_folder.side_effect = lambda user, identity: identity.replace("dir", "al")
+        first = self.favorites.page(self.user).to_api()
+        self.assertEqual((first["albums"][0]["id"], first["albums"][0]["name"]), ("14192", "Towards Rebirth"))
+        self.assertEqual(first["pagination"]["albums"], {"total": 226, "hasMore": True})
+
+    def test_duplicate_album_uses_newest_favorite_date_but_tag_metadata(self):
+        self.raw["getStarred"]["starred"] = {"album": [
+            {"id": "other-directory", "title": "Autre album", "starred": "2026-11-28T12:00:00Z"},
+            {"id": "directory", "title": "Libellé dossier", "starred": "2026-11-29T00:00:00Z"}]}
+        self.raw["getStarred2"]["starred2"] = {"album": {
+            "id": "tag", "name": "Libellé tags", "genre": "Jazz", "songCount": 12,
+            "starred": "2026-11-27T12:00:00Z"}}
+        self.folders.album_id_for_folder.side_effect = lambda user, identity: {
+            "directory": "tag", "other-directory": "other"}[identity]
+        albums = self.favorites.page(self.user).albums
+        self.assertEqual([album["id"] for album in albums], ["tag", "other"])
+        self.assertEqual((albums[0]["name"], albums[0]["genre"], albums[0]["songCount"]), ("Libellé tags", "Jazz", 12))
+
+    def test_missing_or_invalid_dates_keep_their_stable_order(self):
+        self.raw["getStarred2"]["starred2"] = {"album": [
+            {"id": "missing", "name": "Sans date"}, {"id": "invalid", "name": "Date invalide", "starred": "date"},
+            {"id": "valid", "name": "Daté", "starred": "2026-11-28T13:27:56.960Z"},
+            {"id": "boolean", "name": "Date booléenne", "starred": True}]}
+        self.assertEqual([album["id"] for album in self.favorites.page(self.user).albums],
+                         ["valid", "missing", "invalid", "boolean"])
+
     def test_duplicate_song_keeps_tag_metadata_and_directory_only_songs_remain(self):
         self.raw["getStarred2"]["starred2"] = {"song": {
             "id": "track", "title": "Titre", "genre": "Disco / Pop", "size": 12_345_678, "suffix": "flac"}}
@@ -74,3 +106,29 @@ class FavoritesServiceTest(unittest.TestCase):
                 state = self.favorites.set_favorite(self.user, kind, identity, False)
                 self.assertEqual(state.to_api(), {"starred": False})
                 self.assertEqual(self.subsonic.call.call_args.args[1:], ("unstar", [(key, identity)]))
+
+    def test_each_category_exposes_its_own_total_and_continuation(self):
+        self.raw["getStarred"]["starred"] = {
+            "artist": [{"id": "ar%d" % i, "name": "Artiste %d" % i} for i in range(69)],
+            "album": [{"id": "dir%d" % i, "title": "Reaper" if i == 224 else "Album %d" % i}
+                      for i in range(225)],
+            "song": [{"id": "s%d" % i, "title": "Titre %d" % i} for i in range(794)]}
+        self.raw["getStarred2"]["starred2"] = {
+            "artist": [{"id": "ar%d" % i, "name": "Artiste %d" % i} for i in range(2)],
+            "album": [{"id": "al%d" % i, "name": "Album %d" % i} for i in range(11)],
+            "song": self.raw["getStarred"]["starred"]["song"]}
+        self.folders.album_id_for_folder.side_effect = lambda user, identity: identity.replace("dir", "al")
+        self.folders.artist_folder_id.side_effect = lambda user, identity: "f" + identity
+        first = self.favorites.page(self.user).to_api()
+        self.assertEqual(first["pagination"], {
+            "artists": {"total": 69, "hasMore": True}, "albums": {"total": 225, "hasMore": True},
+            "songs": {"total": 794, "hasMore": True}})
+        second = self.favorites.page(self.user, 1).to_api()
+        self.assertEqual(second["pagination"]["artists"], {"total": 69, "hasMore": False})
+        albums_last = self.favorites.page(self.user, 5).to_api()
+        self.assertEqual(albums_last["pagination"]["albums"], {"total": 225, "hasMore": False})
+        self.assertEqual(len(albums_last["albums"]), 25)
+        self.assertEqual(albums_last["albums"][-1]["name"], "Reaper")
+        self.assertTrue(albums_last["pagination"]["songs"]["hasMore"])
+        self.assertTrue(albums_last["hasMore"])
+        self.assertFalse(self.favorites.page(self.user, 19).to_api()["hasMore"])

@@ -1,5 +1,22 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Favoris complets et portraits · 1.28 en préparation (28/11/2026)
+
+Retour utilisateur après la 1.27.1 : albums difficiles à retrouver et souhait de portraits ronds pour les
+artistes. Diagnostic en lecture seule du compte concerné : Subsonic renvoie 225 albums favoris par dossiers,
+11 par tags et 794 titres ; la pagination commune était placée après les titres. Chaque catégorie reçoit
+sa pagination indépendante, son compteur et son bouton local ; les portraits utilisent le service existant
+avec chargement à l’approche de l’écran et initiales de repli. Aucun favori du compte réel modifié.
+L’exemple a été identifié après précision : `Towards Rebirth` de Ripper, favori ID3 récent que la fusion
+repoussait après les anciens favoris par dossiers. Les albums sont désormais triés par date d’ajout,
+la plus récente en premier, avec date maximale et métadonnées des tags en cas de doublon.
+Vérification en lecture seule sur les réponses réelles du compte avec le code candidat chargé en mémoire :
+`Towards Rebirth` (Ripper) est le premier album de la première page ; 234 albums réunis, 70 artistes et
+794 titres disponibles. Aucun favori réel modifié. 26 tests Python ciblés et le parcours jsdom Favoris
+passent ; portraits, pagination indépendante et réponses tardives couverts. Aperçu de la vraie page avec
+données et images d’illustration ; composant des portraits vérifié à 390 px sans débordement.
+Validation visuelle et publication autorisées par l’utilisateur le 28/11/2026.
+
 ## Publication 1.27.1 vérifiée (28/11/2026)
 
 La livraison regroupée est publiée : accueil personnel, navigation, favoris, sorties et playlists.
