@@ -26,7 +26,7 @@ const WeeklyReleaseView = (() => {
       this.genres = []; this.followed = new Set(); this.selected = null; this.generation = 0; this.saving = false;
       this.input = el("input", {type: "search", list: "weekly-genres", placeholder: t("style"), "aria-label": t("style")});
       this.options = el("datalist", {id: "weekly-genres"});
-      this.range = el("strong");
+      this.week = WeeklyWeek.create(this.monday, monday => { this.monday = monday; this.reload(); });
       this.results = el("div", {"aria-live": "polite"});
       this.follows = el("div.chips");
       this.follow = el("button.primary", {type: "button", disabled: true, onclick: () => this.toggleFollow(), text: t("follow")});
@@ -38,9 +38,7 @@ const WeeklyReleaseView = (() => {
     }
 
     layout() {
-      const week = el("div.chips.weekly-week", {}, this.button("previous", () => this.move(-7)), this.range,
-        this.button("next", () => this.move(7)),
-        this.button("today", () => { this.monday = mondayFor(new Date()); this.reload(); }),
+      const week = el("div.weekly-browse-navigation", {}, this.week.node,
         this.back ? this.button("back_to_radar", this.back) : null);
       const sidebar = el("aside.weekly-followed", {}, el("h2", {text: t("followed")}), this.follows,
         el("a", {href: "#/whatsnew/press/g5", text: t("guide")}));
@@ -52,7 +50,7 @@ const WeeklyReleaseView = (() => {
     }
 
     showRange() {
-      this.range.textContent = display(this.monday) + " – " + display(shift(this.monday, 6));
+      this.week.update(this.monday);
     }
 
     async start() {
@@ -108,11 +106,6 @@ const WeeklyReleaseView = (() => {
       else if (this.selected) { this.selected = null; this.updateControls(); this.reload(); }
     }
 
-    move(days) {
-      this.monday = shift(this.monday, days);
-      this.reload();
-    }
-
     reload() {
       const version = ++this.generation;
       this.showRange();
@@ -147,13 +140,15 @@ const WeeklyReleaseView = (() => {
   }
 
   /* Pochette Cover Art Archive d'un groupe de sorties. Pour une sortie toute récente, archive.org n'a souvent pas encore
-     fabriqué les miniatures : on charge alors l'image d'origine, et la pochette vide seulement si elle manque aussi. */
-  function releaseCover(id, title) {
+     fabriqué les miniatures : on charge alors l'image d'origine, et la pochette vide seulement si elle manque aussi.
+     known : pochette déjà trouvée par le serveur, essayée en premier. */
+  function releaseCover(id, title, known) {
     const original = "https://coverartarchive.org/release-group/" + id + "/front";
-    const image = el("img.cover", {alt: title, loading: "lazy", width: 180, height: 180, src: original + "-250"});
-    let triedOriginal = false;
+    const tries = [original + "-250", original];
+    if (known) tries.unshift(known);                    // pochette exacte connue du serveur (ListenBrainz ou Last.fm)
+    const image = el("img.cover", {alt: title, loading: "lazy", width: 180, height: 180, src: tries.shift()});
     image.addEventListener("error", () => {
-      if (!triedOriginal) { triedOriginal = true; image.src = original; return; }
+      if (tries.length) { image.src = tries.shift(); return; }
       image.removeAttribute("src");
       image.alt = "";
       image.classList.add("empty");

@@ -1,0 +1,83 @@
+// Le même menu et les mêmes playlists sont déplacés, puis rendus à la disposition mobile.
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+const {JSDOM} = require(process.argv[2] || "jsdom");
+const root = path.join(__dirname,"../src/web-pc");
+const dom = new JSDOM(fs.readFileSync(path.join(root,"index.html"),"utf8"),{url:"https://music.example/",runScripts:"outside-only"});
+const d = dom.window.document;
+const run = code => vm.runInContext(code,dom.getInternalVMContext());
+const load = name => run(fs.readFileSync(path.join(root,"static/js/"+name+".js"),"utf8"));
+(async()=>{
+  load("core");load("icons");
+  run(`App.texts={"nav.albums":"Albums","nav.listen_later":"À écouter","nav.library":"Bibliothèque","nav.discover":"Découvrir","nav.create_mix":"Créer un mix",
+    "nav.send_album":"Envoyer un album","nav.guide":"À bord","nav.versions":"Versions","nav.webzines":"Webzines","nav.releases":"Sorties"};
+    App.user={id:1,roles:["stream","upload"]};App.preferences={chat_panel:"open"};App.live={on(){return ()=>{};}};
+    App.music={route:null,main:document.getElementById("main"),navigate(){}};
+    App.translate();App.placeIcons();`);
+  load("desktop-navigation");
+  const links = [...d.querySelectorAll(".topnav a")];
+  const search=d.getElementById("search");
+  const playlist = d.getElementById("panel-playlists"), settings=d.getElementById("open-settings");
+  const shortcuts=d.getElementById("artist-shortcuts"), version=d.getElementById("version-tag");
+  shortcuts.hidden=false;
+  const compilation=d.createElement("a");compilation.textContent="Compilations";compilation.href="#/artist/compilations";shortcuts.append(compilation);
+  run('window.desktop=new DesktopNavigation()');
+  assert.equal(d.querySelector("#sidebar .topnav"),links[0].parentElement);
+  assert.equal(d.querySelector(".desktop-search #search"),search);
+  assert.ok(d.querySelector(".desktop-search .icon"));
+  assert.ok(d.querySelector(".desktop-top-start #toggle-sidebar"));
+  assert.equal(d.querySelector(".account-menu-panel #open-settings"),settings);
+  assert.equal(d.querySelector(".account-menu-panel #version-tag"),version);
+  assert.equal(d.querySelector(".topbar .desktop-guide img").getAttribute("src").split("?")[0],"/static/favicon.svg");
+  assert.equal(d.body.dataset.chat,"closed");
+  const menuButton=d.getElementById("toggle-sidebar");
+  menuButton.click();
+  assert.equal(menuButton.getAttribute("aria-expanded"),"false");
+  menuButton.click();
+  assert.equal(menuButton.getAttribute("aria-expanded"),"true");
+  assert.equal(d.querySelector('#sidebar a[href="#/listen-later/bookmarks"]').textContent,"À écouter");
+  assert.ok(d.querySelector('#sidebar a[href="#/news/releases"]'));
+  assert.equal(d.querySelector('#sidebar a[href="#/news"]').textContent,"Webzines");
+  assert.equal(d.querySelector('#sidebar a[href="#/news/releases"]').textContent,"Sorties");
+  run('App.music.route={view:"news",id:"releases"};App.bus.emit("route",App.music.route);');
+  assert.ok(d.querySelector('#sidebar a[href="#/news/releases"]').classList.contains("active"));
+  assert.ok(!d.querySelector('#sidebar a[href="#/news"]').classList.contains("active"));
+  assert.equal(d.getElementById("panel-playlists"),playlist);
+  assert.equal(d.querySelectorAll(".desktop-playlist-actions button, .desktop-playlist-actions .icon-button").length,2);
+  assert.ok(d.querySelector('.desktop-playlist-heading .playlist-see-all[href="#/playlists"]'));
+  assert.equal(shortcuts.parentElement.id,"panel-artists");
+  assert.equal(d.querySelector('#panel-artists #artist-shortcuts a'),compilation);
+  assert.equal(links[1].textContent,"Bibliothèque");
+  run('desktop.destroy()');
+  assert.ok(d.querySelector(".topbar>.topnav"));
+  assert.equal(d.querySelector(".topbar>#search"),search);
+  assert.equal(d.querySelector(".desktop-search"),null);
+  assert.equal(d.getElementById("artist-shortcuts").closest("#panel-artists").id,"panel-artists");
+  assert.equal(d.querySelector(".topbar-right>#open-settings"),settings);
+  assert.equal(d.querySelector(".topbar>#version-tag"),version);
+  assert.equal(d.body.hasAttribute("data-desktop-layout"),false);
+  assert.equal(links[1].textContent,"Albums");
+  run('window.desktop=new DesktopNavigation();desktop.destroy();');
+  assert.equal(d.querySelectorAll("#version-tag").length,1);
+  // Le menu du bureau démarre ouvert même si l'ancienne barre était masquée ou au survol.
+  // Le choix mobile existant est conservé ; un autre compte repart avec son propre menu ouvert.
+  for (const sidebar of ["hidden", "hover", "pinned"]) {
+    run(`App.preferences.sidebar=${JSON.stringify(sidebar)};document.body.dataset.sidebar=${JSON.stringify(sidebar)};
+      window.desktop=new DesktopNavigation();`);
+    assert.equal(menuButton.getAttribute("aria-expanded"), "true", "ouverture initiale avec " + sidebar);
+    assert.equal(d.body.dataset.desktopMenu, "open");
+    menuButton.click();
+    assert.equal(d.body.dataset.desktopMenu, "closed");
+    run('App.bus.emit("preferences",App.preferences);');
+    assert.equal(d.body.dataset.desktopMenu, "closed", "les réglages ne défont pas la fermeture manuelle");
+    run('App.user={id:App.user.id+1,roles:["stream"]};App.bus.emit("preferences",App.preferences);');
+    assert.equal(d.body.dataset.desktopMenu, "open", "nouveau compte avec " + sidebar);
+    assert.equal(run("App.preferences.sidebar"),sidebar);
+    assert.equal(d.body.dataset.sidebar,sidebar);
+    run('desktop.destroy();');
+    assert.equal(d.body.dataset.sidebar,sidebar,"le retour mobile conserve le réglage");
+  }
+  dom.window.close();console.log("OK navigation ordinateur : menu repliable, recherche, playlists, compte et restauration mobile");
+})().catch(error=>{console.error(error);dom.window.close();process.exitCode=1;});

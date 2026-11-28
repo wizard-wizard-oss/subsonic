@@ -1,5 +1,20 @@
 # Barre de gauche : artistes et playlists (site web)
 
+## Sur ordinateur · 1.25
+
+Le menu principal remplace la liste permanente des artistes. Le bouton ☰ ou A le replie ; les playlists existantes
+et leurs cibles de dépôt restent sous les liens. Compilations et les autres dossiers épinglés figurent dans les filtres
+de la page Bibliothèque, après Nouveaux, via `library-shortcuts.js`. Les artistes se retrouvent par la recherche.
+`desktop-navigation.js` et `desktop-layout.css` portent
+cette disposition ; ils rendent les nœuds d’origine au volet mobile. Détails et tests : [Accueil personnel](accueil-personnel.md).
+Les modes fixe/survol/masqué et l’onglet mémorisé décrits ci-dessous concernent les composants d’origine ;
+le cadre du bureau s’ouvre toujours à l’arrivée (1.27.1), sans modifier ces préférences. Le menu réserve sa propre colonne, y compris après repli puis réouverture ; les anciennes règles de survol et de masquage ne s’y appliquent plus.
+
+Depuis la 1.27, « Tout voir › » ouvre la [galerie de playlists](playlists.md#galerie-visuelle--127).
+Le lien occupe une ligne sous le titre pour éviter tout chevauchement dans le menu étroit ; les raccourcis
+de création et d’import restent sur la ligne du titre. Le même lien retourne dans le volet mobile quand
+la disposition change, sans recréer les listes ni leurs cibles de dépôt.
+
 ## Ce que ça fait, de A à Z
 - Deux onglets, **Artistes | Playlists** (l'onglet choisi est gardé dans les réglages, `sidebar_tab`).
 - **Artistes** : les **dossiers d'artistes** de la bibliothèque (`getIndexes`), pas les tags : un seul « Dälek » même si

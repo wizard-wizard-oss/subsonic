@@ -8,6 +8,7 @@ Titres d'ailleurs (YouTube, SoundCloud, Jamendo) : Subsonic ne peut pas les gard
 montre à leur place ; les applications Subsonic ne voient que les titres Subsonic de la playlist."""
 from .library.catalog import as_list, song_row
 from .subsonic import Credentials, SubsonicError
+from .playlist_gallery.artwork import album_covers
 
 BAD_CREDENTIALS = 40
 
@@ -25,7 +26,7 @@ def playlist_card(raw, me, community=False):
     return {"id": raw.get("id"), "name": raw.get("name", "?"), "owner": owner,
             "mine": owner == me, "public": bool(raw.get("public")), "songCount": raw.get("songCount", 0),
             "duration": raw.get("duration", 0), "coverId": raw.get("coverArt", ""), "comment": raw.get("comment", ""),
-            "community": community, "canAdd": owner == me or community}
+            "community": community, "canAdd": owner == me or community, "changed": raw.get("changed", "")}
 
 
 class Playlists:
@@ -58,6 +59,9 @@ class Playlists:
         songs = [dict(song_row(s), position=i, addedBy=authors.get(s.get("id"), card["owner"]) if card["community"] else "")
                  for i, s in enumerate(as_list(raw.get("entry")))]
         card["songs"] = self._with_ext(songs, self.ext_tracks.of_playlist(playlist_id), card["owner"])
+        card["coverIds"] = album_covers(card["songs"])
+        card["songCount"] = len(card["songs"])
+        card["duration"] = sum(song.get("duration") or 0 for song in card["songs"])
         return card
 
     @staticmethod

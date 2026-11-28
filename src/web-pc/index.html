@@ -6,9 +6,11 @@
 <title>Musique</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{V}}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{V}}">
+<link rel="stylesheet" href="/static/css/fonts.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/base.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/layout.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/views.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/weekly-releases.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/help.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/help-home.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/album-tags.css?v={{V}}">
@@ -19,8 +21,10 @@
 <link rel="stylesheet" href="/static/css/account-menu.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/chat.css?v={{V}}">
 <link rel="stylesheet" href="/static/css/player.css?v={{V}}">
-<link rel="stylesheet" href="/static/css/mobile/layout.css?v={{V}}" media="(max-width: 820px), (max-width: 1100px) and (hover: none) and (pointer: coarse)">
-<link rel="stylesheet" href="/static/css/mobile/video.css?v={{V}}" media="(max-width: 820px), (max-width: 1100px) and (hover: none) and (pointer: coarse)">
+<link rel="stylesheet" href="/static/css/mobile/layout.css?v={{V}}" media="(max-width: 1100px) and (hover: none) and (pointer: coarse)">
+<link rel="stylesheet" href="/static/css/mobile/video.css?v={{V}}" media="(max-width: 1100px) and (hover: none) and (pointer: coarse)">
+<link rel="stylesheet" href="/static/css/desktop-layout.css?v={{V}}">
+<link rel="stylesheet" href="/static/css/playlist-gallery.css?v={{V}}">
 </head>
 <body>
 <!-- Connexion -->
@@ -85,6 +89,7 @@
       <div class="artist-list" id="artist-list"></div>
     </div>
     <div class="sidebar-panel" id="panel-playlists" hidden>
+      <a class="playlist-see-all" href="#/playlists" data-t="playlist.see_all"></a>
       <div class="playlist-tools">
         <input class="sidebar-filter" id="playlist-filter" type="search" data-t-placeholder="playlist.filter" autocomplete="off">
         <button class="icon-button" id="playlist-new" type="button" data-t-title="playlist.new" data-icon="plus"></button>
@@ -130,7 +135,12 @@
 <script src="/static/js/library-statistics.js?v={{V}}"></script>
 <script src="/static/js/page-sections.js?v={{V}}"></script>
 <script src="/static/js/artist-profile.js?v={{V}}"></script>
+<script src="/static/js/library-shortcuts.js?v={{V}}"></script>
 <script src="/static/js/views.js?v={{V}}"></script>
+<script src="/static/js/favorites.js?v={{V}}"></script>
+<script src="/static/js/album-rail.js?v={{V}}"></script>
+<script src="/static/js/home-resume.js?v={{V}}"></script>
+<script src="/static/js/desktop-home.js?v={{V}}"></script>
 <script src="/static/js/recommendation-comments.js?v={{V}}"></script>
 <script src="/static/js/listen-later-tabs.js?v={{V}}"></script>
 <script src="/static/js/listen-later.js?v={{V}}"></script>
@@ -144,9 +154,15 @@
 <script src="/static/js/label-discovery.js?v={{V}}"></script>
 <script src="/static/js/mix.js?v={{V}}"></script>
 <script src="/static/js/playlists.js?v={{V}}"></script>
+<script src="/static/js/playlist-artwork.js?v={{V}}"></script>
+<script src="/static/js/playlist-card.js?v={{V}}"></script>
+<script src="/static/js/playlist-gallery.js?v={{V}}"></script>
 <script src="/static/js/listening.js?v={{V}}"></script>
 <script src="/static/js/upload.js?v={{V}}"></script>
 <script src="/static/js/import.js?v={{V}}"></script>
+<script src="/static/js/weekly-week.js?v={{V}}"></script>
+<script src="/static/js/weekly-source-picker.js?v={{V}}"></script>
+<script src="/static/js/weekly-filters.js?v={{V}}"></script>
 <script src="/static/js/weekly-releases.js?v={{V}}"></script>
 <script src="/static/js/weekly-sources.js?v={{V}}"></script>
 <script src="/static/js/weekly-radar.js?v={{V}}"></script>
@@ -167,6 +183,7 @@
 <script src="/static/js/account-menu.js?v={{V}}"></script>
 <script src="/static/js/app.js?v={{V}}"></script>
 <script src="/static/js/mobile/navigation.js?v={{V}}"></script>
+<script src="/static/js/desktop-navigation.js?v={{V}}"></script>
 <script src="/static/js/mobile/bootstrap.js?v={{V}}"></script>
 </body>
 </html>

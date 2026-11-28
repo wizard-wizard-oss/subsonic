@@ -181,6 +181,10 @@ class WeeklyTest(unittest.TestCase):
         calls = len(self.calls)
         self.assertEqual(json.loads(request("GET", radar, cookie).body)["filters"][1]["key"], "style:" + GENRE)
         self.assertEqual(len(self.calls), calls)
+        choices = path + "/sources/choices?kind=artist"
+        self.assertEqual(request("GET", choices).status, 401)
+        self.assertEqual(request("GET", choices, cookie).status, 200)
+        self.assertEqual(request("GET", choices + "&offset=-1", cookie).status, 400)
         self.assertEqual(request("POST", path + "/refresh", cookie, {}).status, 403)
         self.assertEqual(request("POST", path + "/refresh", headers, {}).status, 200)
         refused = request("POST", path + "/refresh", headers, {})

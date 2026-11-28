@@ -22,7 +22,7 @@ win.getWeekly = async (url, params) => {
 win.writeWeekly = async (url, body) => writes.push({url, body});
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 (async () => {
-  win.eval(src("core") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-listen") + `
+  win.eval(src("core") + '\n' + src("icons") + '\n' + src("weekly-week") + '\nconst Views={};\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-listen") + `
     App.api.get=window.getWeekly; App.api.post=window.writeWeekly;
     window.weekly=WeeklyReleaseView; window.news=News;
   `);
@@ -38,15 +38,24 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(doc.querySelector(".weekly-followed button").textContent, "noise rock");
   button.click(); await tick();
   assert.equal(doc.querySelector(".weekly-followed button"), null);
-  const input = doc.querySelector("input");
+  const input = doc.querySelector("input[type=search]");
   input.value = "techno"; input.dispatchEvent(new win.Event("input"));
   input.value = "noise rock"; input.dispatchEvent(new win.Event("input"));
   await tick(); pending({albums: [], next: null}); await tick();
   assert.equal(doc.querySelector("h3").textContent, "Album vendredi");
   const before = calls.filter(x => x.url.endsWith("/releases")).at(-1).params.monday;
-  [...doc.querySelectorAll("button")].find(node => node.textContent === "weekly.next").click(); await tick();
+  doc.querySelector('[aria-label="weekly.next"]').click(); await tick();
   const after = calls.filter(x => x.url.endsWith("/releases")).at(-1).params.monday;
   assert.equal((new Date(after) - new Date(before)) / 86400000, 7);
+  // La pochette exacte connue du serveur reste prioritaire après la refonte des commandes.
+  const known = win.weekly.releaseCover("release", "Titre", "https://images.example/known.jpg");
+  assert.equal(known.src, "https://images.example/known.jpg");
+  known.dispatchEvent(new win.Event("error"));
+  assert.equal(known.src, "https://coverartarchive.org/release-group/release/front-250");
+  known.dispatchEvent(new win.Event("error"));
+  assert.equal(known.src, "https://coverartarchive.org/release-group/release/front");
+  known.dispatchEvent(new win.Event("error"));
+  assert.equal(known.getAttribute("src"), null);
   dom.window.close();
   console.log("OK · dates, annonces, abonnements, navigation et réponses désordonnées");
 })().catch(error => { console.error(error); process.exitCode = 1; });

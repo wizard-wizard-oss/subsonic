@@ -11,10 +11,12 @@
 3. Les **droits du compte Subsonic** (`getUser`) sont lus à la connexion puis à chaque page (`/api/me`) : un changement
    fait dans Subsonic s'applique sans se reconnecter ; si Subsonic ne répond pas, on garde les derniers connus
    (`users.roles`, migration 6).
-4. Réglages par personne (`/api/preferences`) : barre à gauche (fixe/survol/masquée), largeur, densité, salon ouvert/fermé,
+4. Réglages par personne (`/api/preferences`) : thème (sombre initial, clair disponible), barre à gauche (fixe/survol/masquée), largeur, densité, salon ouvert/fermé,
    grille d'albums, colonnes des morceaux, notifications de mentions, onglet de la barre (`sidebar_tab`).
-5. **Réglages rapides** (roue dentée en haut, gardée) : affichage (barre, largeur en px, salon, densité, pochettes,
+5. **Réglages rapides** (menu du compte sur ordinateur depuis la 1.25) : affichage (thème, densité, pochettes,
    colonnes des morceaux, notifications), liste « Votre compte Subsonic permet de… » et lien vers « Mon compte ».
+   Les réglages historiques de barre, largeur en px et salon restent disponibles dans la disposition mobile ;
+   sur ordinateur, le menu et le salon se replient directement et la largeur du menu s’adapte à la fenêtre.
 6. **Page « Mon compte »** (`#/account`, 27/10/2026), ouverte par **sa photo et son nom en haut à droite** (ou depuis les
    réglages rapides), en cartes :
    - **Photo de profil** : d'où vient la photo (`GET /api/account` : `source` = `site`, `subsonic` ou rien) ;

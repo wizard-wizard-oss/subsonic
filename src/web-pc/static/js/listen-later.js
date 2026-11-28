@@ -29,7 +29,7 @@ const ListenLaterUI = (() => {
   function showIndicator(unread, discussion = null) {
     unreadDiscussion = discussion;
     document.querySelectorAll(".recommendation-unread-comments").forEach(button => { button.hidden = !discussion; });
-    document.querySelectorAll('.topnav a[href="#/listen-later"]').forEach(link => {
+    document.querySelectorAll('.topnav a[href^="#/listen-later"]').forEach(link => {
       const label = unread ? t("unread_label") : App.t("nav.listen_later");
       link.classList.toggle("recommendations-unread", unread);
       link.setAttribute("aria-label", label);
@@ -333,10 +333,11 @@ const ListenLaterUI = (() => {
     const thread = options.thread || null;
     const node = el("article.listen-later-card.listen-later-tile", {},
       el("div.listen-later-tile-art", {}, artwork,
-        el("span.listen-later-kind", {text: t("kinds." + target.kind)}),
+        options.plain ? null : el("span.listen-later-kind", {text: t("kinds." + target.kind)}),
         options.isNew ? el("span.listen-later-new", {title: t("new_badge"), "aria-label": t("new_badge")}) : null, play),
       el("div.listen-later-details", {}, openLink(target),
         target.artist ? el("span.muted", {text: target.artist}) : null,
+        options.context ? el("span.home-card-context", {text: options.context}) : null,
         options.names && options.names.length ? advisers(options.names, options.label) : null,
         el("div.listen-later-actions", {}, thread ? thread.bubble : null, options.controls || [],
           target.source === "discogs" ? searchLink(target) : null),
@@ -531,7 +532,7 @@ const ListenLaterUI = (() => {
   }
 
   function showPage(main, route, data, render) {
-    if (route !== lastRoute) { lastRoute = route; selectedTab = "received"; }
+    if (route !== lastRoute) { lastRoute = route; selectedTab = route.id === "bookmarks" ? "bookmarks" : "received"; }
     const {filter, lists, draw} = buildLists(data, main, route);
     page.lists = {sent: lists.sent, archived: lists.archived};
     let acknowledged = false;
@@ -571,5 +572,14 @@ const ListenLaterUI = (() => {
   };
 
   Views.listenLater = page;
-  return {actions, button, recommendButton, reset, start};
+  function preview(group) {
+    const node = tile(group.target, {plain: true,
+      context: t("recommended_by", {names: group.senders.map(sender => sender.username).join(", ")})});
+    if (group.target.source === "subsonic" && group.target.kind === "album" && App.can("playlist")) {
+      Dnd.source(node, {albumId: group.target.sourceId, label: group.target.title});
+    }
+    return node;
+  }
+
+  return {actions, button, recommendButton, reset, start, preview, load};
 })();

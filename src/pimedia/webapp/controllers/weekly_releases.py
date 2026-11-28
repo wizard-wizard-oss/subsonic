@@ -28,6 +28,10 @@ class WeeklyReleasesController:
     def sources(self, request, user):
         return ok(self.radar_service.settings(user).to_api())
 
+    def source_choices(self, request, user):
+        return ok(self.radar_service.source_choices(user, request.param("kind"), request.param("q") or "",
+                                                    int_param(request, "offset", strict=True) or 0).to_api())
+
     def add_source(self, request, user, body):
         return ok(self.radar_service.add_source(user, body.get("kind"), body.get("identity"),
                                                 body.get("name")).to_api())
@@ -54,6 +58,7 @@ class WeeklyReleasesController:
             post("/api/news/releases/follow", self.follow),
             get("/api/news/releases/radar", self.radar),
             get("/api/news/releases/sources", self.sources),
+            get("/api/news/releases/sources/choices", self.source_choices),
             post("/api/news/releases/sources/add", self.add_source),
             post("/api/news/releases/sources/hide", self.hide_source),
             get("/api/news/releases/around", self.around),

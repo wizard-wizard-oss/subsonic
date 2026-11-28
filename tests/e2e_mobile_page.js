@@ -64,6 +64,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     console.log("OK mobile connecté : choisir une playlist ouvre sa page et ferme le menu");
 
     $("#toggle-sidebar").click();
+    $('#panel-playlists .playlist-see-all').click();
+    await until(()=>$(".playlist-card"),"galerie mobile");
+    assert.equal(window.eval("App.music.route.view"),"playlists");
+    assert.equal(document.body.dataset.mobilePanel,undefined);
+    assert.equal($(".playlist-card-name").textContent,"Playlist mobile");
+
+    $("#toggle-sidebar").click();
     $('.topnav a[href="#/favorites"]').click();
     await until(() => window.eval("App.music.route.view") === "favorites", "favoris");
     assert.equal(document.body.dataset.mobilePanel, undefined);
@@ -89,7 +96,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.equal(window.eval("App.preferences.chat_panel"), chat);
     assert.ok(!requests.some(request => request.url === "/api/preferences" && /"(sidebar|chat_panel)":/.test(request.body || "")));
     screen.matches = false; changeScreen();
-    assert.ok($(".topbar > .topnav"));
+    assert.ok($("#sidebar > .topnav"));
+    assert.equal(document.body.dataset.desktopLayout, "true");
     assert.ok($(".topbar-right > #account-menu #me"));
     assert.equal($(".mobile-menu-tools"), null);
     assert.equal(errors.length, 0, errors.join("\n"));

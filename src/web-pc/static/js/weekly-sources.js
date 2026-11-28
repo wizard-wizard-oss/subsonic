@@ -10,8 +10,9 @@ const WeeklySources = (() => {
   const API = "/api/news/releases";
 
   class SourcesPanel {
-    constructor(onChange) {
+    constructor(onChange, onClose) {
       this.onChange = onChange;
+      this.onClose = onClose;
       this.box = el("section.weekly-sources", {"aria-label": t("sources")});
       this.lists = {};
       this.genres = [];
@@ -33,7 +34,8 @@ const WeeklySources = (() => {
 
     draw(settings) {
       App.clear(this.box);
-      this.box.appendChild(el("h2", {text: t("sources_title")}));
+      this.box.appendChild(el("div.weekly-sources-heading", {}, el("h2", {text: t("sources_title")}),
+        this.onClose ? el("button.link-button", {type: "button", text: t("sources_close"), onclick: this.onClose}) : null));
       if (settings.basis === "site") this.box.appendChild(el("p.muted", {text: t("basis_site")}));
       for (const kind of settings.kinds) {
         this.lists[kind] = el("ul.weekly-source-list");
@@ -117,5 +119,5 @@ const WeeklySources = (() => {
     }
   }
 
-  return {panel: onChange => new SourcesPanel(onChange)};
+  return {panel: (onChange, onClose) => new SourcesPanel(onChange, onClose)};
 })();

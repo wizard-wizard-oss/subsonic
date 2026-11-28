@@ -89,7 +89,8 @@ const Views = (() => {
     const header = key => el("th." + songColumnClass(key), {scope: "col", dataset: {songColumn: key}, text: SongColumns.label(key)});
     return el("thead", {}, el("tr", {},
       view.onMove ? el("th.grip", {scope: "col", "aria-label": App.t("playlist.move")}) : null,
-      header("track"), view.showAlbum ? el("th.thumb", {scope: "col"}) : null,
+      el("th.track-play", {scope: "col", "aria-label": App.t("album.play")}), header("track"),
+      view.showAlbum ? el("th.thumb", {scope: "col"}) : null,
       el("th.title", {scope: "col", text: SongColumns.label("title")}), metadata.map(header),
       options.addedBy ? el("th.added-by", {scope: "col", text: SongColumns.label("added_by")}) : null,
       el("th.fav", {scope: "col", "aria-label": App.t("album.favorite")}),
@@ -123,10 +124,11 @@ const Views = (() => {
     const payload = song.ext ? {extItems: [song], label: song.title} : {songIds: [song.id], label: song.title};
     const row = el("tr.song", {dataset: {id: song.id}, ondblclick: () => App.player.playList(songs, i)},
       view.onMove ? el("td.grip", {title: App.t("playlist.move"), text: "⋮⋮"}) : null,
+      el("td.track-play", {}, el("button.row-play", {type: "button", title: App.t("album.play"),
+        onclick: () => App.player.playList(songs, i), ondblclick: e => e.stopPropagation()}, App.icon("play", 14))),
       SongColumns.cell(song, "track", "td.num"),
       view.showAlbum ? el("td.thumb", {}, App.cover(song.coverId || song.imageUrl, 36)) : null,   // titres d'albums différents
-      el("td.title", {}, el("button.row-play", {type: "button", title: App.t("album.play"),
-        onclick: () => App.player.playList(songs, i)}, App.icon("play", 14)), el("span", {text: song.title})),
+      el("td.title", {}, el("span", {text: song.title})),
       view.metadata.map(key => SongColumns.cell(song, key, "td." + songColumnClass(key) + ".muted")),
       view.options.addedBy ? el("td.added-by.muted", {text: song.addedBy}) : null,
       el("td.fav", {}, heart), songActions(song, i, view, payload));
@@ -244,7 +246,9 @@ const Views = (() => {
 
   /* ---------- accueil ---------- */
   const home = {
+    destroy() { if (typeof DesktopHome !== "undefined") DesktopHome.destroy(); },
     async render(main, route) {
+      if (App.layout === "desktop") return DesktopHome.render(main, route);
       loading(main);
       try {
         const data = await App.api.get("/api/home");
@@ -494,12 +498,15 @@ const Views = (() => {
   }
 
   const albums = {
+    destroy() { if (this.shortcuts) this.shortcuts.destroy(); this.shortcuts = null; },
     async render(main, route) {
       const kind = ALBUM_TABS.includes(route.kind) ? route.kind : "newest";
       const tabs = el("nav.tabs", {}, ALBUM_TABS.map(k =>
         el("a.tab" + (k === kind ? ".active" : ""), {href: albumsLink(k), text: App.t("albums.kinds." + k)})));
+      this.shortcuts = new LibraryShortcuts(route);
+      tabs.firstElementChild.after(this.shortcuts.root);
       App.clear(main);
-      App.append(main, [el("h1", {text: App.t("nav.albums")}), tabs]);
+      App.append(main, [el("h1", {text: App.t(App.layout === "desktop" ? "nav.library" : "nav.albums")}), tabs]);
       if ((kind === "decade" || kind === "genre") && !route.value) return this.chooser(main, route, kind);
       if (route.value) main.appendChild(heading(kind === "decade" ? App.t("albums.decade", {decade: route.value}) : route.value));
       this.grid = albumGrid([]);
@@ -545,22 +552,9 @@ const Views = (() => {
 
   /* ---------- favoris ---------- */
   const favorites = {
-    async render(main, route) {
-      loading(main);
-      try {
-        const data = await App.api.get("/api/starred");
-        if (route.stale) return;           // on a changé de page entre-temps
-        App.clear(main);
-        App.append(main, [el("h1", {text: App.t("nav.favorites")}), heading(App.t("search.albums")), albumGrid(data.albums)]);
-        if (data.songs.length) {
-          this.table = songTable(data.songs, {showAlbum: true});
-          App.append(main, [heading(App.t("search.songs")), this.table]);
-        }
-        main.appendChild(ExtMusic.favoritesSection(route));          // titres d'ailleurs : propres au site, pas à Subsonic
-      } catch (error) { failed(main, error); }
-    },
-    destroy() { if (this.table && this.table.destroy) this.table.destroy(); this.table = null; },
+    render(main, route) { return FavoritesView.render(main, route); },
+    destroy() { FavoritesView.destroy(); },
   };
 
-  return {home, artist, album, search, favorites, albums, heading, songTable};
+  return {home, artist, album, search, favorites, albums, heading, songTable, albumGrid};
 })();

@@ -213,7 +213,7 @@ function makeEventSource(jar) {
 
   // --- page Albums : listes de Subsonic en onglets ---
   w.location.hash = "#/albums/frequent";
-  check("albums : 9 onglets, « Plus écoutés » actif", await until(() => $$(".tabs .tab").length === 9 &&
+  check("albums : 9 onglets, « Plus écoutés » actif", await until(() => $$(".tabs > .tab").length === 9 &&
         $(".tabs .tab.active").textContent === "Plus écoutés"));
   check("albums : triés par écoutes", await until(() => $$(".album-card .album-name").map(n => n.textContent).join() ===
         "Arrival,Post,Waterloo"));
@@ -874,7 +874,7 @@ function makeEventSource(jar) {
 
   // --- réglages : barre des artistes au survol ---
   $("#open-settings").click();
-  const sidebarSelect = $(".dialog select");
+  const sidebarSelect = $('.dialog select[name="sidebar"]');
   sidebarSelect.value = "hover";
   sidebarSelect.dispatchEvent(new w.Event("change"));
   check("réglage « au survol » appliqué", d.body.dataset.sidebar === "hover");
@@ -1360,7 +1360,7 @@ function makeEventSource(jar) {
   check("Mon compte : la page, la fenêtre fermée", await until(() => $("#main h1") && $("#main h1").textContent === "Mon compte") &&
         !$(".dialog"));
   check("Mon compte : cinq parties", $$(".account-part").length === 5 && $$("#main .rights-list li").length === 8 &&
-        $$("#main .account-part select").length === 5 && !!$("#main .ext-link-form"));
+        !!$('#main .account-part select[name="theme"]') && !!$('#main .account-part select[name="sidebar_width"]') && !!$("#main .ext-link-form"));
   check("Mon compte : même matrice de colonnes", columnToggle($("#main"), "browse", "genre").checked &&
     $$('#main input[data-column]').length === 18);
   await clickColumnToggle($("#main"), "browse", "genre");

@@ -130,7 +130,7 @@ const News = (() => {
   };
 
   function tabs(releases) {
-    return el("nav.chips", {"aria-label": t("news.title")},
+    return el("nav.chips.news-sections", {"aria-label": t("news.title")},
       el("a.chip" + (releases ? "" : ".on"), {href: "#/news", text: t("artist.press")}),
       el("a.chip" + (releases ? ".on" : ""), {href: "#/news/releases", text: t("weekly.title")}));
   }

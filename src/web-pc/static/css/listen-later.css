@@ -46,7 +46,7 @@
 .listen-later-tile .listen-later-artwork { display: grid; width: 100%; height: auto; aspect-ratio: 1; border-radius: 0; }
 .listen-later-kind { position: absolute; top: .4rem; left: .4rem; background: rgba(0, 0, 0, .6); color: #fff; font-size: .7rem; padding: 0 .5rem; border-radius: 999px; }
 .listen-later-new { position: absolute; top: .45rem; right: .45rem; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
-.listen-later-tile .listen-later-play { position: absolute; right: .5rem; bottom: .5rem; width: 36px; height: 36px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); border: 0; cursor: pointer; }
+.listen-later-tile .listen-later-play { position: absolute; right: .5rem; bottom: .5rem; width: 36px; height: 36px; border-radius: 50%; padding: 0; display: grid; place-items: center; background: var(--button-bg); color: var(--button-text); border: 1px solid var(--button-line); cursor: pointer; }
 .listen-later-tile .listen-later-details { padding: .6rem .7rem .7rem; }
 .listen-later-tile .listen-later-actions { margin-top: .4rem; gap: .15rem; }
 .recommendation-advisers { display: flex; align-items: center; gap: .5rem; font-size: .8rem; min-width: 0; }

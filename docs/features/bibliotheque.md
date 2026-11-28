@@ -4,7 +4,10 @@ Sur téléphone, un menu cliquable donne accès aux mêmes artistes, playlists e
 la navigation PC. Voir [Affichage mobile](mobile.md).
 
 ## Ce que ça fait
-- **Accueil** (`#/`) : derniers albums, plus écoutés (`frequent`), mieux notés (`highest`), albums commentés récemment.
+- **Accueil** (`#/`) : sur ordinateur, reprise et rangées de recommandations reçues, écoutes personnelles,
+  suggestions, sorties de la semaine et derniers ajouts. La navigation passe à gauche ; Bibliothèque ouvre la page
+  Albums existante. Voir [Accueil personnel](accueil-personnel.md) pour les sources, les replis et les limites.
+  Le petit écran conserve son accueil commun (derniers albums, plus écoutés, mieux notés, albums commentés).
 - **Artiste** (`#/artist/<id>`) : **le dossier de l'artiste** (pas les tags) ; ses albums = ses sous-dossiers (par année,
   puis nom), cœur (étoile posée sur le dossier), « Radio de l'artiste », « Créer un mix à partir de cet artiste »,
   **biographie** (priorité corrigée le 26/11/2026 : Last.fm via Subsonic `getArtistInfo2`, sinon Wikipédia en français,
@@ -16,8 +19,13 @@ la navigation PC. Voir [Affichage mobile](mobile.md).
   (CD1, CD2…), nom de l'album = nom du dossier, artiste = dossier parent. Pochette, année, genre, nombre de titres, durée,
   « Écouté N fois », étoiles, cœur, Lire, Aléatoire, Ajouter à la file, Télécharger (zip), Partager dans le salon, tableau
   des titres (lecture au double-clic, cœur, téléchargement d'un titre, « Ajouter à une playlist »), commentaires.
+  Depuis la 1.25, le bouton de chaque piste reste visible à gauche du numéro : `▶ 1 Titre`. Sa colonne reste
+  disponible si les numéros sont masqués ; le même tableau sert aux autres pages de parcours.
 - **Albums** (`#/albums/<onglet>`) : Nouveaux, Plus écoutés, Mieux notés, Écoutés récemment, Au hasard, Favoris, Par
   décennie, Par genre, De A à Z ; 40 par page, « Afficher plus ».
+  Sur ordinateur depuis la 1.25, la page s’appelle Bibliothèque et Compilations rejoint ses filtres après Nouveaux.
+  Les dossiers épinglés proviennent du même chargement que la barre historique ; un événement met à jour ces liens
+  sans reconstruire la page (`library-shortcuts.js`, `e2e_library_shortcuts.js`).
 - **Lecture sur les pochettes (1.7.7)** : dans les grilles de l'accueil (derniers, plus écoutés, mieux notés),
   d'Albums, d'un artiste, de la recherche et des favoris, une petite flèche apparaît au survol en bas à gauche de la pochette (grilles normale et compacte).
   Elle réutilise l'icône `play` et le style `.play-big` du site, à 30 px. La flèche charge l'album puis le lit dans
@@ -26,7 +34,17 @@ la navigation PC. Voir [Affichage mobile](mobile.md).
   sans le droit `stream`, désactivé pendant le chargement, et conserve la file en cas d'erreur. Les lignes compactes
   des albums commentés gardent leur présentation.
 - **Recherche** (champ du haut, dès 2 lettres) : artistes, albums, titres, et section « Ailleurs » (voir `musique-ailleurs.md`).
-- **Favoris** (`#/favorites`) : albums et titres marqués d'un cœur.
+- **Favoris** (`#/favorites`) : artistes, albums et titres marqués d'un cœur. Les listes par dossiers
+  (`getStarred`) et par tags (`getStarred2`) sont réunies avec le compte connecté. Les doublons sont
+  reconnus par les identifiants Subsonic résolus, jamais par les noms ; les albums en plusieurs disques
+  sont inclus. Chaque catégorie est paginée par 40, sans limite totale : « Afficher plus » ajoute la suite
+  en conservant les cartes, les liens et la section D'ailleurs déjà présents.
+  Les cœurs des fiches lisent les deux identités ; retirer un cœur retire les deux marquages associés.
+  Service et entités : `library/favorites.py` ; identités : `library/folders.py` ; interface :
+  `static/js/favorites.js`. Tests : `test_library_favorites.py`, `test_webapp_favorites.py`,
+  `e2e_favorites.js` et parcours général du site. L'API Subsonic renvoie la liste entière (aucun offset
+  disponible) ; seule la page demandée est enrichie avec les commentaires et envoyée au navigateur.
+  Pas de vérification des favoris du compte réel en production.
 - **À écouter** : marque-pages et recommandations d’artistes/albums/morceaux, indépendants des cœurs.
   Boutons sur les fiches et « Conseiller à quelqu’un » sur les lignes de morceaux Subsonic. Les morceaux reçus
   se lisent ensemble et se retirent individuellement ; voir [listen-later](listen-later.md).
@@ -76,6 +94,7 @@ Formats/visibilité : `web-pc/static/js/song-columns.js` ; tableaux : `views.js`
 Tests : `tests/test_song_styles.py` (projection/HTTP, neuf options, isolation compte/contexte, validation
 booléenne et refus atomique), `tests/e2e_webapp.js` (grille complète, réglages immédiats, tags absents,
 formats, titres d’ailleurs et disques), `tests/e2e_webapp_queue.js` (restauration de la file).
+`tests/e2e_song_actions.js` vérifie la lecture à gauche du numéro, toujours visible, y compris avec le numéro masqué.
 Les sauvegardes des cases sont sérialisées pour conserver les changements rapides, même sur une même case ;
 les réponses retardées ne remplacent pas les choix récents et les sauvegardes d’un ancien compte sont ignorées.
 Tests différés dédiés dans `e2e_webapp_queue.js` (ordre, échec puis reprise et changement de compte).
@@ -253,9 +272,8 @@ main si on veut aussi les retirer des applis Subsonic. L'envoi de zip les ignora
 ## N'existe pas / pas vérifié
 - Présentation de la page Albums « provisoire » (pastilles), à refaire en s'inspirant de Spotify/Deezer.
 - Pas de page « albums d'un genre » riche, pas de pagination des titres d'une recherche.
-- Thème sombre au choix encore à faire (`docs/ETAT.md`, point 3 ter). « Lire juste après » et lecture au survol des pochettes sont disponibles.
 - Titres populaires et similaires : vides si Last.fm n'est pas réglé dans Subsonic.
-- Les listes d'albums (accueil, page Albums, recherche, favoris) restent celles de Subsonic, par tags : un album aux tags
+- Les listes d'albums (accueil, page Albums, recherche) restent celles de Subsonic, par tags : un album aux tags
   mal faits peut y apparaître sous un autre nom que son dossier (un clic ouvre bien le dossier).
 - Sur la page artiste, les cartes d'albums n'affichent pas leur nombre de commentaires (ils sont rangés sous l'ID3).
 - Pas vérifié contre le vrai Subsonic : identifiants de dossiers réels, temps de réponse de la page artiste (un appel

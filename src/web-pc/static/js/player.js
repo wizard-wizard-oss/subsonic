@@ -86,8 +86,9 @@ class Player {
       la moitié du titre ou 4 minutes réellement écoutées (un saut en avant ne compte pas). Titres de Subsonic seulement. */
   startListen(song) {
     this.listen = null;
-    if (song.ext || !App.can("scrobble")) return;
-    this.listen = {song, heard: 0, last: 0, counted: false};
+    if (song.ext || !App.can("stream")) return;
+    this.listen = {song, heard: 0, last: 0, counted: false, requestId: App.requestId()};
+    if (!App.can("scrobble")) return;
     App.api.post("/api/scrobble", {id: song.id, submission: false})
       .then(() => App.bus.emit("listening")).catch(() => { /* sans importance */ });
   }
@@ -98,10 +99,15 @@ class Player {
     const time = this.audio.currentTime, step = time - listen.last;
     listen.last = time;
     if (step > 0 && step < 2) listen.heard += step;            // du temps écouté, pas un saut dans le titre
-    const length = this.audio.duration;
-    if (listen.heard < 240 && !(isFinite(length) && length >= 30 && listen.heard >= length / 2)) return;
+    const length = this.audio.duration, policy = App.listeningPolicy;
+    if (!policy || (listen.heard < policy.maximum_seconds &&
+        !(isFinite(length) && length >= policy.minimum_duration && listen.heard >= length * policy.fraction))) return;
     listen.counted = true;
-    App.api.post("/api/scrobble", {id: listen.song.id, submission: true}).catch(() => { /* sans importance */ });
+    App.api.post("/api/listening/history", {id: listen.song.id, requestId: listen.requestId})
+      .catch(() => { /* la lecture continue pendant une panne */ });
+    if (App.can("scrobble")) {
+      App.api.post("/api/scrobble", {id: listen.song.id, submission: true}).catch(() => { /* sans importance */ });
+    }
   }
 
   /** Une vidéo YouTube a vraiment démarré : le site s'en souvient (elle passera en tête des résultats). */

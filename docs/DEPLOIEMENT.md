@@ -1,5 +1,23 @@
 # Déployer le projet
 
+Correctif 1.27.1 publié le 28/11/2026 après retour immédiat : le menu principal démarre ouvert et garde
+sa colonne avec toutes les anciennes préférences ; les suggestions de l’accueil dédoublonnent les albums.
+Commit applicatif `3b14bf9`, image `a533827ea7d2`. Tests ciblés et contrôle visuel bureau/mobile ; aucune
+nouvelle suite complète à la demande de l’utilisateur. HTTPS et version 1.27.1 vérifiés, conteneur sain,
+340 fichiers applicatifs et 88 ressources publiques conformes. Schéma 32 inchangé, intégrité et clés
+étrangères valides. Sauvegarde préalable `../pimedia-backups/pre-1.27.1-20261128T132112Z/` et image
+`pimedia-web:pre-1.27.1-20261128T132112Z`. Configuration, volumes et fichiers musicaux conservés.
+
+Publication 1.27 du 28/11/2026 : livraison regroupée de l’accueil, de la navigation, des favoris,
+des sorties et des playlists. La 1.24.2 publiée hors branche a été préservée, migration 31 comprise ;
+l’historique personnel est en migration 32. Sauvegarde cohérente code/configuration/SQLite dans
+`../pimedia-backups/pre-1.27-20261128T131348Z/`, image de retour arrière
+`pimedia-web:pre-1.27-20261128t131348z`. Migration répétée en conteneur isolé sur la sauvegarde réelle :
+38 tables et 73 910 lignes existantes conservées. Les sources du commit `8dface8` ont été copiées
+seules, sans écraser le `.env` ni les fichiers Compose du serveur. Image `68ac4ed2e675`, service web
+sain, version publique 1.27, schéma 32 intègre et sans clé étrangère orpheline ; 340 fichiers applicatifs
+et 88 ressources HTTPS conformes. Aucune nouvelle suite complète à la demande de l’utilisateur.
+
 Publication 1.18 vérifiée le 27/11/2026 sur https://music2.foos.fr : conteneur sain, version publique,
 253 fichiers exécutés et 62 ressources HTTPS conformes à la livraison isolée de la 1.17. Menu et pastille
 confirmés dans le HTML publié. Aucune migration : schéma 22, intégrité et clés étrangères valides,

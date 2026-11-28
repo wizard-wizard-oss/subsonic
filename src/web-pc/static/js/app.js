@@ -68,7 +68,9 @@ class MusicApp {
     ListenLaterUI.reset();
     ListenLaterUI.start();
     App.preferences = me.preferences;
+    App.themeChoices = me.themeChoices;
     App.songColumns = me.songColumns;
+    App.listeningPolicy = me.listeningPolicy;
     App.reactions = me.reactions;
     App.usernames = me.usernames;
     App.unread = me.unread;
@@ -102,6 +104,7 @@ class MusicApp {
     this.applyPreferences();
     App.bus.on("preferences", () => this.applyPreferences());
     this.bindTopbar();
+    App.bus.on("layout", () => { if (this.route && this.route.view === "home") this.navigate(); });
     this.bindShortcuts();
     App.live.start();
     App.live.on("message", m => {        // nouvel inscrit : son nom devient mentionnable
@@ -122,6 +125,7 @@ class MusicApp {
   }
 
   applyPreferences() {
+    document.documentElement.dataset.theme = App.preferences.theme;
     document.body.dataset.density = App.preferences.density || "comfortable";
     this.sidebar.applyMode();
   }
@@ -187,9 +191,9 @@ class MusicApp {
     if (view === "playlist") return id ? {view, id} : {view: "home"};
     if (view === "listen") return rest.length > 1 ? {view, artist: decodeURIComponent(rest[0]),
                                                      id: decodeURIComponent(rest.slice(1).join("/"))} : {view: "home"};
-    if (view === "listen-later") return {view: "listenLater"};
+    if (view === "listen-later") return {view: "listenLater", id};
     if (view === "whatsnew" && id) return {view, id};
-    if (view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
+    if (view === "playlists" || view === "favorites" || view === "upload" || view === "whatsnew" || view === "versions" ||
         view === "account" || view === "notifications") return {view};
     if (view === "import") return {view, id};                     // id : « guide » (facultatif)
     if (view === "mix") return {view, id};                        // id : artiste de départ (facultatif)

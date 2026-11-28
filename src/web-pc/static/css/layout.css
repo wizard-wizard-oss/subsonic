@@ -5,10 +5,11 @@
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--chat-width);
   grid-template-areas: "top top top" "side main chat" "player player player";
 }
-body[data-sidebar="hover"] .app, body[data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
-body[data-chat="closed"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0; }
-body[data-chat="closed"][data-sidebar="hover"] .app,
-body[data-chat="closed"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) 0; }
+body:where(:not([data-desktop-layout]))[data-sidebar="hover"] .app,
+body:where(:not([data-desktop-layout]))[data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
+body:where(:not([data-desktop-layout]))[data-chat="closed"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0; }
+body:where(:not([data-desktop-layout]))[data-chat="closed"][data-sidebar="hover"] .app,
+body:where(:not([data-desktop-layout]))[data-chat="closed"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) 0; }
 body[data-chat="closed"] .chat-panel { display: none; }
 
 .topbar {
@@ -86,13 +87,13 @@ body[data-density="compact"] .artist { padding: 2px 8px; }
 
 /* mode « au survol » : bande sensible au bord gauche, la barre glisse par-dessus la page */
 .sidebar-edge { display: none; }
-body[data-sidebar="hover"] .sidebar-edge { display: block; position: fixed; left: 0; top: var(--topbar); bottom: var(--playerbar); width: 10px; z-index: 30; }
-body[data-sidebar="hover"] .sidebar {
+body:where(:not([data-desktop-layout]))[data-sidebar="hover"] .sidebar-edge { display: block; position: fixed; left: 0; top: var(--topbar); bottom: var(--playerbar); width: 10px; z-index: 30; }
+body:where(:not([data-desktop-layout]))[data-sidebar="hover"] .sidebar {
   position: fixed; left: 0; top: var(--topbar); bottom: var(--playerbar); width: var(--sidebar-width); z-index: 31;
   transform: translateX(-100%); transition: transform 0.16s ease; box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
 }
-body[data-sidebar="hover"] .sidebar.peek { transform: none; }
-body[data-sidebar="hidden"] .sidebar { display: none; }
+body:where(:not([data-desktop-layout]))[data-sidebar="hover"] .sidebar.peek { transform: none; }
+body:where(:not([data-desktop-layout]))[data-sidebar="hidden"] .sidebar { display: none; }
 
 .main { grid-area: main; overflow-y: auto; padding: 22px 28px 40px; min-width: 0; }
 .chat-panel { grid-area: chat; border-left: 1px solid var(--line); background: var(--bg-raised); min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -106,14 +107,14 @@ body[data-sidebar="hidden"] .sidebar { display: none; }
                 border-left: 1px solid var(--line); background: var(--bg-raised); }
 body[data-lyrics="open"] .lyrics-panel { display: flex; }
 body[data-lyrics="open"] .chat-panel { display: none; }
-body[data-lyrics="open"][data-sidebar="pinned"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--chat-width); }
-body[data-lyrics="open"][data-sidebar="hover"] .app,
-body[data-lyrics="open"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
+body:where(:not([data-desktop-layout]))[data-lyrics="open"][data-sidebar="pinned"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--chat-width); }
+body:where(:not([data-desktop-layout]))[data-lyrics="open"][data-sidebar="hover"] .app,
+body:where(:not([data-desktop-layout]))[data-lyrics="open"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
 
 /* Vidéo YouTube en cours : la colonne de droite s'ouvre pour elle, même salon fermé */
-body[data-video="on"][data-chat="closed"][data-sidebar="pinned"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--chat-width); }
-body[data-video="on"][data-chat="closed"][data-sidebar="hover"] .app,
-body[data-video="on"][data-chat="closed"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
+body:where(:not([data-desktop-layout]))[data-video="on"][data-chat="closed"][data-sidebar="pinned"] .app { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--chat-width); }
+body:where(:not([data-desktop-layout]))[data-video="on"][data-chat="closed"][data-sidebar="hover"] .app,
+body:where(:not([data-desktop-layout]))[data-video="on"][data-chat="closed"][data-sidebar="hidden"] .app { grid-template-columns: 0 minmax(0, 1fr) var(--chat-width); }
 
 /* écouté en ce moment : en haut du panneau de droite, au-dessus du salon */
 .listening { flex: none; max-height: 38%; overflow-y: auto; padding: 10px 14px 8px; border-bottom: 1px solid var(--line); }

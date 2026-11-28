@@ -75,7 +75,7 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
 L'exploration des labels et collaborations est propre au site (`webapp/exploration*`) ; toutes ses requêtes passent par
 la classe `shared/providers/musicbrainz`, qui garde aussi la cadence (1,05 seconde entre départs).
 Les fonctionnalités récentes sont rangées en paquets (`webapp/tags/`, `notifications/`, `recommendations/`,
-`listen_later/`, `weekly_releases/`) ; chaque contrôleur déclare ses routes (`routes()`), `app.py` assemble seulement.
+`listen_later/`, `weekly_releases/`, `personal_home/`) ; chaque contrôleur déclare ses routes (`routes()`), `app.py` assemble seulement.
 
 Dépôts (SQL seulement) → services (règles) → contrôleurs (HTTP seulement), assemblés à **un seul endroit**
 (`webapp/app.py` pour le site, `server/app.py` pour le Pi). Détail et règles de code : `docs/CONVENTIONS.md`.
@@ -106,6 +106,12 @@ Aucun déplacement de zone Pi/web/shared ni modification de base. AnyASCII 0.3.3
 uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi restent sans cette dépendance.
 
 ### Autres fonctionnalités
+
+- Accueil ordinateur (1.25) : `desktop-home.js` compose `HomeResume` et `AlbumRail`, avec les cartes À écouter,
+  les albums et le radar existants. `desktop-navigation.js` adapte les mêmes nœuds de navigation et playlists ;
+  `mobile/bootstrap.js` choisit puis détruit l’adaptateur selon la taille et la session. `personal_home/` choisit
+  les sources et entités personnelles, `storage/listening_history.py` garde les références d’écoute. Aucun déplacement
+  vers la zone Pi ou partagée. Police locale et palettes dans les CSS communs, thème initial et choix dans Preferences.
 
 - Affichage mobile (1.15) : `web-pc/static/js/mobile/bootstrap.js` assemble un adaptateur de navigation selon
   l’écran et la session. `navigation.js` réutilise les artistes, playlists, routes et fil du salon existants,
@@ -153,3 +159,9 @@ uniquement par `LibraryNaming` pour les lettres latines ; le partagé et le Pi r
 Actualités charge la vue `weekly-releases.js` pour `#/news/releases`. Help ouvre cette vue depuis le guide presse. Le navigateur envoie le lundi sélectionné et le genre au contrôleur `controllers/weekly_releases.py`. Le service `weekly_releases.py` valide le genre et calcule le dimanche. Le client `musicbrainz.py` interroge MusicBrainz, réutilise le cache public et convertit les réponses en entités de `weekly_release_entities.py`. Le service conserve les sorties datées dans la semaine. La recherche d’une semaine est rafraîchie après une heure.
 
 Pour suivre ou quitter un style, le contrôleur transmet l’utilisateur authentifié au même service. Seul `storage/weekly_releases.py` lit et écrit les abonnements dans `release_subscriptions` (migration 23). La vue interroge séparément le contrôleur d’exploration existant pour identifier les albums accessibles sur Subsonic. Les dépendances sont assemblées dans `app.py`.
+
+La présentation 1.26 sépare la navigation (`weekly-week.js`, commune aux deux vues), les filtres
+(`weekly-filters.js`) et la recherche paginée des suivis (`weekly-source-picker.js`) du rendu du radar.
+`GET /api/news/releases/sources/choices` appelle `RadarService.source_choices` : validation et normalisation
+commune dans le service, lecture bornée en SQL dans `ReleaseSources.choices`, réponse en entité
+`RadarSourceChoices`. Aucun nouvel appel externe, déplacement de zone ou changement de schéma.

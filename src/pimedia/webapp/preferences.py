@@ -10,6 +10,7 @@ SONG_DEFAULTS = {context + "_" + column: column in enabled
                  for context, enabled in SONG_ENABLED.items() for column in SONG_COLUMNS}
 
 CHOICES = {
+    "theme": ("dark", "light"),                   # essai visuel : tous les comptes commencent en sombre
     "sidebar": ("pinned", "hover", "hidden"),       # barre des artistes : fixe, au survol du bord gauche, masquée
     "sidebar_width": (200, 240, 280, 320),
     "sidebar_tab": ("artists", "playlists"),        # onglet affiché dans la barre de gauche
@@ -19,7 +20,7 @@ CHOICES = {
     "notify_mentions": (True, False),               # notification du navigateur quand on me mentionne
     **{key: (True, False) for key in SONG_DEFAULTS},
 }
-DEFAULTS = {"sidebar": "pinned", "sidebar_width": 240, "density": "comfortable", "chat_panel": "open",
+DEFAULTS = {"theme": "dark", "sidebar": "pinned", "sidebar_width": 240, "density": "comfortable", "chat_panel": "open",
             "album_grid": "large", "notify_mentions": True,
             "sidebar_tab": "artists", **SONG_DEFAULTS}
 

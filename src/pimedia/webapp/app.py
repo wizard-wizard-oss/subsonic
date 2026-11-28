@@ -44,6 +44,8 @@ from .controllers.news import NewsController
 from .controllers.weekly_releases import WeeklyReleasesController
 from .weekly_releases import assembly as weekly_releases
 from .controllers.playlists import PlaylistController
+from .controllers.playlist_gallery import PlaylistGalleryController
+from .playlist_gallery.service import PlaylistGallery
 from .controllers.uploads import UploadController
 from .controllers.profile import ProfileController
 from .events import EventHub
@@ -63,10 +65,13 @@ from .youtube_versions import YouTubeVersions
 from .tags.sources import TagSources
 from .library_scan import LibraryScan
 from .storage.exploration import ExplorationRepository
+from .library.favorites import Favorites
 from .library.folders import Folders
 from .library.catalog import Library
 from .library.statistics import SubsonicStatistics
 from .listening import Listening
+from .personal_home import assembly as personal_home
+from .controllers.personal_home import PersonalHomeController
 from .listen_later.service import ListenLater
 from .recommendations.service import Recommendations
 from .listen_later.targets import ListeningTargets
@@ -158,6 +163,7 @@ class WebApplication:
         self.library = Library(self.subsonic, self.ratings, self.messages, artist_indexes=self.artist_indexes)
         self.library_statistics = SubsonicStatistics(self.config.subsonic_statistics_file)
         self.folders = Folders(self.subsonic, self.library, self.ratings)
+        self.favorites = Favorites(self.subsonic, self.library, self.folders)
 
     def _build_providers(self):
         """Une seule instance par service externe, toutes sur le même cache de métadonnées et le même transport."""
@@ -200,6 +206,7 @@ class WebApplication:
         self.ext_favorites = ExtFavorites(ExtFavoriteRepository(self.db), self.extmusic)
         self.playlists = Playlists(self.subsonic, CommunityRepository(self.db), self.users,
                                    PlaylistExtRepository(self.db), self.ext_favorites)
+        self.playlist_gallery = PlaylistGallery(self.playlists)
         self.imports = PlaylistImport(self.subsonic, self.extmusic, self.playlists, self.ext_favorites,
                                       DeezerReader(Deezer(self.external_http)))
         self.youtube_versions = YouTubeVersions(self.extmusic)
@@ -208,8 +215,9 @@ class WebApplication:
         self.news = News(NewsRepository(self.db))
 
     def _build_listening_lists(self):
-        """« À écouter » et recommandations, sur des cibles partagées."""
+        """Accueil personnel, « À écouter » et recommandations, sur des cibles partagées."""
         targets = ListeningTargets(self.folders, self.discogs, self.artist_discogs.library_key, self.library)
+        self.listening_history, self.personal_home = personal_home.build(self, targets)
         self.listen_later = ListenLater(ListenLaterRepository(self.db), targets)
         self.recommendations = Recommendations(RecommendationRepository(self.db), RecommendationCommentRepository(self.db),
                                              targets, self.users, self.hub)
@@ -244,7 +252,7 @@ class WebApplication:
         auth = AuthController(self.accounts, self.preferences, self.chat, self.users, self.config.secure_cookie,
                               self.config.trust_proxy)
         library = LibraryController(self.library, self.folders, self.artist_indexes, self.ratings, self.subsonic,
-                                    self.library_statistics, self.upload_attribution)
+                                    self.library_statistics, self.upload_attribution, self.favorites)
         chat = ChatController(self.chat, self.hub)
         mixes = MixController(self.mixes)
         playlists = PlaylistController(self.playlists)
@@ -265,7 +273,9 @@ class WebApplication:
         tags = TagController(self.album_tags)
         notifications = NotificationController(self.notifications)
         imports = ImportController(self.imports)
-        return (auth, library, chat, mixes, playlists, listening, listen_later, profile, lyrics, facts, exploration,
+        return (PersonalHomeController(self.personal_home, self.listening_history),
+                PlaylistGalleryController(self.playlist_gallery),
+                auth, library, chat, mixes, playlists, listening, listen_later, profile, lyrics, facts, exploration,
                 discogs, extmusic, uploads, news, releases, covers, tags, notifications, imports)
 
     def _page(self, request):

@@ -3,7 +3,8 @@
 ## Fonctionnement
 
 Les fichiers dédiés `web-pc/static/css/mobile/` et `web-pc/static/js/mobile/` adaptent l’affichage
-à 820 px de largeur ou moins, ainsi que sur écran tactile sans survol jusqu’à 1100 px (téléphone en paysage).
+sur écran tactile sans survol jusqu’à 1100 px (téléphone en paysage compris). Une fenêtre étroite sur un ordinateur
+à la souris conserve la disposition du bureau.
 Le bouton ☰ ouvre un volet avec les liens de navigation,
 les artistes et playlists existants, leurs filtres, le compte et les réglages. Un second clic, Fermer,
 Échap, le fond ou le choix d’une destination referme le volet. Le salon dispose de son propre volet.
@@ -21,9 +22,9 @@ Un message reçu lorsque le volet mobile est masqué reste non lu.
 
 ## Organisation et périmètre
 
-Édition web uniquement. Aucun changement des styles ou scripts de navigation PC, des routes,
-de l’édition Pi, des préférences serveur ou du moteur de lecture YouTube.
-`js/mobile/bootstrap.js` assemble et détruit l’adaptateur `navigation.js` selon l’écran et la session.
+Édition web uniquement. La 1.25 conserve cette disposition mobile et introduit le cadre ordinateur séparé.
+IBM Plex Mono et les thèmes Clair/Sombre concernent tout le site ; le sombre est initial pour tous les comptes.
+`js/mobile/bootstrap.js` assemble et détruit `navigation.js` ou `desktop-navigation.js` selon l’écran et la session.
 Les règles métier et données restent dans les composants et services existants ; aucune nouvelle route,
 base ou copie des playlists n’est créée. `css/mobile/layout.css` porte la disposition et `video.css` borne
 simplement la fenêtre vidéo à la largeur disponible. Les CSS ont la même condition que le point d’entrée JS.

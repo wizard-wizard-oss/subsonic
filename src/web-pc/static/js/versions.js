@@ -33,7 +33,7 @@ const Versions = (() => {
     if (!tag || !releases || !releases.length) return;
     const latest = releases[0], fresh = newer(latest.version, seen());
     tag.hidden = false;
-    tag.textContent = t("versions.tag", {version: latest.version});
+    tag.textContent = tag.dataset.accountVersion ? t("nav.versions") : t("versions.tag", {version: latest.version});
     tag.title = t(fresh ? "versions.tag_new" : "versions.tag_title", {version: latest.version, date: day(latest.date)});
     tag.classList.toggle("fresh", fresh);
   }
