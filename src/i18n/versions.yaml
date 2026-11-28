@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.27.1"
+  date: 2026-11-28
+  title: "Menu visible et suggestions sans doublons"
+  changes:
+    - "Le menu principal s’ouvre dès l’arrivée sur ordinateur, même si l’ancienne barre latérale était masquée. Son ouverture réserve sa place et ne passe plus sous la page."
+    - "La rangée « Vous pourriez aimer » ne propose plus deux fois le même album."
+
 - version: "1.27"
   date: 2026-11-28
   title: "Vos playlists en pochettes"

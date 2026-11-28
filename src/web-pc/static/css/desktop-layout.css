@@ -1,17 +1,13 @@
 /* Nouvelle disposition activée par l’adaptateur ordinateur. Les nœuds et préférences mobiles restent réutilisés. */
-body[data-desktop-layout] { --topbar: 72px; --desktop-menu-width: clamp(167px, 21vw, 214px); }
+body[data-desktop-layout] { --topbar: 72px; --desktop-menu-width: clamp(167px, 21vw, 214px);
+  --desktop-left-column: var(--desktop-menu-width); --desktop-right-column: 0px; }
 body[data-desktop-layout] .app {
-  grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr) 0;
+  grid-template-columns: var(--desktop-left-column) minmax(0, 1fr) var(--desktop-right-column);
 }
 body[data-desktop-layout][data-chat="open"] .app,
-body[data-desktop-layout][data-lyrics="open"] .app {
-  grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr) var(--chat-width);
-}
-body[data-desktop-layout][data-desktop-menu="closed"] .app { grid-template-columns: 0 minmax(0, 1fr) 0; }
-body[data-desktop-layout][data-desktop-menu="closed"][data-chat="open"] .app,
-body[data-desktop-layout][data-desktop-menu="closed"][data-lyrics="open"] .app {
-  grid-template-columns: 0 minmax(0, 1fr) var(--chat-width);
-}
+body[data-desktop-layout][data-lyrics="open"] .app,
+body[data-desktop-layout][data-video="on"] .app { --desktop-right-column: var(--chat-width); }
+body[data-desktop-layout][data-desktop-menu="closed"] .app { --desktop-left-column: 0px; }
 body[data-desktop-layout] .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 24px; padding: 14px 24px; }
 body[data-desktop-layout] .desktop-top-start { display: flex; align-items: center; gap: 12px; }

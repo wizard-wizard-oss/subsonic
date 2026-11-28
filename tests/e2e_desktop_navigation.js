@@ -61,5 +61,23 @@ const load = name => run(fs.readFileSync(path.join(root,"static/js/"+name+".js")
   assert.equal(links[1].textContent,"Albums");
   run('window.desktop=new DesktopNavigation();desktop.destroy();');
   assert.equal(d.querySelectorAll("#version-tag").length,1);
+  // Le menu du bureau démarre ouvert même si l'ancienne barre était masquée ou au survol.
+  // Le choix mobile existant est conservé ; un autre compte repart avec son propre menu ouvert.
+  for (const sidebar of ["hidden", "hover", "pinned"]) {
+    run(`App.preferences.sidebar=${JSON.stringify(sidebar)};document.body.dataset.sidebar=${JSON.stringify(sidebar)};
+      window.desktop=new DesktopNavigation();`);
+    assert.equal(menuButton.getAttribute("aria-expanded"), "true", "ouverture initiale avec " + sidebar);
+    assert.equal(d.body.dataset.desktopMenu, "open");
+    menuButton.click();
+    assert.equal(d.body.dataset.desktopMenu, "closed");
+    run('App.bus.emit("preferences",App.preferences);');
+    assert.equal(d.body.dataset.desktopMenu, "closed", "les réglages ne défont pas la fermeture manuelle");
+    run('App.user={id:App.user.id+1,roles:["stream"]};App.bus.emit("preferences",App.preferences);');
+    assert.equal(d.body.dataset.desktopMenu, "open", "nouveau compte avec " + sidebar);
+    assert.equal(run("App.preferences.sidebar"),sidebar);
+    assert.equal(d.body.dataset.sidebar,sidebar);
+    run('desktop.destroy();');
+    assert.equal(d.body.dataset.sidebar,sidebar,"le retour mobile conserve le réglage");
+  }
   dom.window.close();console.log("OK navigation ordinateur : menu repliable, recherche, playlists, compte et restauration mobile");
 })().catch(error=>{console.error(error);dom.window.close();process.exitCode=1;});

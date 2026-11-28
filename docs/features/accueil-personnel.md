@@ -48,7 +48,7 @@ les couleurs de danger et les commandes transparentes gardent leur rôle.
 La consultation de la file ne crée aucune écoute. Les titres à venir dans cette file ne sont pas considérés comme
 écoutés. Les listes globales `recent` et `frequent` de Subsonic ne sont pas utilisées pour établir les goûts personnels.
 Les suggestions emploient le genre exact du morceau ou de l’album de départ et les listes Subsonic par genre.
-Elles excluent l’album de départ. Un genre absent donne une sélection vide. Aucun appel Last.fm n’est ajouté.
+Elles excluent l’album de départ, y compris sous un autre identifiant. Depuis la 1.27.1, les doublons d’identifiant ou d’artiste/titre normalisés sont retirés entre les pages ; les noms et pochettes d’origine sont conservés. Les artistes différents et les éditions nommées distinctement restent séparés. Un genre absent donne une sélection vide. Aucun appel Last.fm n’est ajouté.
 Les sorties de la semaine et les articles restent accessibles séparément par Sorties et Webzines ; leurs onglets
 communs sont masqués sur ordinateur et conservés dans la disposition mobile. L’accueil ne crée aucun second fournisseur de sorties.
 

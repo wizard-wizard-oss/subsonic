@@ -1,9 +1,16 @@
 """Projections typées des lectures Subsonic déjà utilisées par la bibliothèque."""
+from ...shared.text import normalize
 from ..library.catalog import album_card, song_row, visible
 from ..subsonic import Credentials, SubsonicError, SubsonicUnreachable
 from .entities import Album, PAGE_SIZE, SEED_ATTEMPTS, Seed, SUGGESTION_PAGES
 
 UNAVAILABLE = (SubsonicError, SubsonicUnreachable)
+
+
+def _album_key(artist, title):
+    """Deux copies du même disque se comparent par artiste/titre, si les deux sont renseignés."""
+    key = normalize(artist), normalize(title)
+    return key if all(key) else None
 
 
 class HomeCatalog:
@@ -64,12 +71,23 @@ class HomeCatalog:
         if not seed.genre:
             return ()
         found = []
+        seen_ids = {seed.album_id}
+        seed_key = _album_key(seed.artist, seed.album)
+        seen_albums = {seed_key} if seed_key else set()
         for page in range(SUGGESTION_PAGES):
             try:
                 result = self.library.albums(user, "genre", seed.genre, page)
             except UNAVAILABLE:
                 break
-            found.extend(Album.of(album) for album in result["albums"] if str(album["id"]) != seed.album_id)
+            for raw in result["albums"]:
+                album = Album.of(raw)
+                key = _album_key(album.artist, album.name)
+                if album.id in seen_ids or key and key in seen_albums:
+                    continue
+                seen_ids.add(album.id)
+                if key:
+                    seen_albums.add(key)
+                found.append(album)
             if len(found) >= PAGE_SIZE or not result["hasMore"]:
                 break
         return tuple(found[:PAGE_SIZE])

@@ -3,6 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from pimedia.webapp.personal_home.catalog import HomeCatalog
+from pimedia.webapp.personal_home.entities import PAGE_SIZE
 from pimedia.webapp.subsonic import SubsonicUnreachable
 
 
@@ -49,3 +50,31 @@ class HomeCatalogTest(unittest.TestCase):
         self.catalog.listening.play_queue = unavailable
         self.assertIsNone(self.catalog.current(self.user))
         self.assertEqual(self.catalog.suggestions(self.user, SimpleNamespace(genre="")), ())
+
+    def test_suggestions_deduplicate_ids_and_album_names_across_pages(self):
+        first = dict(id="first", name="Début", artist="Björk", coverId="original")
+        pages = [dict(albums=[first] * PAGE_SIZE + [dict(id="another-copy", name="DEBUT", artist="Bjork")], hasMore=True),
+                 dict(albums=[dict(id="third-copy", name="Début!", artist="BJÖRK"),
+                              dict(id="different-artist", name="Début", artist="Autre groupe"),
+                              dict(id="deluxe", name="Début (Deluxe)", artist="Björk")], hasMore=False)]
+        self.library.albums = lambda user, kind, genre, page: self.calls.append(page) or pages[page]
+        seed = SimpleNamespace(genre="Rock", album_id="seed", album="Autre album", artist="Artiste")
+        albums = self.catalog.suggestions(self.user, seed)
+        self.assertEqual([album.id for album in albums], ["first", "different-artist", "deluxe"])
+        self.assertEqual((albums[0].name, albums[0].artist, albums[0].cover_id), ("Début", "Björk", "original"))
+        self.assertEqual(self.calls, [0, 1])
+
+    def test_suggestions_exclude_the_seed_by_identity_or_normalized_artist_and_title(self):
+        seed = SimpleNamespace(genre="Rock", album_id="seed", album="L’Apocalypse", artist="Cœur de Pirate")
+        self.library.albums = lambda *args: dict(albums=[
+            dict(id="seed", name="Autre libellé", artist="Autre artiste"),
+            dict(id="seed-copy", name="L Apocalypse", artist="COEUR DE PIRATE"),
+            dict(id="other", name="L’Apocalypse", artist="Autre artiste")], hasMore=False)
+        self.assertEqual([album.id for album in self.catalog.suggestions(self.user, seed)], ["other"])
+
+    def test_suggestions_do_not_merge_distinct_albums_with_incomplete_metadata(self):
+        seed = SimpleNamespace(genre="Rock", album_id="seed", album="", artist="")
+        self.library.albums = lambda *args: dict(albums=[
+            dict(id="a", name="Untitled"), dict(id="b", name="Untitled"),
+            dict(id="c", name="", artist="Groupe"), dict(id="d", name="", artist="Groupe")], hasMore=False)
+        self.assertEqual([album.id for album in self.catalog.suggestions(self.user, seed)], ["a", "b", "c", "d"])

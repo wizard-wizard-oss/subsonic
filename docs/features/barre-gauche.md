@@ -8,7 +8,7 @@ de la page Bibliothèque, après Nouveaux, via `library-shortcuts.js`. Les artis
 `desktop-navigation.js` et `desktop-layout.css` portent
 cette disposition ; ils rendent les nœuds d’origine au volet mobile. Détails et tests : [Accueil personnel](accueil-personnel.md).
 Les modes fixe/survol/masqué et l’onglet mémorisé décrits ci-dessous concernent les composants d’origine ;
-le nouveau cadre du bureau utilise une ouverture temporaire, initialisée par la préférence masquée.
+le cadre du bureau s’ouvre toujours à l’arrivée (1.27.1), sans modifier ces préférences. Le menu réserve sa propre colonne, y compris après repli puis réouverture ; les anciennes règles de survol et de masquage ne s’y appliquent plus.
 
 Depuis la 1.27, « Tout voir › » ouvre la [galerie de playlists](playlists.md#galerie-visuelle--127).
 Le lien occupe une ligne sous le titre pour éviter tout chevauchement dans le menu étroit ; les raccourcis

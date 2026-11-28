@@ -5,7 +5,7 @@ class DesktopNavigation {
     this.moves = [];
     this.originals = new Map();
     this.owner = App.user.id;
-    this.opened = App.preferences.sidebar !== "hidden";
+    this.opened = true;
     this.chatOpen = false;
     this.sidebar = document.getElementById("sidebar");
     this.button = document.getElementById("toggle-sidebar");
@@ -163,7 +163,7 @@ class DesktopNavigation {
     if (this.owner === App.user.id) return;
     this.owner = App.user.id;
     this.chatOpen = false;
-    this.opened = App.preferences.sidebar !== "hidden";
+    this.opened = true;
     if (App.music.sidebar && App.music.sidebar.owner !== this.owner) App.music.sidebar.load(true);
     this.applyMenu();
     if (App.chatPanel) App.chatPanel.applyOpen();
