@@ -6,6 +6,8 @@ from ..subsonic import Credentials
 from .catalog import PAGE_SIZE, album_card, song_row, text, visible
 from .folders import PREFIX, FolderNotFound, folder_ref, is_folder
 
+PORTRAIT_REQUESTS = 3
+
 
 @dataclass
 class FavoriteState:
@@ -52,7 +54,8 @@ class FavoritesPage:
 
     def to_api(self):
         return {"artists": self.artists, "albums": self.albums, "songs": self.songs,
-                "page": self.page, "hasMore": self.has_more, "pagination": self.pagination.to_api()}
+                "page": self.page, "hasMore": self.has_more, "pagination": self.pagination.to_api(),
+                "portraitParallelism": PORTRAIT_REQUESTS}
 
 
 def unique(items):

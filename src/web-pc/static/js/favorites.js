@@ -1,12 +1,14 @@
 "use strict";
 /* Portraits chargés seulement à l'approche de l'écran, par une file propre à la visite du compte. */
 class FavoriteArtistPortraits {
-  constructor(container, current) {
+  constructor(container, current, parallelism) {
     this.container = container;
     this.isCurrent = current;
     this.alive = true;
     this.pending = [];
     this.entries = new Map();
+    this.parallelism = Number.isInteger(parallelism) && parallelism > 0 ? parallelism : 1;
+    this.active = 0;
     if (window.IntersectionObserver) {
       this.observer = new IntersectionObserver(entries => {
         for (const entry of entries) if (entry.isIntersecting) this.enqueue(entry.target);
@@ -38,21 +40,23 @@ class FavoriteArtistPortraits {
     this.drain();
   }
 
-  async drain() {
-    if (this.loading || !this.current()) return;
-    this.loading = true;
-    while (this.pending.length && this.current()) {
+  drain() {
+    while (this.pending.length && this.current() && this.active < this.parallelism) {
       const entry = this.pending.shift();
-      try {
-        const data = await App.api.get("/api/artist/image", {id: entry.artist.id});
-        if (!this.current() || !entry.node.isConnected || !data.imageUrl) continue;
-        const image = App.el("img", {src: data.imageUrl, alt: "", loading: "lazy", width: 112, height: 112,
-          referrerPolicy: "no-referrer", onload: () => { entry.fallback.hidden = true; },
-          onerror: () => { image.remove(); entry.fallback.hidden = false; }});
-        entry.portrait.appendChild(image);
-      } catch (error) { /* Les initiales restent disponibles si le portrait ne répond pas. */ }
+      this.active += 1;
+      this.load(entry).finally(() => { this.active -= 1; this.drain(); });
     }
-    this.loading = false;
+  }
+
+  async load(entry) {
+    try {
+      const data = await App.api.get("/api/artist/image", {id: entry.artist.id});
+      if (!this.current() || !entry.node.isConnected || !data.imageUrl) return;
+      const image = App.el("img", {src: data.imageUrl, alt: "", loading: "lazy", width: 112, height: 112,
+        referrerPolicy: "no-referrer", onload: () => { entry.fallback.hidden = true; },
+        onerror: () => { image.remove(); entry.fallback.hidden = false; }});
+      entry.portrait.appendChild(image);
+    } catch (error) { /* Les initiales restent disponibles si le portrait ne répond pas. */ }
   }
 
   destroy() {
@@ -79,18 +83,18 @@ const FavoritesView = {
     try {
       const data = await App.api.get("/api/starred", {page: 0});
       if (!this.current(route, owner)) return;
-      this.layout(main, route, owner);
+      this.layout(main, route, owner, data.portraitParallelism);
       this.append(data);
     } catch (error) {
       if (this.current(route, owner)) App.clear(main).appendChild(App.el("p.page-error", {text: App.errorText(error)}));
     }
   },
 
-  layout(main, route, owner) {
+  layout(main, route, owner, portraitParallelism) {
     const el = App.el;
     App.clear(main).appendChild(el("h1", {text: App.t("nav.favorites")}));
     this.artists = el("div.favorite-artists");
-    this.portraits = new FavoriteArtistPortraits(this.artists, () => this.current(route, owner));
+    this.portraits = new FavoriteArtistPortraits(this.artists, () => this.current(route, owner), portraitParallelism);
     this.albums = Views.albumGrid([]);
     App.clear(this.albums);
     this.songs = el("div");

@@ -6,6 +6,13 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.28.1"
+  date: 2026-11-28
+  title: "Les photos d’artistes retrouvent leur place"
+  changes:
+    - "Les anciennes adresses de photos Last.fm renvoyées par Subsonic sont reconnues et conservent la même image sur son adresse actuelle. Le service est commun aux favoris et aux fiches artistes."
+    - "Une recherche de portrait lente ne bloque plus toutes les autres photos visibles."
+
 - version: "1.28"
   date: 2026-11-28
   title: "Des favoris plus faciles à retrouver"

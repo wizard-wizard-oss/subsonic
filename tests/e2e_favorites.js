@@ -8,20 +8,23 @@ const load = file => run(fs.readFileSync(path.join(__dirname, "../src/web-pc/sta
   load("core"); load("icons");
   run(`App.user={id:1,roles:[]};App.preferences={};App.texts["favorites.count"]="{shown} sur {total}";
     const ExtMusic={favoritesSection:()=>App.el("section.ext-favorites")};
-    window.asked=[];window.route={};window.observers=[];window.photos=[];
+    window.asked=[];window.route={};window.observers=[];window.photos=[];window.activePhotos=0;window.peakPhotos=0;
     window.IntersectionObserver=class{
       constructor(callback){this.callback=callback;this.nodes=[];observers.push(this);}
       observe(node){this.nodes.push(node);}unobserve(){}disconnect(){this.disconnected=true;}
     };
     App.api.get=async(url,params)=>{
-      if(url==="/api/artist/image")return new Promise(resolve=>photos.push({id:params.id,resolve}));
+      if(url==="/api/artist/image")return new Promise(resolve=>{
+        activePhotos++;peakPhotos=Math.max(peakPhotos,activePhotos);
+        photos.push({id:params.id,resolve:value=>{activePhotos--;resolve(value);}});
+      });
       asked.push(params?.page || 0);return params?.page ?
       {artists:[{id:"f126",name:"Suite"}],albums:Array.from({length:40},(_,i)=>({id:"album"+(params.page*40+i),name:"Album suivant"})),
         songs:Array.from({length:40},(_,i)=>({id:"song"+(i+40),title:"Titre suivant"})),hasMore:true,
-        pagination:{artists:{total:4,hasMore:false},albums:{total:225,hasMore:true},songs:{total:794,hasMore:true}}} :
+        portraitParallelism:2,pagination:{artists:{total:4,hasMore:false},albums:{total:225,hasMore:true},songs:{total:794,hasMore:true}}} :
       {artists:[{id:"f123",name:"<ABBA>"},{id:"f124",name:"Sans photo"},{id:"f125",name:"Image absente"}],
         albums:Array.from({length:40},(_,i)=>({id:"album"+i,name:"Album "+i})),songs:Array.from({length:40},(_,i)=>({id:"song"+i,title:"Titre"})),hasMore:true,
-        pagination:{artists:{total:4,hasMore:true},albums:{total:225,hasMore:true},songs:{total:794,hasMore:true}}};};`);
+        portraitParallelism:2,pagination:{artists:{total:4,hasMore:true},albums:{total:225,hasMore:true},songs:{total:794,hasMore:true}}};};`);
   load("views");
   run('Views.songTable=songs=>App.el("div.test-song-table",{},songs.map(song=>App.el("span.test-song",{text:song.title})));');
   if (fs.existsSync(path.join(__dirname, "../src/web-pc/static/js/favorites.js"))) load("favorites");
@@ -37,14 +40,10 @@ const load = file => run(fs.readFileSync(path.join(__dirname, "../src/web-pc/sta
   assert.ok(artist.querySelector('.favorite-artist-portrait'));
   assert.equal(run('photos.length'),0,"pas de requête portrait avant visibilité");
   run('observers[0].callback(observers[0].nodes.map(target=>({target,isIntersecting:true})))');
-  assert.equal(run('photos.length'),1,"une seule recherche de portrait en vol");
-  run('photos[0].resolve({imageUrl:"https://images.example/abba.jpg",source:"subsonic"})');
-  await new Promise(resolve=>setImmediate(resolve));
-  const image=artist.querySelector('img');
-  assert.equal(image.getAttribute('src'),"https://images.example/abba.jpg");
-  assert.equal(image.getAttribute('loading'),"lazy");
-  assert.equal(run('photos.length'),2);
+  assert.equal(run('photos.length'),2,"la limite du serveur borne les recherches simultanées");
+  // Le premier appel reste lent ; une place libérée par le deuxième fait avancer la suite.
   run('photos[1].resolve({imageUrl:""})');await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(run('photos.length'),3,"un portrait lent ne bloque pas les autres");
   const fallback=d.querySelector('a[href="#/artist/f124"]');
   assert.equal(fallback.querySelector('img'),null);
   assert.equal(fallback.querySelector('.favorite-artist-initials').textContent,'SP');
@@ -53,6 +52,12 @@ const load = file => run(fs.readFileSync(path.join(__dirname, "../src/web-pc/sta
   broken.querySelector('img').dispatchEvent(new dom.window.Event('error'));
   assert.equal(broken.querySelector('img'),null);
   assert.equal(broken.querySelector('.favorite-artist-initials').hidden,false);
+  run('photos[0].resolve({imageUrl:"https://images.example/abba.jpg",source:"subsonic"})');
+  await new Promise(resolve=>setImmediate(resolve));
+  const image=artist.querySelector('img');
+  assert.equal(image.getAttribute('src'),"https://images.example/abba.jpg");
+  assert.equal(image.getAttribute('loading'),"lazy");
+  assert.equal(run('peakPhotos'),2,"aucune requête ne dépasse la limite fournie");
   const first = d.querySelector('.album-card'), elsewhere = d.querySelector('.ext-favorites');
   const songs=d.querySelector('.test-song-table');
   albumSection.querySelector('.favorites-more').click();
@@ -86,5 +91,16 @@ const load = file => run(fs.readFileSync(path.join(__dirname, "../src/web-pc/sta
   await rendering;
   assert.equal(d.querySelector('a[href="#/artist/old"]'),null,"favoris tardifs d’un ancien compte ignorés");
   run('Views.favorites.destroy()');
+  // Une réponse d'une ancienne version de l'API conserve le chargement séquentiel compatible.
+  run(`window.legacyPhotos=[];window.legacyRoute={};App.api.get=async(url,params)=>{
+    if(url==="/api/artist/image")return new Promise(resolve=>legacyPhotos.push(resolve));
+    return {artists:[{id:"a",name:"A"},{id:"b",name:"B"}],albums:[],songs:[],hasMore:false};
+  };`);
+  await run('Views.favorites.render(document.querySelector("main"),legacyRoute)');
+  run('observers.at(-1).callback(observers.at(-1).nodes.map(target=>({target,isIntersecting:true})))');
+  assert.equal(run('legacyPhotos.length'),1);
+  run('legacyPhotos[0]({imageUrl:""})');await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(run('legacyPhotos.length'),2);
+  run('Views.favorites.destroy();legacyPhotos[1]({imageUrl:""})');
   dom.window.close(); console.log("OK favoris : artistes, pagination et mise à jour locale");
 } catch(error) {console.error(error);dom.window.close();process.exitCode=1;} })();

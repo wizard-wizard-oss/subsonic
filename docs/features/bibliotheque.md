@@ -17,7 +17,9 @@ les listes réunies et dédoublonnées côté serveur avant découpage.
 
 Les artistes ont un portrait rond, leur nom et un lien vers leur fiche. Les images réutilisent le service
 `ArtistPortraits` et sa route existante ; elles se chargent à l’approche de l’écran, avec un nombre de
-requêtes simultanées borné. Une image absente ou en erreur laisse les initiales. Les réponses d’une ancienne
+requêtes simultanées borné (limite transmise par le serveur), sans qu’un portrait lent bloque les autres.
+La 1.28.1 normalise les anciennes adresses Last.fm de Subsonic vers le CDN actuel ; la même photo et le
+même service sont utilisés dans les favoris et sur la fiche artiste. Une image absente ou en erreur laisse les initiales. Les réponses d’une ancienne
 page ou d’un ancien compte sont ignorées ; les autres catégories, filtres et éléments déjà chargés restent
 à leur place.
 

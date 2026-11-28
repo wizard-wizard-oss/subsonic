@@ -19,6 +19,10 @@ class FavoritesServiceTest(unittest.TestCase):
         self.folders = Mock()
         self.favorites = Favorites(self.subsonic, self.library, self.folders)
 
+    def test_portrait_parallelism_is_supplied_to_the_page(self):
+        data = self.favorites.page(self.user).to_api()
+        self.assertGreater(data["portraitParallelism"], 1)
+
     def test_duplicate_album_keeps_the_richer_tag_metadata(self):
         self.raw["getStarred2"]["starred2"] = {"album": {"id": "tag", "name": "Album", "genre": "Jazz", "songCount": 12}}
         self.raw["getStarred"]["starred"] = {"album": {"id": "directory", "title": "Album"}}

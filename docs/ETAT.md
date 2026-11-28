@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-## Favoris complets et portraits · 1.28 en préparation (28/11/2026)
+## Favoris 1.28 publiée · correctif photos 1.28.1 (28/11/2026)
 
 Retour utilisateur après la 1.27.1 : albums difficiles à retrouver et souhait de portraits ronds pour les
 artistes. Diagnostic en lecture seule du compte concerné : Subsonic renvoie 225 albums favoris par dossiers,
@@ -15,7 +15,17 @@ Vérification en lecture seule sur les réponses réelles du compte avec le code
 794 titres disponibles. Aucun favori réel modifié. 26 tests Python ciblés et le parcours jsdom Favoris
 passent ; portraits, pagination indépendante et réponses tardives couverts. Aperçu de la vraie page avec
 données et images d’illustration ; composant des portraits vérifié à 390 px sans débordement.
-Validation visuelle et publication autorisées par l’utilisateur le 28/11/2026.
+Validation visuelle et publication autorisées par l’utilisateur le 28/11/2026. La 1.28 est publiée :
+commit applicatif `567f04a`, image `be152dc7a1dc`, HTTPS 1.28 et conteneur sain, schéma 32 intègre,
+340 fichiers applicatifs et 88 ressources publiques conformes. Le code publié place Ripper en premier.
+Sauvegarde `../pimedia-backups/pre-1.28-20261128T134153Z/`.
+
+Retour utilisateur sur les photos : reprise du service commun déjà utilisé sur la fiche artiste, sans
+second mécanisme. Exemple confirmé : Red Axes, URL Last.fm HTTPS `lastfm-img2.akamaized.net` rejetée
+et inaccessible, même image disponible sur le CDN Fastly existant. Normalisation étroite des anciens
+liens dans LastFm, réutilisée par ArtistPortraits, sans élargissement des origines CSP ni acceptation d’URL arbitraires.
+La liste de favoris reçoit du serveur la limite de recherches parallèles pour qu’un portrait lent ne
+bloque plus les autres. Aucun nouveau fournisseur, aucune migration, aucun favori réel modifié.
 
 ## Publication 1.27.1 vérifiée (28/11/2026)
 
