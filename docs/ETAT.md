@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-## Interface 1.29 en livraison (28/11/2026)
+## Interface 1.29 publiée et vérifiée (28/11/2026)
 
 Rendus validés avec de vrais flux RSS puis une liste de playlists fictive : cartes avec image, source et date,
 repli par journal ; marque `#220022` à la place du vert ; petite icône pour agrandir les playlists, défilement
@@ -10,7 +10,15 @@ Migration 33 additive pour l'adresse d'image ; client de flux déplacé dans le 
 images relayées par le serveur sans élargir la CSP. Conservation depuis une base 32 remplie couverte.
 Les nouveaux tests Python et jsdom ont été écrits et vus en échec avant l'implémentation. Vérifications ciblées
 uniquement : l'utilisateur a explicitement demandé de ne pas relancer la suite complète avant cette livraison.
-Commit, PR et publication autorisés ; contrôles de livraison encore en cours.
+Publication autorisée, commit applicatif `8caaa57`, PR 11 fusionnée (`cac2ebd`), image `2097187e6f1e`.
+48 tests Python ciblés et les parcours jsdom presse, playlists, navigation, ordinateur/mobile et général passent ;
+la borne du cache a aussi son test ciblé. Rendu intégré vérifié avec huit icônes de menu, sous-marin décoratif,
+point d'interrogation Help, six images réelles chargées et trente playlists fictives sans erreur JavaScript.
+Répétition distante avant publication sur la sauvegarde : 39 tables et 73 976 lignes conservées, clés étrangères valides.
+Production : conteneur sain, schéma 33 intègre, 348 fichiers applicatifs et 90 scripts/styles HTTPS conformes à
+l'instantané. 38 des 40 articles de la première page ont une image ; une image JPEG de 41 396 octets est relayée
+par le vrai service. Aucun favori ni playlist du compte réel modifié. Sauvegarde code/configuration/SQLite
+`../pimedia-backups/pre-1.29-20261128T143130Z/`, image de retour arrière `pimedia-web:pre-1.29-20261128T143130Z`.
 
 ## Favoris 1.28.1 publiée et vérifiée (28/11/2026)
 

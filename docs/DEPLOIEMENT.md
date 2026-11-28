@@ -1,5 +1,22 @@
 # Déployer le projet
 
+Publication 1.29 le 28/11/2026 : presse en cartes avec images des flux, agrandissement et défilement des playlists,
+couleur `#220022`, sous-marin décoratif et point d'interrogation Help. Commit applicatif `8caaa57`,
+PR 11 fusionnée (`cac2ebd`), image `2097187e6f1e`. Tests ciblés et contrôle du rendu intégré ; aucune suite complète,
+sur demande explicite de l'utilisateur. Aucune dépendance ni configuration nouvelle.
+
+Migration 33 additive, répétée uniquement sur le serveur dans une copie de la sauvegarde : 39 tables et
+73 976 lignes préexistantes conservées, clés étrangères valides. Publication du seul `src/`, configuration et
+volumes conservés. Production : HTTPS 1.29, conteneur sain, schéma 33 intègre, 348 fichiers applicatifs et
+90 scripts/styles publics conformes à l'instantané. Le service réel relaie une image JPEG ; l'accès HTTP
+aux images exige une session. Aucun favori ni playlist réel modifié pendant la vérification.
+Sauvegarde `../pimedia-backups/pre-1.29-20261128T143130Z/`, image de retour arrière
+`pimedia-web:pre-1.29-20261128T143130Z`. L'ancien code peut conserver la nouvelle colonne ; une restauration
+complète de SQLite doit préserver les écritures reçues depuis la sauvegarde.
+
+L'accès SSH macOS existant utilise `UseKeychain=yes`, `BatchMode=yes` et `StrictHostKeyChecking=yes` avec
+la clé de déploiement configurée. Il ne nécessite aucune recherche d'identité dans d'autres agents SSH.
+
 Publication 1.28 puis 1.28.1 le 28/11/2026 : favoris triés par date d’ajout, pagination indépendante
 et portraits ronds approuvés par l’utilisateur. La 1.28.1 rétablit les photos Last.fm renvoyées avec un
 ancien hôte par Subsonic, dans le service commun aux favoris et à la fiche artiste. Elle borne à trois
