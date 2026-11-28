@@ -1,0 +1,130 @@
+/* Nouvelle disposition activée par l’adaptateur ordinateur. Les nœuds et préférences mobiles restent réutilisés. */
+body[data-desktop-layout] { --topbar: 72px; --desktop-menu-width: clamp(167px, 21vw, 214px); }
+body[data-desktop-layout] .app {
+  grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr) 0;
+}
+body[data-desktop-layout][data-chat="open"] .app,
+body[data-desktop-layout][data-lyrics="open"] .app {
+  grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr) var(--chat-width);
+}
+body[data-desktop-layout][data-desktop-menu="closed"] .app { grid-template-columns: 0 minmax(0, 1fr) 0; }
+body[data-desktop-layout][data-desktop-menu="closed"][data-chat="open"] .app,
+body[data-desktop-layout][data-desktop-menu="closed"][data-lyrics="open"] .app {
+  grid-template-columns: 0 minmax(0, 1fr) var(--chat-width);
+}
+body[data-desktop-layout] .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 24px; padding: 14px 24px; }
+body[data-desktop-layout] .desktop-top-start { display: flex; align-items: center; gap: 12px; }
+body[data-desktop-layout] .brand { font-size: 18px; font-weight: 600; letter-spacing: 0; }
+body[data-desktop-layout] #toggle-sidebar { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; }
+body[data-desktop-layout] .desktop-search { display: flex; align-items: center; gap: 10px;
+  width: min(100%, 480px); min-height: 42px; justify-self: center; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--bg-hover); color: var(--text-soft); }
+body[data-desktop-layout] .desktop-search:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+body[data-desktop-layout] .desktop-search .search { width: 100%; min-width: 0; max-width: none; margin: 0;
+  border: 0; border-radius: 0; outline: none; background: transparent; padding: 9px 0; color: var(--text); }
+body[data-desktop-layout] .topbar-right { margin-left: 0; gap: 10px; }
+body[data-desktop-layout] #toggle-chat { min-height: 36px; padding: 6px 10px; gap: 7px;
+  border-color: transparent; background: transparent; color: var(--text); font-weight: 500; }
+body[data-desktop-layout] #toggle-chat:hover { background: var(--bg-hover); }
+body[data-desktop-layout] .desktop-guide { display: grid; place-items: center; flex: none; padding: 0;
+  width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; background: transparent; }
+body[data-desktop-layout] .desktop-guide:hover { background: var(--bg-hover); }
+body[data-desktop-layout] .desktop-guide img { display: block; width: 28px; height: 28px; }
+body[data-desktop-layout] #account-toggle { width: 36px; height: 36px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--bg-hover); }
+body[data-desktop-layout] #account-toggle::after, body[data-desktop-layout] #me .me-name { display: none; }
+body[data-desktop-layout] #me { display: flex; padding: 0; }
+body[data-desktop-layout] #me .avatar { width: 32px !important; height: 32px !important; font-size: 13px; }
+body[data-desktop-layout] .sidebar { position: static; transform: none; transition: none; box-shadow: none;
+  display: flex; flex-direction: column; overflow-y: auto; padding: 23px 13px 0; gap: 10px; }
+body[data-desktop-layout][data-desktop-menu="closed"] .sidebar { display: none; }
+body[data-desktop-layout] .sidebar-edge,
+body[data-desktop-layout] .sidebar-tabs,
+body[data-desktop-layout] #panel-artists { display: none; }
+body[data-desktop-layout] .sidebar > .topnav { display: flex; flex-direction: column; flex: none; gap: 3px; }
+body[data-desktop-layout] .sidebar > .topnav a { display: flex; align-items: center; gap: 9px; min-height: 40px;
+  padding: 6px 9px; border: 1px solid transparent; border-radius: 8px; font-size: 13px; line-height: 1.35; }
+body[data-desktop-layout] .sidebar > .topnav a[href="#/mix"] { margin-top: 12px; border-top-color: var(--line); border-radius: 0; padding-top: 12px; }
+body[data-desktop-layout] .sidebar > .topnav a.active,
+body[data-desktop-layout] .sidebar > .topnav a:hover,
+body[data-desktop-layout] .sidebar .playlist-row.active,
+body[data-desktop-layout] .sidebar .playlist-row:hover { color: var(--button-text);
+  background: var(--button-bg); border-color: var(--button-line); font-weight: 500; }
+body[data-desktop-layout] .desktop-playlist-heading { display: flex; justify-content: space-between; align-items: center;
+  margin: 4px 4px 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); }
+body[data-desktop-layout] .desktop-playlist-heading h2 { font-size: 13px; font-weight: 500; }
+body[data-desktop-layout] .desktop-playlist-actions { display: flex; gap: 4px; }
+body[data-desktop-layout] .desktop-playlist-actions > * { width: 27px; height: 27px; padding: 0; border-radius: 50%; }
+body[data-desktop-layout] .desktop-playlist-actions .icon { width: 14px; height: 14px; }
+body[data-desktop-layout] #panel-playlists[hidden], body[data-desktop-layout] #panel-playlists {
+  display: grid !important; flex: 1; min-height: 160px; }
+body[data-desktop-layout] #panel-playlists .sidebar-filter { margin: 0; min-width: 0; width: 100%; }
+body[data-desktop-layout] #panel-playlists .artist-list { padding-inline: 0; }
+body[data-desktop-layout] .main { padding: 25px 25px 30px; }
+body[data-desktop-layout] .account-menu-panel .fresh { color: var(--text); }
+body[data-desktop-layout] .account-menu-panel #version-tag { order: 1; font: inherit; margin: 0; }
+body[data-desktop-layout] .news-sections { display: none; }
+body[data-desktop-layout] .tabs a.active, body[data-desktop-layout] .tabs a:hover {
+  background: var(--button-bg); color: var(--button-text); }
+.library-shortcuts { display: inline-flex; gap: 4px; }
+
+.desktop-home { display: grid; gap: 27px; max-width: 1600px; margin-inline: auto; }
+.desktop-home .personal-resume { display: flex; align-items: center; padding: 19px; gap: 23px; border-radius: 15px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--accent) 15%, var(--bg-raised)), var(--bg-raised)); }
+.desktop-home .personal-resume > img.cover { width: 145px; height: 145px; flex: none; border-radius: 10px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-sunken) 30%, transparent); }
+.personal-resume-details { display: grid; justify-items: start; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.desktop-home .personal-resume h1 { font-size: clamp(22px, 3.05vw, 34px); letter-spacing: -.04em; }
+.desktop-home .personal-resume-song { font-size: 16px; font-weight: 500; }
+.desktop-home .personal-resume p { margin: 0 0 4px; }
+.desktop-home .personal-resume button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 12px; }
+.home-rail { min-width: 0; }
+.home-rail-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.home-rail-head h2 { font-size: clamp(18px, 2.1vw, 24px); letter-spacing: -.025em; flex: 1; min-width: 160px; }
+.home-rail-controls { display: flex; align-items: center; gap: 8px; }
+.home-rail-title { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: .2em;
+  transition: text-decoration-color .16s ease; }
+.home-rail-title:hover { color: var(--text); text-decoration-color: var(--button-line); }
+.home-rail-arrow { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; }
+.home-rail-arrow:disabled { opacity: .35; }
+.home-rail-track { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(150px, 15vw, 180px);
+  gap: 18px; overflow-x: auto; scroll-snap-type: x proximity; scroll-behavior: smooth; overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 6px;
+  margin: -6px; scroll-padding: 6px; align-items: start; }
+.home-rail-track::-webkit-scrollbar { display: none; }
+.home-rail-track > * { min-width: 0; scroll-snap-align: start; }
+.home-rail-track .album-card { padding: 0; margin: 0; }
+.home-rail-track .album-card:hover { background: transparent; }
+.home-rail-track .album-card img.cover { box-shadow: none; border-radius: 8px; }
+.home-rail-track .album-card-play { width: 36px; height: 36px;
+  top: calc(100cqw - 48px); left: 10px; }
+.home-rail-track .album-name { font-size: 14px; font-weight: 500; }
+.home-rail-track .album-meta, .home-rail-track .album-year, .home-rail-track .album-uploader { display: none; }
+.home-rail-track .listen-later-tile { border: 0; background: transparent; border-radius: 0; }
+.home-rail-track .listen-later-tile .listen-later-details { padding: 9px 0 0; }
+.home-rail-track .listen-later-tile-art { border-radius: 8px; overflow: hidden; }
+.home-rail-track .listen-later-name { font-size: 14px; font-weight: 500; }
+.home-card-context { color: var(--text-soft); font-size: 11px; line-height: 1.4; }
+.home-rail-track .listen-later-actions:empty { display: none; }
+.home-rail-track :is(.album-card-play, .listen-later-play) { opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+.home-rail-track :is(.album-card, .listen-later-tile):is(:hover, :focus-within) :is(.album-card-play, .listen-later-play) {
+  opacity: 1; pointer-events: auto; }
+.home-rail-track .weekly-card { padding: 0; background: transparent; border: 0; }
+.home-rail-track .weekly-card .cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 10px; }
+.home-rail-track .weekly-card h3 { font-size: 16px; margin-top: 9px; }
+.home-rail-track .weekly-reasons { font-size: 12px; }
+.home-rail-track .weekly-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.home-rail-status { margin: 8px 0 0; }
+.home-rail-status:empty { display: none; }
+@media (max-width: 720px) {
+  body[data-desktop-layout] .topbar { gap: 12px; padding-inline: 16px; }
+  body[data-desktop-layout] .main { padding: 19px 14px 24px; }
+  .desktop-home .personal-resume { gap: 12px; padding: 12px; }
+  .desktop-home .personal-resume > img.cover { width: 100px; height: 100px; }
+}
+@media (hover: none) { .home-rail-track :is(.album-card-play, .listen-later-play) { opacity: 1; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) {
+  .home-rail-track { scroll-behavior: auto; }
+  .home-rail-title, .home-rail-track :is(.album-card-play, .listen-later-play) { transition: none; }
+}

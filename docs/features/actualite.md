@@ -1,10 +1,15 @@
 # Actualités : flux RSS des webzines (site web)
 
 ## Ce que ça fait
-Page **« Actualités »** (`#/news`, lien dans le menu du haut) : les derniers articles des webzines suivis par le site,
+Page **« Actualités »** (`#/news`, lien **Webzines** dans le menu gauche sur ordinateur) : les derniers articles des webzines suivis par le site,
 du plus récent au plus ancien, 40 par page avec « Afficher plus ». Pour chaque article : titre (lien vers le webzine,
 nouvel onglet), webzine, date, début du résumé (280 caractères, sans HTML). **Le site ne montre que des liens** :
 l'article se lit chez le webzine ; ni image ni contenu copié.
+
+La 1.25 sépare Webzines et Sorties (`#/news/releases`) dans le menu de gauche. Les deux onglets de la page sont
+masqués sur ordinateur ; l’accueil montre aussi une rangée du radar des sorties existant. `e2e_desktop_page.js`
+vérifie les deux destinations, leur surlignage distinct et l’absence d’onglets dupliqués. La disposition mobile
+conserve son lien Actualités et les deux onglets.
 
 - **Filtre par webzine** : une pastille par flux (`#/news/<id>`), avec le nombre d'articles gardés et ⚠ si la
   dernière lecture a échoué.
@@ -64,14 +69,23 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   **masquée**, pas effacée : le calcul suivant ne la remet pas ; l’ajouter à la main la réactive.
 - **Tendances**, recalculées à chaque synchronisation, d’après les **favoris seulement** (`getStarred2` : artistes,
   albums, morceaux) :
-  - artistes (30 au plus ; MBID de Subsonic, sinon recherche MusicBrainz au nom exact, gardée dans
+  - artistes (500 au plus ; MBID de Subsonic, sinon recherche MusicBrainz au nom exact, gardée dans
     `artist_resolutions` ; un nom introuvable ou porté par plusieurs artistes est recherché de nouveau après 30 jours) ;
   - labels des albums favoris (lien album ↔ label gardé dans `album_labels`, « rien trouvé » compris) ;
   - **styles dominants** : les 3 premiers tags du catalogue de chaque artiste, lus par lots de 20 artistes en une
     requête ; un style porté par moins de 3 artistes est écarté ; les 5 premiers sont proposés.
   - **Sans favori** : styles génériques calculés de la même façon sur les albums les plus écoutés du sub
     (`getAlbumList2 type=frequent`, liste commune au serveur) ; la page le dit (`radar_profiles.basis = 'site'`).
-- **Page** : pastilles Tout · chaque style · Labels · Mes artistes, avec leur nombre ; chaque carte dit pourquoi elle est
+- **Page (1.26)** : toutes les sorties affichées à l’arrivée, filtres repliés. Navigation par petites flèches,
+  choix d’une date dans le libellé de la semaine et retour à cette semaine dans ce menu. « Filtrer » ouvre
+  les origines (Tout, Labels, Mes artistes, avec leurs nombres), un sélecteur de style et « Découvrir autour
+  d’un artiste ». Chaque sélection remplace la précédente, referme le panneau et laisse une seule pastille
+  retirable avec « Modifier ». Styles et artistes suivis se recherchent côté serveur avec la normalisation
+  commune, cinq suggestions par page, sans afficher tous les noms ni faire d’appel externe. Un style à zéro
+  sortie reste accessible avec son nombre. Le menu `…` regroupe les suivis, l’actualisation et sa date.
+  Sur téléphone tactile jusqu’à 600 px, les filtres s’ouvrent en bas ; Échap et les boutons de fermeture
+  permettent de sortir des panneaux. La grille seule est mise à jour ; semaine, filtres et défilement restent
+  en place. Chaque carte dit pourquoi elle est
   là ; cartes par date puis titre ; « Ouvrir l’album » quand l’album est déjà dans la bibliothèque (rapprochement
   serveur, gardé 5 min). 48 cartes par page. Pochette Cover Art Archive : miniature 250 px, sinon l’image d’origine
   (archive.org ne fabrique pas tout de suite les miniatures des sorties récentes), sinon pochette vide.
@@ -81,7 +95,7 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   lien vers la recherche habituelle (`web-pc/static/js/weekly-listen.js`).
 - **« Autour de… »** : on choisit un de ses artistes ; Last.fm donne ses proches (une requête) ; on cherche leurs
   sorties parmi celles de ListenBrainz déjà en base (MBID quand Last.fm le donne, sinon nom normalisé).
-- **Hors période** (plus de 14 jours en arrière, plus de 60 jours en avant) : consultation « un style à la fois ».
+- **Anciennes semaines** : les trois derniers mois sont gardés ; plus loin dans le passé, la semaine du radar est synchronisée à la demande pour les sources du compte. Les semaines récentes sont relues chaque nuit, les plus anciennes une fois par semaine (comportement publié en 1.24.2 et conservé).
 
 ### Synchronisation de fond
 - Fil lancé par `app.run()` (`ReleaseSync.run`) : au démarrage si la dernière synchronisation complète date de plus
@@ -93,7 +107,7 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
   ne garder que les nouveautés.
 - **Pas de cache de 7 jours pour le radar** : ListenBrainz est lu en direct ; ce que le radar garde est dans ses tables.
 - Une panne garde les sorties déjà en base, note l’échec (`radar_sync.failed_at`) et sa raison dans le journal ; la
-  source est réessayée 30 min plus tard. Une panne pendant les tendances n’en retire aucune. Sorties de plus de 30 jours
+  source est réessayée 10 min plus tard. Une panne pendant les tendances n’en retire aucune. Sorties de plus de 120 jours
   purgées.
 - Ajouter une source la synchronise tout de suite ; « ↻ » relance ListenBrainz, les tendances et les sources du
   compte, une fois toutes les 10 min (refus : 429 `weekly.refresh_too_soon`). Une seule file de travail, sans doublon.
@@ -102,11 +116,14 @@ Conception : `docs/superpowers/specs/2026-11-27-radar-sorties-design.md` ; plan 
 ### Où
 Paquet `webapp/weekly_releases/` : `radar.py` (page, « Autour de… », sources), `trends.py`, `sync.py`, `entities.py`,
 `limits.py`, `assembly.py` (câblage) ; `service.py` (consultation par style). Dépôts : `storage/release_radar.py`,
-`storage/weekly_releases.py`. Migrations 29 et 30. Requêtes : `MusicBrainz` (`label_groups`, `release_label`,
+`storage/weekly_releases.py`. Migrations 29 à 31 (la 31 publiée ajoute les pochettes et la date de relecture des anciennes semaines). Requêtes : `MusicBrainz` (`label_groups`, `release_label`,
 `search_labels`, `artists_tags`, `weekly_groups`), `webapp/providers/listenbrainz.py`, `LastFm.similar_artists`.
-Page : `web-pc/static/js/weekly-radar.js`, `weekly-sources.js`, `weekly-releases.js` (vue par style, pochettes).
+Page : `web-pc/static/js/weekly-radar.js`, `weekly-sources.js`, `weekly-releases.js` (vue par style, pochettes),
+`weekly-week.js` (navigation commune), `weekly-filters.js` (choix actif), `weekly-source-picker.js`
+(recherche paginée) ; styles des commandes dans `static/css/weekly-releases.css`.
 Routes : `GET /api/news/releases/radar?monday=&filter=&offset=`, `GET …/around?name=&mbid=&monday=&offset=`,
-`GET …/sources`, `POST …/sources/add {kind, identity, name}`, `POST …/sources/hide {id}`,
+`GET …/sources`, `GET …/sources/choices?kind=style|artist&q=&offset=` (sources visibles du compte seulement),
+`POST …/sources/add {kind, identity, name}`, `POST …/sources/hide {id}`,
 `GET …/search?kind=label|artist&q=`, `POST …/refresh` ; et toujours `GET /api/news/releases`, `GET …/genres`,
 `POST …/follow`.
 
@@ -114,7 +131,11 @@ Routes : `GET /api/news/releases/radar?monday=&filter=&offset=`, `GET …/around
 `tests/test_release_radar_storage.py` (dont migration 29 depuis une base remplie), `test_musicbrainz_radar.py`,
 `test_lastfm_similar.py`, `test_listenbrainz.py`, `test_release_trends.py`, `test_release_sync.py`, `test_release_radar_service.py`,
 `test_weekly_releases.py` (routes, session, CSRF, 429) ; parcours jsdom `e2e_weekly_radar.js` et
-`e2e_weekly_releases.js`.
+`e2e_weekly_releases.js` et `e2e_weekly_filters.js` (500 artistes, pagination, recherche, sélection/retrait,
+maintien des nœuds et du défilement, calendrier, Échap, réponses tardives).
+Contrôle visuel local de la 1.26 en clair et sombre, sur ordinateur (1440/800 px) et téléphone tactile
+(390/320 px), avec 500 artistes suivis : filtres ouverts/fermés, cinq suggestions, sélection active et
+absence de débordement horizontal ou d’erreur JavaScript. Bibliothèque fictive ; pas de validation en production.
 
 ### N’existe pas / pas vérifié
 - Pas de partie communauté (« ce que suivent les autres ») ni de projets parallèles via les relations MusicBrainz.

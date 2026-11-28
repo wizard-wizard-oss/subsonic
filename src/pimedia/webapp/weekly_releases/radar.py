@@ -9,10 +9,11 @@ from ...shared.providers.musicbrainz.parsing import mbid as valid_mbid
 from ...shared.text import normalize
 from ..library.cache import TtlCache
 from ..subsonic import SubsonicError, SubsonicUnreachable
-from .entities import RadarCard, RadarError, RadarFilter, RadarRefresh, RadarSearch, RadarSettings, RadarSource, RadarWeek
+from .entities import (RadarCard, RadarError, RadarFilter, RadarRefresh, RadarSearch, RadarSettings, RadarSource,
+                       RadarSourceChoices, RadarWeek)
 from .limits import (ARTIST, AROUND_SIMILAR, FRESH, FRESH_IDENTITY, KINDS, LABEL, LOCAL_CACHE_SECONDS,
                      LOCAL_LOOKUPS_IN_PARALLEL, MANUAL, MANUAL_KINDS, MAX_NAME, RADAR_PAGE, REFRESH_COOLDOWN,
-                     SEARCH_KINDS, STYLE, WINDOW_AFTER, WINDOW_BEFORE)
+                     SEARCH_KINDS, SOURCE_CHOICE_KINDS, SOURCE_CHOICES_PAGE, STYLE, WINDOW_AFTER, WINDOW_BEFORE)
 
 STYLE_FILTER = STYLE + ":"
 FILTER_KINDS = {"labels": LABEL, "artists": ARTIST}
@@ -45,12 +46,18 @@ class RadarService:
         return monday + timedelta(days=6) >= today - WINDOW_BEFORE and monday <= today + WINDOW_AFTER
 
     def week(self, user, start, selected="all", offset=0):
+        """Une semaine du radar. Dans la fenêtre synchronisée : lue en base. Plus ancienne : cherchée d'abord à la
+        demande pour les sources du compte (quelques dizaines de secondes, une fois par jour). Trop loin dans le
+        futur : consultation par style."""
         monday = self._monday(start, offset)
-        if not self._in_window(monday):
+        older = monday + timedelta(days=6) < self.today() - WINDOW_BEFORE
+        if not older and not self._in_window(monday):
             return RadarWeek(monday, out_of_window=True, default_style=self.styles.DEFAULT_GENRE)
         sources = self.sources.for_user(user.id)
         if not sources:
             return RadarWeek(monday, empty="no-sources", default_style=self.styles.DEFAULT_GENRE)
+        if older and not offset:
+            self.sync.sync_week(user, monday)
         cards = self._cards(sources, monday, monday + timedelta(days=6))
         filters = self._filters(sources, cards)
         if selected not in {f.key for f in filters}:
@@ -116,7 +123,9 @@ class RadarService:
                                 for s in found)
                 cards.append(RadarCard(release, reasons))
         shown = _by_date(cards)
-        return RadarWeek(monday, tuple(self._with_local(user, shown[offset:offset + RADAR_PAGE])), (), AROUND,
+        sources = self.sources.for_user(user.id)
+        filters = self._filters(sources, self._cards(sources, monday, monday + timedelta(days=6)))
+        return RadarWeek(monday, tuple(self._with_local(user, shown[offset:offset + RADAR_PAGE])), tuple(filters), AROUND,
                          self._next(offset, shown), self.releases.last_synced({(FRESH, FRESH_IDENTITY)}),
                          self._refresh_after(user), around=name, default_style=self.styles.DEFAULT_GENRE)
 
@@ -142,6 +151,17 @@ class RadarService:
         return last + REFRESH_COOLDOWN if last is not None else None
 
     # ---------- sources et réglages ----------
+    def source_choices(self, user, kind, query="", offset=0):
+        if kind not in SOURCE_CHOICE_KINDS or not isinstance(query, str) or len(query) > MAX_NAME:
+            raise ValueError("source")
+        if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0 or offset % SOURCE_CHOICES_PAGE:
+            raise ValueError("offset")
+        if kind == ARTIST and not self.lastfm.enabled:
+            return RadarSourceChoices(available=False)
+        sources = self.sources.choices(user.id, kind, normalize(query), offset, SOURCE_CHOICES_PAGE + 1)
+        next_offset = offset + SOURCE_CHOICES_PAGE if len(sources) > SOURCE_CHOICES_PAGE else None
+        return RadarSourceChoices(tuple(sources[:SOURCE_CHOICES_PAGE]), next_offset)
+
     def settings(self, user):
         return RadarSettings(tuple(self.sources.for_user(user.id)), bool(self.lastfm.enabled), REFRESH_COOLDOWN,
                              KINDS, MANUAL_KINDS, self.profiles.basis(user.id), self._refresh_after(user))

@@ -3,8 +3,8 @@
 ## Ce que ça fait
 Page **« Versions »** (`#/versions`) : ce qui a changé sur le site, **version par version, la plus récente en haut**,
 chacune avec son numéro (« majeure.mineure » ou « majeure.mineure.correction »), sa **date de mise en ligne**, un titre et la liste des changements, écrits
-pour les personnes qui utilisent le site. Le numéro de la dernière version (ex. `v1.2`) est affiché **à côté du titre du
-site** (lien vers la page) ; une **pastille rouge** dessus et la mention « Nouveau » sur les versions pas encore vues
+pour les personnes qui utilisent le site. Depuis la 1.25, **Versions se trouve dans le menu du compte sur ordinateur**.
+Le petit écran conserve le numéro à côté du titre du site (lien vers la page) ; une pastille rouge dessus et la mention « Nouveau » sur les versions pas encore vues
 signalent une mise à jour. Ouvrir la page la marque comme vue. Lien aussi en haut de la page « Nouveautés ».
 
 ## Tenir l'historique (à CHAQUE modification du site)

@@ -16,6 +16,7 @@ faux Subsonic, mpv et jsdom).
 | [comptes-et-droits](comptes-et-droits.md) | connexion Subsonic, sessions, droits, réglages, page « Mon compte », photos (Gravatar) | oui | en partie (photos : Chromium) |
 | [barre-gauche](barre-gauche.md) | artistes + playlists, modes | oui | oui (liste d'artistes) |
 | [bibliotheque](bibliotheque.md) | accueil, artiste, album, albums, recherche, favoris | oui | en partie |
+| [accueil-personnel](accueil-personnel.md) | accueil en rangées, menu ordinateur, reprise, écoutes privées, suggestions et thèmes | oui | tests locaux, non déployé |
 | [tags-albums](tags-albums.md) | édition des tags, application groupée, MusicBrainz ou Discogs, écriture et réindexation | oui | fichiers de test et faux Subsonic |
 | [labels-et-collaborations](labels-et-collaborations.md) | crédits, labels, membres et leurs autres groupes / projets depuis l'album ou l'artiste (MusicBrainz) | oui | API oui (ABBA, Vitalic, Kyuss), interface jsdom |
 | [decouverte-labels](decouverte-labels.md) | découverte variée, Top sourcé, playlists mixtes, crédits, musiciens et discographies Discogs | oui | API Discogs/Last.fm, interface jsdom |

@@ -12,6 +12,8 @@ class ArtistSidebar {
     this.shortcuts = document.getElementById("artist-shortcuts");     // dossiers épinglés (« Compilations »)
     this.filter = document.getElementById("artist-filter");
     this.index = [];
+    this.owner = App.user.id;
+    this.shortcutItems = [];
     this.groups = null;
     this.observer = null;
     this.rowHeight = 26;                                       // estimation, corrigée à la première lettre construite
@@ -39,16 +41,23 @@ class ArtistSidebar {
   /** Subsonic peut mettre plus de 30 s à calculer la liste la première fois : on le dit, et on propose
       de réessayer en cas d'échec au lieu de laisser la barre vide. */
   async load(quiet) {
+    const owner = App.user.id;
+    if (this.owner !== owner) { this.owner = owner; this.showShortcuts([]); }
+    this.reportLoad(null);
     if (!quiet) {
       App.clear(this.list);
       this.list.appendChild(App.el("p.sidebar-note", {text: App.t("nav.artists_loading")}));
     }
     try {
       const data = await App.api.get("/api/artists");
+      if (!App.user || App.user.id !== owner) return;
       this.index = data.index;
       this.showShortcuts(data.shortcuts || []);
+      this.reportLoad(null);
       for (const group of this.index) group.artists.forEach(a => { a.key = ArtistSidebar.fold(a.name); });
     } catch (error) {
+      if (!App.user || App.user.id !== owner) return;
+      this.reportLoad(error);
       if (quiet) return;                                     // on garde la liste affichée
       App.clear(this.list);
       this.list.appendChild(App.el("p.sidebar-note.error", {text: App.errorText(error)}));
@@ -61,8 +70,14 @@ class ArtistSidebar {
     if (quiet) this.list.scrollTop = top;                    // la personne ne perd pas sa place
   }
 
+  reportLoad(error) {
+    this.loadError = error;
+    App.bus.emit("artist-index", {error});
+  }
+
   /** Dossiers épinglés en haut de la barre, toujours visibles (le filtre ne les cache pas). */
   showShortcuts(shortcuts) {
+    this.shortcutItems = shortcuts;
     App.clear(this.shortcuts);
     this.shortcuts.hidden = !shortcuts.length;
     for (const folder of shortcuts) {

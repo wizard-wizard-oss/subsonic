@@ -160,6 +160,7 @@ class WeeklyRelease:
     kind: str
     tags: tuple = ()
     artist_ids: tuple = ()
+    cover: str = ""                         # image exacte quand la source la connaît (ListenBrainz), sinon vide
 
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,

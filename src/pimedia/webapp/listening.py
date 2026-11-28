@@ -63,7 +63,7 @@ class Listening:
         songs = [song_row(e) for e in as_list(raw.get("entry"))]
         current = str(raw.get("current", ""))
         index = next((i for i, s in enumerate(songs) if str(s["id"]) == current), 0)
-        return {"songs": songs, "index": index, "position": (raw.get("position") or 0) / 1000,
+        return {"songs": songs, "index": index, "currentId": current, "position": (raw.get("position") or 0) / 1000,
                 "changedBy": raw.get("changedBy", ""), "changed": raw.get("changed", "")}
 
     def save_play_queue(self, user, song_ids, current_id, position_seconds):

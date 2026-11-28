@@ -4,6 +4,36 @@ Depuis la 1.7.10, la découverte et le Top d’un label réutilisent ces mêmes 
 prioritaires, versions YouTube choisies explicitement, ordre conservé et titres ignorés exclus.
 Voir [`decouverte-labels.md`](decouverte-labels.md). Aucun format de stockage ni droit supplémentaire.
 
+## Galerie visuelle · 1.27
+
+`#/playlists` est une page dédiée, ouverte par « Tout voir › » sous le titre Playlists du menu ordinateur
+ou dans l’onglet Playlists du volet mobile. Les raccourcis « + » et import restent à côté du titre sur ordinateur,
+et les listes de gauche conservent leurs cibles de glisser-déposer. La page propose aussi création et import.
+
+Chaque carte affiche une mosaïque carrée de quatre pochettes, le nom, le créateur, le nombre total de titres
+et leur durée, avec un indicateur communautaire. La sélection suit les premiers albums distincts dans l’ordre
+de la playlist : elle reste stable entre affichages et ne choisit jamais des albums au hasard. Deux ou trois
+albums remplissent les quatre cases par répétition ; un seul album occupe tout le carré. Sans pochette disponible
+(notamment une playlist vide ou uniquement composée de titres d’ailleurs), le visuel de repli commun est utilisé.
+Les miniatures des vidéos ne sont pas des pochettes d’albums. Le même composant affiche le visuel du détail.
+
+Le clic ouvre la playlist et le bouton de lecture utilise le lecteur existant. Les cartes acceptent aussi les
+dépôts selon les mêmes droits que la colonne de gauche. Un ajout ne rafraîchit que sa carte : recherche,
+tri, pages déjà chargées et défilement sont conservés. Le catalogue suit les droits Subsonic du compte connecté.
+Une recherche normalisée conserve les noms originaux à l’écran ; le tri est alphabétique ou par modification
+récente (si Subsonic fournit `changed`). La suite s’ajoute par « Afficher plus », douze listes à la fois.
+Subsonic ne pagine pas `getPlaylists` : seuls ses résumés sont lus en entier ; les contenus sont lus pour la page
+affichée uniquement. Une erreur permet de réessayer, sans perdre les filtres.
+
+Code : paquet `webapp/playlist_gallery/` (entités, service, sélection commune des pochettes), contrôleur
+`controllers/playlist_gallery.py`, route authentifiée `GET /api/playlists/page?page=&q=&sort=`. Le service
+consomme `Playlists` et son client Subsonic existants ; aucune nouvelle connexion, table ou migration.
+`Playlists.get` fournit `coverIds`, le compteur et la durée des titres Subsonic et d’ailleurs réunis.
+Front : `playlist-artwork.js`, `playlist-card.js`, `playlist-gallery.js`, `playlist-gallery.css`.
+Tests : `test_playlist_gallery.py`, `test_webapp_playlist_gallery.py`, `e2e_playlist_gallery.js` et navigation
+ordinateur. Aperçu visuel local avec données de démonstration ; pas encore vérifié contre le compte Subsonic réel.
+Pas de synchronisation automatique des modifications faites dans une autre application Subsonic : rouvrir la page.
+
 ## Ce que ça fait, de A à Z
 - **Liste** (barre de gauche, onglet Playlists) : *Mes playlists*, *Communautaires* (celles des autres où l'on peut ajouter),
   *Partagées* (publiques des autres, lecture seule). Compteur de titres, filtre, pastille ⚑ pour une communautaire.

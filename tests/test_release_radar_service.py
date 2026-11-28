@@ -163,6 +163,11 @@ class RadarServiceTest(unittest.TestCase):
             self.around(self.alice, name="Moderat")
         self.assertEqual(error_reply(raised.exception).status, 503)
 
+    def test_around_keeps_the_current_week_filter_counts_available(self):
+        self.follow_all()
+        expected = self.week(self.alice)["filters"]
+        self.assertEqual(self.around(self.alice, name="Moderat", mbid=MODERAT)["filters"], expected)
+
     def test_a_card_whose_folder_is_missing_does_not_break_the_week(self):
         self.follow_all()
         self.radar.local = lambda user, title, artist: (_ for _ in ()).throw(LookupError("dossier"))
@@ -195,6 +200,46 @@ class RadarServiceTest(unittest.TestCase):
                          {("label", "manual"), ("style", "trends"), ("artist", "trends")})
         self.assertEqual((mine["kinds"], mine["addable"], mine["aroundAvailable"], mine["refreshCooldown"]),
                          (["style", "label", "artist"], ["style", "label", "artist"], True, REFRESH_COOLDOWN))
+
+    def choices(self, user, **params):
+        return json.loads(self.controller.source_choices(self.request(**params), user).body)
+
+    def test_source_choices_are_paginated_and_private(self):
+        from pimedia.webapp.weekly_releases.limits import SOURCE_CHOICES_PAGE
+        for number in range(SOURCE_CHOICES_PAGE + 2):
+            self.sources.add(1, "artist", mbid(number), "Artiste %03d" % number, "manual")
+        self.sources.add(2, "artist", MODERAT, "Autre compte", "manual")
+        hidden = self.sources.add(1, "artist", APPARAT, "Artiste masqué", "manual")
+        self.sources.hide(1, hidden.id)
+        self.sources.add(1, "style", "techno", "techno", "manual")
+        first = self.choices(self.alice, kind="artist")
+        second = self.choices(self.alice, kind="artist", offset=str(first["next"]))
+        self.assertEqual(len(first["sources"]), SOURCE_CHOICES_PAGE)
+        self.assertEqual(len(second["sources"]), 2)
+        self.assertIsNone(second["next"])
+        self.assertEqual({s["name"] for p in (first, second) for s in p["sources"]},
+                         {"Artiste %03d" % number for number in range(SOURCE_CHOICES_PAGE + 2)})
+        self.assertEqual(self.choices(self.bob, kind="artist")["sources"][0]["name"], "Autre compte")
+        self.assertEqual((self.musicbrainz.calls, self.lastfm.calls), ([], []))
+
+    def test_source_choices_use_shared_normalization_and_keep_original_names(self):
+        self.sources.add(1, "artist", MODERAT, "Björk & Cœur", "manual")
+        page = self.choices(self.alice, kind="artist", q=" BJORK coeur ")
+        self.assertEqual([s["name"] for s in page["sources"]], ["Björk & Cœur"])
+        self.sources.add(1, "style", "noise rock", "noise rock", "manual")
+        self.assertEqual(self.choices(self.alice, kind="style", q="Noise-Rock")["sources"][0]["identity"],
+                         "noise rock")
+        self.assertEqual(self.choices(self.alice, kind="artist", q="inconnu")["sources"], [])
+
+    def test_source_choices_validate_requests_and_explain_lastfm_availability(self):
+        for params in ({"kind": "label"}, {"kind": "artist", "q": "x" * 301},
+                       {"kind": "artist", "offset": "-1"}, {"kind": "artist", "offset": "1"},
+                       {"kind": "artist", "offset": "abc"}):
+            with self.subTest(params=params), self.assertRaises(ValueError):
+                self.choices(self.alice, **params)
+        self.lastfm.enabled = False
+        self.assertFalse(self.choices(self.alice, kind="artist")["available"])
+        self.assertTrue(self.choices(self.alice, kind="style")["available"])
 
     def test_add_source_validates_and_syncs_at_once(self):
         self.controller.add_source(None, self.alice, {"kind": "label", "identity": WARP, "name": "Warp"})

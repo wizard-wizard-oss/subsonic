@@ -200,19 +200,3 @@ class Library:
             return name != key, not name.startswith(key), name
 
         return sorted(artists, key=relevance)[:SEARCH_ARTIST_COUNT]
-
-    def starred(self, user):
-        result = self._call(user, "getStarred2").get("starred2") or {}
-        return {"albums": self._with_site_data(user, [album_card(a) for a in visible(result.get("album"))]),
-                "songs": [song_row(s) for s in visible(result.get("song"))]}
-
-    # --- favoris (cœur Subsonic) ---
-    def set_favorite(self, user, kind, item_id, on):
-        """kind « folder » : un dossier (« f123 », page artiste), étoilé avec son identifiant de dossier."""
-        key = {"album": "albumId", "artist": "artistId", "song": "id", "folder": "id"}[kind]
-        if kind == "folder":
-            if not item_id.startswith("f"):
-                raise ValueError("dossier")
-            item_id = item_id[1:]
-        self._call(user, "star" if on else "unstar", [(key, item_id)])
-        return on

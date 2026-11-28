@@ -1,9 +1,8 @@
 "use strict";
 
 /* Radar des sorties : ce que la personne suit, lu en base par le serveur (aucun appel MusicBrainz à l'affichage).
-   Pastilles de filtre en haut, grille des cartes, « ⚙ Mes sources » à part (weekly-sources.js).
-   « Autour de… » : on choisit un de ses artistes, la grille montre les sorties de ses proches (Last.fm).
-   Changer de pastille ou de semaine remplace la grille seulement ; l'en-tête et les pastilles restent en place. */
+   Navigation compacte, filtres repliables et recherche paginée des sources dans leurs composants dédiés.
+   Changer de filtre ou de semaine remplace la grille seulement ; l'en-tête reste en place. */
 const WeeklyRadar = (() => {
   const el = App.el;
   const t = (key, values) => App.t("weekly." + key, values);
@@ -19,13 +18,15 @@ const WeeklyRadar = (() => {
       this.aroundArtist = null;
       this.generation = 0;
       this.panel = null;
-      this.range = el("strong");
+      this.availableFilters = [];
+      this.week = WeeklyWeek.create(this.monday, monday => { this.monday = monday; this.load(); });
+      this.filters = WeeklyFilters.create((filter, artist) => {
+        this.filter = filter; this.aroundArtist = artist; this.updateFilters(); this.load();
+      }, () => !this.route.stale);
       this.updated = el("span.muted.weekly-updated");
-      this.refreshButton = el("button.weekly-refresh", {type: "button", text: "↻", "aria-label": t("refresh"),
+      this.refreshButton = el("button.weekly-refresh", {type: "button", text: t("refresh"), "aria-label": t("refresh"),
                                                         onclick: () => this.refresh()});
-      this.chips = el("div.chips.weekly-chips", {role: "group", "aria-label": t("filters")});
       this.panelBox = el("div");
-      this.aroundBox = el("div.chips.weekly-around");
       this.note = el("p.muted.weekly-note");
       this.grid = el("div.weekly-grid");
       this.status = el("div.muted", {"aria-live": "polite"});
@@ -37,39 +38,45 @@ const WeeklyRadar = (() => {
     }
 
     start() {
-      const week = el("div.chips.weekly-week", {}, this.button("previous", () => this.move(-7)), this.range,
-        this.button("next", () => this.move(7)), this.button("today", () => this.move(null)));
+      const menu = this.options();
       App.append(App.clear(this.main), [News.tabs(true),
-        el("header.weekly-heading", {}, el("h1", {text: t("title")}), week,
-          el("div.chips", {}, this.updated, this.refreshButton)),
-        el("div.weekly-toolbar", {}, this.chips, el("div.chips", {}, this.button("around", () => this.toggleAround()),
-          this.button("sources", () => this.toggleSources()))),
-        this.aroundBox, this.note, this.panelBox, this.results]);
+        el("header.weekly-heading", {}, el("h1", {text: t("title")})),
+        el("div.weekly-toolbar.weekly-radar-toolbar", {}, this.week.node,
+          el("div.weekly-tools", {}, this.filters.toggle, menu)),
+        this.filters.panel, this.filters.active, this.note, this.panelBox, this.results]);
       return this.load();
+    }
+
+    options() {
+      const sources = this.button("sources", () => { menu.open = false; this.toggleSources(); });
+      const summary = el("summary.icon-button", {"aria-label": t("options"), title: t("options")}, App.icon("more"));
+      const menu = el("details.weekly-options", {}, summary,
+        el("div.weekly-popover", {}, sources, this.refreshButton, this.updated));
+      menu.addEventListener("keydown", event => {
+        if (event.key === "Escape") { menu.open = false; summary.focus(); }
+      });
+      menu.addEventListener("focusout", event => { if (!menu.contains(event.relatedTarget)) menu.open = false; });
+      return menu;
     }
 
     current(version) {
       return !this.route.stale && version === this.generation;
     }
 
-    move(days) {
-      this.monday = days === null ? W.mondayFor(new Date()) : W.shift(this.monday, days);
-      this.load();
-    }
-
     async load(offset = 0) {
       const version = ++this.generation;
-      this.range.textContent = W.display(this.monday) + " – " + W.display(W.shift(this.monday, 6));
       if (!offset) App.clear(this.grid);
       App.clear(this.status).textContent = t("loading");
       try {
         const monday = W.iso(this.monday), artist = this.aroundArtist;
         const data = artist ? await App.api.get(API + "/around", {name: artist.name, mbid: artist.identity, monday, offset})
-          : await App.api.get(API + "/radar", {monday, filter: this.filter, offset});
+          : await read(this.monday, this.filter, offset);
         if (this.current(version)) this.show(data, offset);
       } catch (error) {
         if (!this.current(version)) return;
-        if (this.filter !== "all" && error.status === 400) { this.filter = "all"; this.load(); return; }
+        if (!this.aroundArtist && this.filter !== "all" && error.status === 400) {
+          this.filter = "all"; this.updateFilters(); this.load(); return;
+        }
         App.append(App.clear(this.status), [el("p.page-error", {text: App.errorText(error)}),
                                              this.button("retry", () => this.load(offset))]);
       }
@@ -77,10 +84,12 @@ const WeeklyRadar = (() => {
 
     show(data, offset) {
       App.clear(this.status);
+      this.note.textContent = "";
       if (data.outOfWindow) return this.message("out_of_window", "browse_style", () => this.browse());
       if (data.empty) return this.message("no_sources", "choose_sources", () => this.openSources());
       this.note.textContent = data.basis === "site" ? t("basis_site") : "";
-      if (data.around) this.showAroundChip(data.around); else this.showChips(data.filters);
+      if (data.filters.length) this.availableFilters = data.filters;
+      this.updateFilters();
       this.showUpdate(data.updatedAt, data.refreshAfter);
       App.append(this.grid, data.cards.map(card));
       if (data.next !== null) {
@@ -89,20 +98,10 @@ const WeeklyRadar = (() => {
     }
 
     message(text, action, onclick) {
-      App.clear(this.chips);
       App.append(this.status, [el("p", {text: t(text)}), el("button.primary", {type: "button", text: t(action), onclick})]);
     }
 
-    showChips(filters) {
-      App.clear(this.chips);
-      for (const filter of filters) {
-        const name = filter.key === "all" ? t("filter_all") : filter.name || t("filter_" + filter.key);
-        const chip = el("button.chip", {type: "button", dataset: {key: filter.key}, text: name + " (" + filter.count + ")",
-          "aria-pressed": String(filter.key === this.filter), onclick: () => { this.filter = filter.key; this.load(); }});
-        if (filter.key === this.filter) chip.classList.add("on");
-        this.chips.appendChild(chip);
-      }
-    }
+    updateFilters() { this.filters.update(this.availableFilters, this.filter, this.aroundArtist); }
 
     showUpdate(updatedAt, refreshAfter) {
       const minutes = updatedAt ? Math.max(0, Math.round((Date.now() / 1000 - updatedAt) / 60)) : null;
@@ -128,32 +127,6 @@ const WeeklyRadar = (() => {
       }
     }
 
-    showAroundChip(name) {
-      const chip = el("button.chip.on", {type: "button", text: t("around_title", {name}) + " ×", "aria-pressed": "true",
-        title: t("around_close"), onclick: () => { this.aroundArtist = null; this.load(); }});
-      App.clear(this.chips).appendChild(chip);
-    }
-
-    async toggleAround() {
-      if (this.aroundBox.firstChild) { App.clear(this.aroundBox); return; }
-      this.aroundBox.textContent = t("loading");
-      try {
-        const settings = await App.api.get(API + "/sources");
-        const artists = settings.sources.filter(source => source.kind === "artist");
-        App.clear(this.aroundBox);
-        if (!settings.aroundAvailable) { this.aroundBox.textContent = t("around_unavailable"); return; }
-        if (!artists.length) { this.aroundBox.textContent = t("around_none"); return; }
-        App.append(this.aroundBox, [el("span.muted", {text: t("around_choose")}), ...artists.map(artist =>
-          el("button.chip", {type: "button", text: artist.name, onclick: () => this.chooseAround(artist)}))]);
-      } catch (error) { App.clear(this.aroundBox).textContent = App.errorText(error); }
-    }
-
-    chooseAround(artist) {
-      this.aroundArtist = artist;
-      App.clear(this.aroundBox);
-      this.load();
-    }
-
     toggleSources() {
       if (this.panel) { this.panel.close(); this.panel = null; return; }
       this.openSources();
@@ -161,7 +134,8 @@ const WeeklyRadar = (() => {
 
     openSources() {
       if (this.panel) return;
-      this.panel = WeeklySources.panel(() => this.load());
+      this.filters.close();
+      this.panel = WeeklySources.panel(() => this.load(), () => { this.panel.close(); this.panel = null; });
       this.panel.open(this.panelBox);
     }
 
@@ -178,7 +152,7 @@ const WeeklyRadar = (() => {
 
   function card(item) {
     const local = item.local;
-    const image = local ? App.cover(local.coverId, 180, item.title) : W.releaseCover(item.id, item.title);
+    const image = local ? App.cover(local.coverId, 180, item.title) : W.releaseCover(item.id, item.title, item.cover);
     const cover = local ? el("a", {href: "#/album/" + encodeURIComponent(local.id)}, image)
       : el("a", {href: "https://musicbrainz.org/release-group/" + item.id, target: "_blank", rel: "noopener"}, image);
     const date = new Date(item.date + "T00:00:00Z");
@@ -203,5 +177,9 @@ const WeeklyRadar = (() => {
     return new RadarPage(main, route).start();
   }
 
-  return {render};
+  function read(monday, filter = "all", offset = 0) {
+    return App.api.get(API + "/radar", {monday: W.iso(monday), filter, offset});
+  }
+
+  return {render, read, card};
 })();

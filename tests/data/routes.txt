@@ -39,6 +39,7 @@ GET /api/ext/status read right=None limit=None ExtMusicController.status
 GET /api/facts read right=None limit=None FactsController.song_facts
 GET /api/genres read right=None limit=None LibraryController.genres
 GET /api/home read right=None limit=None LibraryController.home
+GET /api/home/personal read right=None limit=None PersonalHomeController.page
 GET /api/labels/discover read right=None limit=None DiscogsController.discover
 GET /api/labels/ranking read right=None limit=None DiscogsController.ranking
 GET /api/labels/tracks read right=None limit=None DiscogsController.tracks
@@ -56,6 +57,7 @@ GET /api/news/releases/genres read right=None limit=None WeeklyReleasesControlle
 GET /api/news/releases/radar read right=None limit=None WeeklyReleasesController.radar
 GET /api/news/releases/search read right=None limit=None WeeklyReleasesController.search
 GET /api/news/releases/sources read right=None limit=None WeeklyReleasesController.sources
+GET /api/news/releases/sources/choices read right=None limit=None WeeklyReleasesController.source_choices
 GET /api/notifications read right=None limit=None NotificationController.page
 GET /api/notifications/recipients read right=admin limit=None NotificationController.recipients
 GET /api/notifications/status read right=None limit=None NotificationController.status
@@ -63,6 +65,7 @@ GET /api/now-playing read right=None limit=None ListeningController.now_playing
 GET /api/play-queue read right=None limit=None ListeningController.play_queue
 GET /api/playlist read right=None limit=None PlaylistController.get
 GET /api/playlists read right=None limit=None PlaylistController.all
+GET /api/playlists/page read right=None limit=None PlaylistGalleryController.page
 GET /api/radio/artist read right=None limit=None MixController.artist_radio
 GET /api/radio/song read right=None limit=None MixController.song_radio
 GET /api/radios read right=None limit=None ProfileController.stations
@@ -112,6 +115,7 @@ POST /api/import/youtube write right=playlist limit=65536 ImportController.youtu
 POST /api/labels/versions write right=None limit=16384 DiscogsController.versions
 POST /api/listen-later/add write right=None limit=16384 ListenLaterController.add
 POST /api/listen-later/remove write right=None limit=16384 ListenLaterController.remove
+POST /api/listening/history write right=stream limit=16384 PersonalHomeController.record
 POST /api/login open AuthController.login
 POST /api/logout open AuthController.logout
 POST /api/mix/build write right=None limit=16384 MixController.build

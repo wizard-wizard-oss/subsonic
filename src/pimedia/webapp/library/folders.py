@@ -61,11 +61,24 @@ class Folders:
                 covers = pool.map(lambda a: self._cover_below(user, a["id"][len(PREFIX):]), missing)
                 for album, cover in zip(missing, covers):
                     album["coverId"] = cover
-        song = self._first_song(user, folder, depth=2)
+        song = self._tagged_song(user, folder)
+        id3_id = (song or {}).get("artistId", "") if is_folder(artist_id) else artist_id
         return {"id": folder_ref(folder), "name": text(directory.get("name"), "?"),
-                "id3Id": (song or {}).get("artistId", "") if is_folder(artist_id) else artist_id,
-                "coverId": albums[0]["coverId"] if albums else "", "starred": bool(directory.get("starred")),
+                "id3Id": id3_id,
+                "coverId": albums[0]["coverId"] if albums else "",
+                "starred": bool(directory.get("starred")) or self._artist_starred(user, id3_id),
                 "albums": albums}
+
+    def _artist_starred(self, user, artist_id):
+        if not artist_id:
+            return False
+        try:
+            artist = self._call(user, "getArtist", [("id", artist_id)]).get("artist") or {}
+            return bool(artist.get("starred"))
+        except SubsonicError as error:
+            if error.code != NOT_FOUND:
+                raise
+            return False
 
     @staticmethod
     def _album_card(child, artist_dir, artist_folder):
@@ -84,6 +97,21 @@ class Folders:
                 raise FolderNotFound(id3_artist)
             return str(parent)
         return self.cache.get(("artist-folder", id3_artist), find)
+
+    def artist_folder_id(self, user, artist_id):
+        """Référence publique du dossier d'un artiste ID3."""
+        return folder_ref(self._artist_folder(user, artist_id))
+
+    def album_id_for_folder(self, user, folder_id):
+        """Identité ID3 d'un dossier d'album, y compris ses sous-dossiers de disques."""
+        return (self._tagged_song(user, folder_id) or {}).get("albumId", "")
+
+    def artist_id_for_folder(self, user, folder_id):
+        return (self._tagged_song(user, folder_id) or {}).get("artistId", "")
+
+    def _tagged_song(self, user, folder_id):
+        return self.cache.get(("tagged-song", user.username, folder_id),
+                              lambda: self._first_song(user, folder_id, depth=2))
 
     # --- album : le dossier qui contient les titres (et les dossiers de disques) ---
     def _album_folder(self, user, album_id):
@@ -110,6 +138,7 @@ class Folders:
         if not id3_album:
             raise FolderNotFound(album_id)
         album = self.library.album(user, id3_album)          # note, favori, écoutes, commentaires : côté ID3
+        album["starred"] = album["starred"] or bool(directory.get("starred"))
         parent = str(directory.get("parent") or "")
         album.update(folderId=folder_ref(folder), name=text(directory.get("name"), album["name"]), songs=songs,
                      duration=sum(s["duration"] or 0 for s in songs))

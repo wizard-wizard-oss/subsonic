@@ -6,6 +6,55 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.27"
+  date: 2026-11-28
+  title: "Vos playlists en pochettes"
+  changes:
+    - "Le lien « Tout voir › » du menu ouvre une page dédiée aux playlists, avec des mosaïques de quatre pochettes d’albums. Les raccourcis de création et d’import restent accessibles à gauche."
+    - "Recherchez une playlist ou triez-les par nom ou modification récente, puis affichez la suite sans quitter la page. Chaque carte donne le nombre de titres, la durée et un accès direct à la lecture."
+    - "La même mosaïque accompagne la playlist ouverte. Les ajouts par glisser-déposer mettent à jour la carte concernée en conservant les filtres et la position dans la page."
+
+- version: "1.26"
+  date: 2026-11-28
+  title: "Des sorties plus faciles à parcourir"
+  changes:
+    - "La semaine se parcourt avec deux petites flèches. Cliquez sur son libellé pour choisir une date ou revenir à cette semaine."
+    - "Les filtres restent repliés à l’arrivée : choisissez une origine, un style ou les artistes proches de l’un de vos artistes suivis. Le choix actif tient dans une seule pastille, modifiable ou retirable."
+    - "Styles et artistes se recherchent dans des listes de cinq suggestions par page : même avec beaucoup de suivis, les albums gardent leur place. La recherche reconnaît les noms sans accents."
+    - "Le menu des options regroupe « Gérer mes suivis », l’actualisation et la date de mise à jour. Sur téléphone, les filtres s’ouvrent dans un panneau en bas de l’écran."
+
+- version: "1.25.1"
+  date: 2026-11-28
+  title: "Tous vos favoris Subsonic"
+  changes:
+    - "Les favoris affichent aussi vos artistes et les albums marqués dans la navigation par dossiers de Subsonic, sans doublons avec les favoris par tags."
+    - "Retrouvez la suite de vos favoris avec « Afficher plus », sans quitter la page. Les cœurs des fiches tiennent compte des deux types de favoris."
+
+    - "Les titres favoris conservent leurs styles et métadonnées détaillées. Un favori reste retirable même si son dossier n’est plus résolu."
+
+- version: "1.25"
+  date: 2026-11-28
+  title: "Un accueil selon vos écoutes"
+  changes:
+    - "Un menu repliable à gauche réunit Bibliothèque, Favoris, À écouter, Webzines, Sorties, le créateur de mix et les envois, avec les playlists en dessous."
+    - "Sur ordinateur, retrouvez votre écoute en cours, les albums que vous avez écoutés sur le site et des suggestions du même style."
+    - "De grandes rangées défilantes présentent les recommandations reçues, les écoutes récentes, les suggestions, les sorties de la semaine et les derniers ajouts."
+    - "Vos recommandations reçues passent en première rangée lorsqu’il y en a, avec le nom des personnes qui les ont conseillées."
+    - "Les pochettes se parcourent au doigt ou au pavé tactile, avec un défilement fluide. Le titre d’une rangée ouvre sa page ; les liens « Tout voir » disparaissent. Compilations rejoint aussi les onglets de Bibliothèque."
+    - "Le salon est fermé à l’arrivée. Le sous-marin jaune ouvre les guides ; les réglages, les raccourcis et les versions se trouvent dans le menu du compte."
+    - "IBM Plex Mono habille tout le site. Le sombre devient le thème initial pour tous, le clair reste disponible dans les réglages et les boutons adoptent un violet profond."
+    - "Les suggestions partent de vos écoutes personnelles, puis du morceau de votre file sauvegardée, puis de vos favoris."
+    - "Les écoutes des titres de la bibliothèque effectuées sur le site sont conservées par compte pour personnaliser l’accueil."
+    - "Dans les listes de morceaux, le bouton de lecture reste visible à gauche du numéro de piste."
+
+- version: "1.24.2"
+  date: 2026-11-27
+  title: "Sorties de la semaine : plus de pochettes"
+  changes:
+    - "Les sorties récentes ont bien plus souvent leur pochette : celle de l'édition qui en a une, sinon celle de Last.fm."
+    - "Le radar remonte maintenant trois mois en arrière. Plus loin encore, la semaine est cherchée à la demande pour vos sources : la première fois prend quelques dizaines de secondes."
+    - "Quand MusicBrainz ne répond pas, la recherche d'un style ou d'un label est relancée 10 minutes plus tard (au lieu de 30)."
+
 - version: "1.24.1"
   date: 2026-11-27
   title: "Écouter l'album : correction"

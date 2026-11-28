@@ -21,7 +21,8 @@ def item_id(value):
 
 
 class LibraryController:
-    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics, upload_attribution):
+    def __init__(self, library, folders, artist_indexes, ratings, subsonic, statistics, upload_attribution, favorites):
+        self.favorites = favorites
         self.upload_attribution = upload_attribution
         self.library = library
         self.folders = folders
@@ -72,13 +73,14 @@ class LibraryController:
         return ok(self.library.search(user, request.param("q")))
 
     def starred(self, request, user):
-        return ok(self.library.starred(user))
+        page = request.param("page", "0")
+        return ok(self.favorites.page(user, int(page) if page.isdigit() else -1).to_api())
 
     def favorite(self, request, user, body):
         kind = body.get("kind")
         if kind not in ("album", "artist", "song", "folder"):
             raise ValueError("type")
-        return ok({"starred": self.library.set_favorite(user, kind, item_id(body.get("id")), bool(body.get("on")))})
+        return ok(self.favorites.set_favorite(user, kind, item_id(body.get("id")), bool(body.get("on"))).to_api())
 
     def rate(self, request, user, body):
         return ok({"rating": self.ratings.rate(user, item_id(body.get("albumId")), body.get("rating")).to_api()})

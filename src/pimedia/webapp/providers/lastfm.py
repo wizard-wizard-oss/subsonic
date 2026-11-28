@@ -11,6 +11,7 @@ from ...shared.text import normalize
 LASTFM_BLANK = "2a96cbd8b46e442fc41c2b86b821562f"  # Visuel vide renvoyé par Last.fm.
 SIZES = ("mega", "extralarge", "large", "medium")     # du plus grand au plus petit
 MAX_CANDIDATES = 12
+COVER_SIZES = ("extralarge", "large", "mega", "medium")   # une carte du radar fait 180 px : 300 px d'abord
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,20 @@ class LastFm(PublicMetadata):
         if normalize(album.get("name")) != normalize(title) or normalize(album.get("artist")) != normalize(artist):
             return AlbumPopularity()
         return AlbumPopularity(int(album.get("listeners") or 0), int(album.get("playcount") or 0))
+
+    def album_cover(self, artist, title):
+        """Pochette de cet album précis (artiste et titre égaux après normalisation), 300 px de préférence ; "" sinon.
+        Sert au radar des sorties quand Cover Art Archive n'a encore rien."""
+        if not self.enabled:
+            return ""
+        raw = self._call("cover", {"method": "album.getinfo", "artist": artist, "album": title, "autocorrect": 0})
+        album = raw.get("album") or {}
+        if normalize(_text(album.get("name"))) != normalize(title) or \
+                normalize(_text(album.get("artist"))) != normalize(artist):
+            return ""
+        images = {i.get("size"): _text(i.get("#text")) for i in album.get("image") or [] if isinstance(i, dict)}
+        found = [images[size] for size in COVER_SIZES if images.get(size) and LASTFM_BLANK not in images[size]]
+        return found[0] if found else ""
 
     def album_images(self, artist, album):
         """Pochettes : l'album exact d'abord (album.getinfo), puis les albums de ce nom, ceux du même artiste en tête."""

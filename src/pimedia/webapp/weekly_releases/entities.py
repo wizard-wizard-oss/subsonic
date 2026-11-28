@@ -48,16 +48,18 @@ class RadarRelease:
     kind: str
     tags: tuple = ()
     artist_ids: tuple = ()                 # MBID des artistes crédités
+    cover: str = ""                        # pochette connue (ListenBrainz ou Last.fm) ; vide : Cover Art Archive
 
     @classmethod
     def from_row(cls, row):
         artists = row["artist_ids"] if "artist_ids" in row.keys() else None
         return cls(row["id"], row["title"], row["artist"], date.fromisoformat(row["released_on"]), row["kind"],
-                   tuple(json.loads(row["tags"])), tuple(sorted(artists.split(","))) if artists else ())
+                   tuple(json.loads(row["tags"])), tuple(sorted(artists.split(","))) if artists else (),
+                   row["cover"] or "")
 
     def to_api(self):
         return {"id": self.id, "title": self.title, "artist": self.artist,
-                "date": self.released_on.isoformat(), "type": self.kind}
+                "date": self.released_on.isoformat(), "type": self.kind, "cover": self.cover}
 
 
 @dataclass(frozen=True)
@@ -73,7 +75,7 @@ class RadarCard:
 
 @dataclass(frozen=True)
 class RadarFilter:
-    """Pastille de la page : « all », « style:<nom> », « labels », « artists » ou « discoveries »."""
+    """Filtre de la semaine : toutes les sorties, un style, les labels ou les artistes suivis."""
     key: str
     count: int
     name: Optional[str] = None
@@ -127,6 +129,18 @@ class RadarRefresh:
 
     def to_api(self):
         return {"refreshAfter": self.refresh_after}
+
+
+@dataclass(frozen=True)
+class RadarSourceChoices:
+    """Une page de suggestions parmi les sources visibles du compte, sans appel externe."""
+    sources: tuple = ()
+    next_offset: Optional[int] = None
+    available: bool = True
+
+    def to_api(self):
+        return {"sources": [source.to_api() for source in self.sources], "next": self.next_offset,
+                "available": self.available}
 
 
 @dataclass(frozen=True)

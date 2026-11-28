@@ -1,15 +1,18 @@
 """Limites et valeurs du radar des sorties : seule définition, envoyée au front quand il en a besoin."""
 from datetime import timedelta
 
-WINDOW_BEFORE = timedelta(days=14)        # sorties gardées en base avant aujourd'hui
+WINDOW_BEFORE = timedelta(days=90)        # sorties gardées en base avant aujourd'hui (trois mois)
+RECENT_BEFORE = timedelta(days=14)        # semaines passées relues chaque nuit ; les plus anciennes, une fois par semaine
+PAST_REFRESH_EVERY = 7 * 86400
+OLD_WEEK_AGAIN_AFTER = 86400              # au-delà des trois mois : une semaine cherchée à la demande, gardée un jour
 WINDOW_AFTER = timedelta(days=60)         # … et annoncées après aujourd'hui
-PURGE_AFTER = timedelta(days=30)          # une sortie plus ancienne que ça quitte la base
+PURGE_AFTER = timedelta(days=120)         # une sortie plus ancienne que ça quitte la base
 FULL_SYNC_EVERY = 86400                   # synchronisation complète au plus tard toutes les 24 h
 NIGHT_HOUR = 4                            # heure locale de la synchronisation de nuit
 REFRESH_COOLDOWN = 600                    # « Actualiser » : une fois toutes les 10 min par compte
 STYLE_PAGES_PER_WEEK = 2                  # pages MusicBrainz lues par style et par semaine
-SYNC_CHECK_EVERY = 900                    # la tâche de fond regarde toutes les 15 min s'il faut synchroniser
-RETRY_FAILED_AFTER = 1800                 # une source en échec est réessayée 30 min plus tard, sans attendre la nuit
+SYNC_CHECK_EVERY = 300                    # la tâche de fond regarde toutes les 5 min s'il faut synchroniser
+RETRY_FAILED_AFTER = 600                  # une source en échec est réessayée 10 min plus tard, sans attendre la nuit
 TREND_ARTISTS = 500                       # artistes des favoris suivis par compte (rapprochement local, presque gratuit)
 TREND_RESOLVE_ATTEMPTS = 60               # recherches MusicBrainz d'un nom d'artiste sans MBID, par compte et par calcul
 TREND_LABEL_ALBUMS = 30                   # albums dont on cherche le label, par compte et par nuit
@@ -18,9 +21,11 @@ STYLES_PER_ARTIST = 3                     # styles d'un artiste pris en compte (
 MIN_STYLE_ARTISTS = 3                     # un style porté par moins de 3 artistes n'est pas dominant
 SITE_ALBUMS = 50                          # sans favori : albums les plus écoutés du sub pris pour les styles génériques
 RESOLVE_AGAIN_AFTER = 30 * 86400          # un nom d'artiste introuvable est recherché de nouveau après 30 jours
+COVER_LOOKUPS = 300                       # pochettes cherchées sur Last.fm par synchronisation complète
 AROUND_SIMILAR = 30                       # « Autour de… » : proches demandés à Last.fm pour un artiste
 
 RADAR_PAGE = 48                           # cartes par page de la semaine
+SOURCE_CHOICES_PAGE = 5                   # suggestions visibles dans un sélecteur de style ou d'artiste
 LOCAL_CACHE_SECONDS = 300                 # « Dans ta bibliothèque » gardé 5 min par compte et par sortie
 LOCAL_LOOKUPS_IN_PARALLEL = 4
 MAX_NAME = 300                            # longueur maximale d'un nom de source ou d'une recherche
@@ -28,6 +33,7 @@ MAX_NAME = 300                            # longueur maximale d'un nom de source
 # Types de source : un style (nom exact du catalogue), un label, un artiste suivi.
 STYLE, LABEL, ARTIST = "style", "label", "artist"
 KINDS = (STYLE, LABEL, ARTIST)
+SOURCE_CHOICE_KINDS = (STYLE, ARTIST)
 MANUAL_KINDS = KINDS                      # tout se suit aussi à la main
 SEARCH_KINDS = (LABEL, ARTIST)
 # Sorties lues chez ListenBrainz pour tout le site (pas une source d'un compte) : « Mes artistes » et « Autour de… ».

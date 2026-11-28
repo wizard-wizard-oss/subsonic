@@ -1,5 +1,89 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Livraison regroupée 1.27 · autorisée le 28/11/2026
+
+L’utilisateur demande un commit, une PR et la publication de tous les travaux finalisés : accueil personnel
+et navigation, favoris Subsonic, sorties simplifiées, galerie des playlists. La validation préalable du rendu
+des sorties est accordée par cette demande. La revue a corrigé la perte de styles des titres favoris et
+le retrait d’un favori dont le dossier ne se résout plus, avec tests de régression.
+
+Le contrôle de production a retrouvé la 1.24.2, publiée mais absente de la branche : pochettes du radar,
+fenêtre de trois mois et anciennes semaines à la demande réintégrées. Sa migration 31 est conservée à
+l’identique ; l’historique personnel passe en migration 32. Test de conservation depuis une base 31 remplie,
+pochettes et lignes enfants comprises. Sauvegarde cohérente code/configuration/SQLite et image de retour
+arrière conservées dans `../pimedia-backups/pre-1.27-20261128T131348Z/`.
+
+À la demande explicite de l’utilisateur, aucune nouvelle suite complète : vérifications ciblées des
+correctifs et des intégrations, avec les résultats précédents des parcours et contrôles visuels. La suite
+complète précédente avait identifié la perte de style des favoris, maintenant corrigée et revue.
+
+## Galerie des playlists · 1.27 en préparation (28/11/2026)
+
+Page dédiée `#/playlists`, mosaïques de quatre pochettes réutilisées dans le détail, lecture directe,
+recherche normalisée, tri et pagination de douze cartes. Contrôleur HTTP et paquet de service/entités dédiés,
+client Subsonic et playlists existants réutilisés. Compteurs/durées calculés sur le contenu mixte, aucune migration.
+« Tout voir › » est placé sous le titre à gauche ; les petits raccourcis de création/import sont conservés
+à côté du titre selon le retour utilisateur. Les ajouts actualisent seulement leur carte.
+Tests Python et jsdom écrits et vus en échec avant implémentation ; 45 tests Python ciblés et cinq parcours
+jsdom passent (galerie, navigation, pages complètes ordinateur/mobile et parcours général). Contrôle visuel
+du menu étroit et des quatre pochettes dans le navigateur local. Pas de suite Compose complète ni de PR.
+L’aperçu local utilise six playlists fictives ; aucun déploiement. Les travaux déjà présents
+sur l’accueil, les favoris et les sorties sont conservés. Détails : [Playlists](features/playlists.md).
+
+## Sorties simplifiées · 1.26 en préparation (28/11/2026)
+
+Disposition issue de la maquette revue avec l’utilisateur : petites flèches pour la semaine, choix de date
+et retour à aujourd’hui dans son menu ; filtres fermés à l’arrivée, une seule pastille après sélection.
+Origine, style et « Autour d’un artiste » restent des choix exclusifs. Styles et artistes suivis sont cherchés
+et paginés par le serveur (cinq suggestions, normalisation commune, noms originaux conservés), plutôt que
+déroulés en centaines de boutons. Menu des options pour les suivis et l’actualisation ; volet en bas sur
+téléphone tactile. Navigation et sélecteurs séparés du rendu des albums ; aucun changement de fournisseur,
+de schéma ou des suivis enregistrés. Voir [Actualités](features/actualite.md).
+
+Validation : 60 tests Python ciblés et les trois parcours jsdom des sorties passent, dont 500 artistes,
+les recherches/paginations et les réponses tardives. Chrome contrôlé en clair et sombre à 1440, 800, 390
+et 320 px, sans débordement horizontal ni erreur JavaScript. Captures de la page réelle avec bibliothèque
+fictive, filtres ouverts/fermés et choix actif. Docker arrêté : suite locale Python de 1068 tests exécutée,
+avec un échec hors de cette fonctionnalité (`test_song_styles`, genre perdu sur `/api/starred`, confirmé
+isolément). La suite jsdom a signalé un échec initial de la galerie Playlists ; son parcours ciblé repasse
+après les modifications concurrentes de cette fonctionnalité. Aucun changement apporté ici aux favoris.
+
+Validation visuelle préalable accordée par la demande de livraison regroupée du 28/11/2026.
+
+## Favoris Subsonic · correctif 1.25.1 en préparation (28/11/2026)
+
+Les artistes étaient omis et seuls les favoris par tags étaient lus. `library/favorites.py` réunit désormais
+`getStarred` et `getStarred2` avec résolution des identifiants et dédoublonnage, y compris les albums sur plusieurs
+disques. Pagination des trois catégories, ajout local des pages suivantes, état et retrait des cœurs cohérents
+entre dossiers et tags. Aucun changement de base. Les modifications déjà présentes de l'accueil 1.25 sont conservées.
+Tests de régression Python et jsdom vus en échec avant correction ; 94 tests Python ciblés et quatre parcours
+jsdom (Favoris, bibliothèque/raccourcis, actions des pistes et parcours général du site) passent. L'assertion des
+neuf onglets Albums exclut maintenant le raccourci Compilations ajouté par le travail 1.25 déjà présent.
+Le moteur Docker est arrêté : pas de suite Compose complète ; aucune PR créée. Aucun déploiement ni contrôle
+du nombre de favoris du compte réel. Détail : [Bibliothèque](features/bibliotheque.md).
+
+## Accueil personnel · 1.25 en préparation (28/11/2026)
+
+Historique des écoutes du site par compte, conservé sans purge sur demande utilisateur. Migration 32 avec références
+aux cibles existantes, requêtes idempotentes et lecture paginée. L’accueil ordinateur utilise cet historique, puis le
+morceau courant de la file Subsonic, puis les favoris ; les derniers ajouts restent le repli commun. Suggestions par genre
+du catalogue Subsonic, sans nouvelle intégration Last.fm. Les règles de seuil d’écoute sont fournies par le serveur.
+Cadre ordinateur et rangées défilantes réalisés : menu gauche repliable, playlists sous les liens, Compilations dans
+les filtres de Bibliothèque après Nouveaux, Webzines et Sorties séparés sans onglets dupliqués sur ordinateur.
+Salon fermé à l’arrivée, Help accessible par le sous-marin jaune,
+réglages/raccourcis/versions dans le compte. Les sorties de l’accueil réutilisent le radar existant.
+Recommandations en première rangée si présentes, avec le nom des conseillers ; pochettes sans cadre, défilement
+fluide au doigt/pavé tactile et titres des rangées cliquables. Lecture des pistes toujours visible avant leur numéro.
+IBM Plex Mono sur tout le site, boutons pleins `#220022`, thème initial sombre pour tous et clair disponible dans
+les préférences. La disposition mobile reste réservée aux écrans tactiles sans survol jusqu’à 1100 px ; une fenêtre
+étroite à la souris conserve le bureau. Aucun déploiement effectué.
+Détail et limites dans [Accueil personnel](features/accueil-personnel.md).
+
+Validation locale sous Python 3.11 : 1046 tests Python et 19 parcours jsdom complets réussis avant les derniers
+ajustements de présentation. Les ajustements suivants sont couverts par les vérifications ciblées et le navigateur
+local ; pas de nouvelle suite complète à la demande utilisateur. Le moteur Docker est arrêté sur le poste ; la
+commande Compose n’a pas pu démarrer les tests.
+
 ## Sorties de la semaine · 1.19.1
 
 La page Actualités propose les annonces MusicBrainz du lundi au dimanche, les styles suivis par compte et le guide Help associé. La 1.19.1 remplace la pagination JSON du catalogue des styles par une requête texte et conserve les abonnements existants par nom, sans migration. Voir [Actualités](features/actualite.md).

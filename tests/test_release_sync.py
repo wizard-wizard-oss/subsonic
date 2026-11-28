@@ -11,7 +11,7 @@ from pimedia.storage.database import Database
 from pimedia.webapp.schema import MIGRATIONS
 from pimedia.webapp.storage.release_radar import RadarProfiles, RadarReleases, ReleaseSources
 from pimedia.webapp.weekly_releases.entities import RadarError, RadarRelease
-from pimedia.webapp.weekly_releases.limits import (FULL_SYNC_EVERY, REFRESH_COOLDOWN, RETRY_FAILED_AFTER, WINDOW_AFTER,
+from pimedia.webapp.weekly_releases.limits import (FULL_SYNC_EVERY, PURGE_AFTER, REFRESH_COOLDOWN, RETRY_FAILED_AFTER, WINDOW_AFTER,
                                                     WINDOW_BEFORE)
 from pimedia.webapp.weekly_releases.sync import ReleaseSync
 
@@ -119,7 +119,9 @@ class ReleaseSyncTest(unittest.TestCase):
         mondays = {c[2] for c in self.musicbrainz.calls if c[0] == "style"}
         self.assertEqual(min(mondays), START - timedelta(days=START.weekday()))
         self.assertEqual(max(mondays), END - timedelta(days=END.weekday()))
-        self.assertEqual(len(mondays), 12)            # 74 jours à cheval sur 12 semaines du calendrier
+        first = START - timedelta(days=START.weekday())
+        last = END - timedelta(days=END.weekday())
+        self.assertEqual(len(mondays), (last - first).days // 7 + 1)
         self.assertTrue(self.found("style", "techno"))
 
     def test_fresh_releases_are_read_once_for_everyone(self):
@@ -215,7 +217,7 @@ class ReleaseSyncTest(unittest.TestCase):
         self.sync.sync_all()
         self.assertTrue(any("Warp" in line and "explore.unavailable" in line for line in errors), errors)
 
-    def test_failed_sources_are_retried_after_half_an_hour(self):
+    def test_failed_sources_are_retried_after_the_configured_delay(self):
         self.sources.add(1, "label", mbid(700), "Warp", "manual")
         self.sources.add(1, "style", "techno", "techno", "manual")
         self.releases.mark_full_sync(self.now - 3600)
@@ -238,10 +240,10 @@ class ReleaseSyncTest(unittest.TestCase):
         self.assertEqual(self.musicbrainz.calls, [])
 
     def test_purge_removes_old_releases(self):
-        old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - timedelta(days=60), "Album", ())
-        self.releases.save("label", "x", [old], START - timedelta(days=90), END)
+        old = RadarRelease(mbid(9), "Ancien", "Artiste", TODAY - PURGE_AFTER - timedelta(days=1), "Album", ())
+        self.releases.save("label", "x", [old], old.released_on, END)
         self.sync.sync_all()
-        self.assertEqual(self.releases.for_sources({("label", "x")}, START - timedelta(days=90), END), [])
+        self.assertEqual(self.releases.for_sources({("label", "x")}, old.released_on, END), [])
 
 
 if __name__ == "__main__":

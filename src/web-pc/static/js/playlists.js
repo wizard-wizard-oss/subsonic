@@ -220,11 +220,11 @@ Views.playlist = (() => {
           } catch (error) { App.toast(App.errorText(error), "error"); }
         }}) : el("p.muted", {text: t("playlist.no_songs")});
       const facts = [data.mine ? null : t("playlist.by", {name: data.owner}), App.plural("album.tracks", songs.length),
-                     songs.length ? App.duration(data.duration || songs.reduce((n, s) => n + (s.duration || 0), 0)) : null]
+                     songs.length ? App.duration(data.duration) : null]
         .filter(Boolean).join(" · ");
       App.clear(main);
       App.append(main, [
-        el("header.page-head", {}, el("h1", {text: data.name}),
+        el("header.page-head.playlist-detail-head", {}, PlaylistArtwork.render(data.coverIds), el("h1", {text: data.name}),
           data.community ? el("span.chip.community-chip", {title: t("playlist.community_help"), text: t("playlist.community")}) : null),
         el("p.muted", {text: facts}),
         el("div.album-actions", {},

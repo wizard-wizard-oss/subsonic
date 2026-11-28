@@ -132,7 +132,7 @@ button.discovery-video:hover, button.discovery-video.on { border-color: var(--ac
 .album-head img.cover { width: 220px; height: 220px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
 .cover-edit { position: relative; flex: none; }
 .cover-pencil { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
-  border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+  border-radius: 50%; border: 1px solid var(--button-line); background: var(--button-bg); color: var(--button-text); cursor: pointer; opacity: 0; transition: opacity 0.15s; }
 .cover-edit:hover .cover-pencil, .cover-pencil:focus-visible { opacity: 1; }
 .dialog.dialog-wide { width: min(760px, 100%); max-height: 90vh; overflow-y: auto; }
 .cover-editor { display: grid; gap: 12px; }
@@ -155,8 +155,8 @@ button.discovery-video:hover, button.discovery-video.on { border-color: var(--ac
 .album-rating .label { color: var(--text-soft); }
 .album-actions { display: flex; align-items: center; gap: 14px; margin: 6px 0 18px; }
 .play-big { width: 56px; height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center;
-  background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.play-big:hover { transform: scale(1.06); background: var(--accent-strong); }
+  background: var(--button-bg); border-color: var(--button-line); color: var(--button-text); }
+.play-big:hover { transform: scale(1.06); background: var(--button-hover); }
 .icon-button { background: none; border: none; padding: 6px; color: var(--text-soft); display: inline-grid; place-items: center; }
 .icon-button:hover { color: var(--text); }
 .album-more { position: relative; }
@@ -190,8 +190,11 @@ body[data-density="compact"] table.songs td { padding: 4px 8px; }
 tr.song:hover { background: var(--bg-hover); }
 tr.song.playing { color: var(--accent-strong); }
 td.num { width: 48px; color: var(--text-dim); text-align: right; }
+table.songs .track-play { width: 26px; padding-inline: 0; text-align: center; }
+.track-play + td.num { width: 36px; padding-left: 4px; text-align: left; }
 .row-play { display: inline-flex; opacity: 0; background: none; border: none; padding: 0; color: var(--text);
   width: 20px; margin-right: 4px; vertical-align: middle; }
+.track-play .row-play { margin: 0; width: 24px; height: 24px; justify-content: center; opacity: 1; pointer-events: auto; }
 tr.song:hover .row-play, .row-play:focus-visible { opacity: 1; }
 td.thumb { width: 36px; padding-right: 0; }
 /* Playlist dont on est le créateur : on change l'ordre en glissant (poignée ⋮⋮) ou au clavier */

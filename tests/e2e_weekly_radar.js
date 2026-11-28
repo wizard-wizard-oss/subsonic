@@ -33,6 +33,8 @@ win.fakeGet = async (url, params) => {
   if (url.endsWith("/sources")) return {sources: state.sources, aroundAvailable: state.aroundAvailable,
                                          refreshCooldown: 600, basis: state.basis,
                                          kinds: ["style", "label", "artist"], addable: ["label", "style"]};
+  if (url.endsWith("/choices")) return {sources: state.sources.filter(s => s.kind === params.kind), next: null,
+                                         available: params.kind === "style" || state.aroundAvailable};
   if (url.endsWith("/genres")) return {genres: [{name: "techno"}, {name: "noise rock"}], followed: [], default: "noise rock"};
   if (url === "/api/ext/album") return {items: state.albumFound ? [{id: "yt-1", youtubeId: "1", title: "Sabaya",
     artist: params.artist, album: params.title, ext: "youtube", duration: 300}] : []};
@@ -51,7 +53,7 @@ const settle = async () => { for (let i = 0; i < 5; i++) await tick(); };
 const radarCalls = () => calls.filter(c => c.url.endsWith("/radar"));
 const button = text => [...doc.querySelectorAll("button")].find(node => node.textContent === text);
 (async () => {
-  win.eval(src("core") + '\n' + src("icons") + '\nconst Views={};\n' + src("ext") + '\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-sources") +
+  win.eval(src("core") + '\n' + src("icons") + '\n' + src("weekly-week") + '\n' + src("weekly-source-picker") + '\n' + src("weekly-filters") + '\nconst Views={};\n' + src("ext") + '\n' + src("news") + '\n' + src("weekly-releases") + '\n' + src("weekly-sources") +
     '\n' + src("weekly-radar") + '\n' + src("weekly-listen") + `
     App.api.get=window.fakeGet; App.api.post=window.fakePost; App.toast=()=>{};
     Object.assign(App.texts, {"weekly.reason_label": "label {name}", "weekly.reason_similar": "proche de {name}",
@@ -68,10 +70,9 @@ const button = text => [...doc.querySelectorAll("button")].find(node => node.tex
   assert.equal(radarCalls()[0].params.filter, "all");
   assert.equal(calls.filter(c => c.url.includes("/explore/local")).length, 0);
   assert.deepEqual([...doc.querySelectorAll(".weekly-card h3")].map(n => n.textContent), ["Album label", "Album style", "Album de Moderat"]);
-  const chips = doc.querySelector(".weekly-chips");
-  assert.deepEqual([...chips.querySelectorAll("button")].map(b => b.dataset.key),
-                   ["all", "style:techno", "labels", "artists"]);
-  assert.ok(chips.querySelector('[data-key="style:techno"]').textContent.includes("techno"));
+  const filters = doc.querySelector(".weekly-filter-panel");
+  assert.equal(filters.hidden, true);
+  assert.deepEqual([...filters.querySelectorAll("select option")].map(b => b.value), ["all", "labels", "artists"]);
   const first = doc.querySelector(".weekly-card");
   assert.ok(first.querySelector(".weekly-reasons").textContent.includes("Warp"));
   assert.equal(first.querySelector("a").getAttribute("href"), "#/album/al1");
@@ -92,17 +93,19 @@ const button = text => [...doc.querySelectorAll("button")].find(node => node.tex
   assert.equal(cover.getAttribute("src"), null);
   assert.ok(cover.classList.contains("empty"));
 
-  // pastille : la grille change, l'en-tête et les pastilles restent les mêmes éléments
+  // filtre : la grille change, l'en-tête et les commandes restent les mêmes éléments
   const heading = doc.querySelector(".weekly-heading");
-  chips.querySelector('[data-key="style:techno"]').click(); await settle();
+  doc.querySelector(".weekly-filter-toggle").click();
+  doc.querySelector('[data-kind="style"] .weekly-picker-toggle').click(); await settle();
+  doc.querySelector('[data-kind="style"] .weekly-picker-results button').click(); await settle();
   assert.equal(radarCalls().at(-1).params.filter, "style:techno");
   assert.equal(doc.querySelector(".weekly-heading"), heading);
-  assert.equal(doc.querySelector(".weekly-chips"), chips);
-  assert.ok(chips.querySelector('[data-key="style:techno"]').classList.contains("on"));
+  assert.equal(doc.querySelector(".weekly-filter-panel"), filters);
+  assert.ok(doc.querySelector(".weekly-active-filter").textContent.includes("techno"));
 
   // semaine suivante : même filtre, lundi + 7 jours
   const before = radarCalls().at(-1).params.monday;
-  button("weekly.next").click(); await settle();
+  doc.querySelector('[aria-label="weekly.next"]').click(); await settle();
   assert.equal((new Date(radarCalls().at(-1).params.monday) - new Date(before)) / 86400000, 7);
   assert.equal(radarCalls().at(-1).params.filter, "style:techno");
 
@@ -148,25 +151,27 @@ const button = text => [...doc.querySelectorAll("button")].find(node => node.tex
   assert.equal(calls.filter(c => c.url.endsWith("/search")).length, searches);
 
   // « Autour de… » : choisir un de ses artistes, la grille montre les sorties de ses proches
-  button("weekly.around").click(); await settle();
-  const choices = [...doc.querySelectorAll(".weekly-around button")];
+  doc.querySelector(".weekly-filter-toggle").click();
+  doc.querySelector('[data-kind="artist"] .weekly-picker-toggle').click(); await settle();
+  const choices = [...doc.querySelectorAll('[data-kind="artist"] .weekly-picker-results button')];
   assert.deepEqual(choices.map(b => b.textContent), ["Moderat"]);
   choices[0].click(); await settle();
   assert.deepEqual(calls.at(-1), {url: "/api/news/releases/around", params: {name: "Moderat", mbid: "m1",
                                   monday: radarCalls().at(-1).params.monday, offset: 0}});
   assert.equal(doc.querySelector(".weekly-card h3").textContent, "Album proche");
   assert.ok(doc.querySelector(".weekly-reasons").textContent.includes("proche de Moderat"));
-  const aroundChip = doc.querySelector(".weekly-chips button");
-  assert.ok(aroundChip.textContent.startsWith("Autour de Moderat"));
-  button("weekly.next").click(); await settle();
+  const aroundChip = doc.querySelector(".weekly-filter-clear");
+  assert.ok(doc.querySelector(".weekly-active-filter").textContent.startsWith("Autour de Moderat"));
+  doc.querySelector('[aria-label="weekly.next"]').click(); await settle();
   assert.equal(calls.at(-1).url, "/api/news/releases/around");                  // la semaine change, pas le mode
   aroundChip.click(); await settle();
   assert.equal(calls.at(-1).url, "/api/news/releases/radar");                    // retour au radar
 
   // sans Last.fm : « Autour de… » le dit
   state.aroundAvailable = false;
-  button("weekly.around").click(); await settle();
-  assert.equal(doc.querySelector(".weekly-around").textContent, "weekly.around_unavailable");
+  doc.querySelector(".weekly-filter-toggle").click();
+  doc.querySelector('[data-kind="artist"] .weekly-picker-toggle').click(); await settle();
+  assert.ok(doc.querySelector('[data-kind="artist"]').textContent.includes("weekly.around_unavailable"));
 
   // sans favori : les styles viennent du sub, la page le dit
   state.basis = "site";

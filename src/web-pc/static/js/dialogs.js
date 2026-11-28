@@ -30,7 +30,7 @@ const Dialogs = (() => {
   }
 
   function choice(label, key, values) {
-    const select = el("select", {onchange: () => {
+    const select = el("select", {name: key, onchange: () => {
       const raw = select.value;
       const value = typeof values[0][0] === "number" ? Number(raw) : raw;
       App.savePreference(key, value);
@@ -57,16 +57,23 @@ const Dialogs = (() => {
   function display() {
     const t = App.t;
     return [
-      choice(t("settings.sidebar"), "sidebar", [["pinned", t("settings.sidebar_pinned")], ["hover", t("settings.sidebar_hover")],
-                                                 ["hidden", t("settings.sidebar_hidden")]]),
-      choice(t("settings.sidebar_width"), "sidebar_width", [[200, "200 px"], [240, "240 px"], [280, "280 px"], [320, "320 px"]]),
-      choice(t("settings.chat_panel"), "chat_panel", [["open", "✓"], ["closed", "—"]]),
+      choice(t("settings.theme"), "theme", App.themeChoices.map(value => [value, t("settings.theme_" + value)])),
+      App.layout === "desktop" ? null : navigationSettings(),
       choice(t("settings.density"), "density", [["comfortable", t("settings.density_comfortable")], ["compact", t("settings.density_compact")]]),
       choice(t("settings.album_grid"), "album_grid", [["large", t("settings.album_grid_large")], ["small", t("settings.album_grid_small")]]),
       SongColumns.settings(),
       toggle(t("settings.notify_mentions"), "notify_mentions", () => {
         if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
       })];
+  }
+
+  function navigationSettings() {
+    const t = App.t;
+    return [
+      choice(t("settings.sidebar"), "sidebar", [["pinned", t("settings.sidebar_pinned")], ["hover", t("settings.sidebar_hover")],
+                                                 ["hidden", t("settings.sidebar_hidden")]]),
+      choice(t("settings.sidebar_width"), "sidebar_width", [[200, "200 px"], [240, "240 px"], [280, "280 px"], [320, "320 px"]]),
+      choice(t("settings.chat_panel"), "chat_panel", [["open", "✓"], ["closed", "—"]])];
   }
 
   /** Ce que le compte Subsonic permet sur le site (réglé par l'administrateur, dans Subsonic). */

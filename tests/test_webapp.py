@@ -78,7 +78,7 @@ class AccountsStorageTest(unittest.TestCase):
 
 class PreferencesTest(unittest.TestCase):
     def setUp(self):
-        db = database()
+        self.db = db = database()
         self.user = UserRepository(db).save_login("a", "s", "t", ())
         self.preferences = Preferences(PreferenceRepository(db))
 
@@ -92,6 +92,15 @@ class PreferencesTest(unittest.TestCase):
         for change in ({"sidebar_tab": "autre"}, {"sidebar": "partout"}, {"inconnu": 1}, {"show_album_counts": 1}, {"sidebar_width": True}, {}):
             with self.assertRaises(InvalidPreference, msg=change):
                 self.preferences.update(self.user, change)
+
+    def test_every_account_starts_dark_and_can_keep_the_light_mode(self):
+        self.assertEqual(self.preferences.of(self.user)["theme"], "dark")
+        self.assertEqual(self.preferences.update(self.user, {"theme": "light"})["theme"], "light")
+        self.assertEqual(self.preferences.of(self.user)["theme"], "light")
+        another = UserRepository(self.db).save_login("b", "s", "t", ())
+        self.assertEqual(self.preferences.update(another, {"density": "compact"})["theme"], "dark")
+        with self.assertRaises(InvalidPreference):
+            self.preferences.update(self.user, {"theme": "unknown"})
 
 
 class FakeHub(EventHub):

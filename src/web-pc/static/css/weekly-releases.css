@@ -1,0 +1,78 @@
+/* Commandes des sorties : une semaine, un panneau de filtres, des sélecteurs à hauteur bornée. */
+.weekly-radar-toolbar { align-items: flex-start; gap: 12px 24px; margin: 0 0 18px; }
+.weekly-tools { display: flex; align-items: center; gap: 8px; }
+.weekly-week-control { min-width: 0; }
+.weekly-week-control .weekly-week { flex-wrap: nowrap; gap: 4px; }
+.weekly-week-control .icon-button, .weekly-options > summary {
+  background: transparent; border-color: transparent; color: var(--text-soft);
+}
+.weekly-week-control .icon-button:hover, .weekly-options > summary:hover { background: var(--bg-hover); color: var(--text); }
+.weekly-week-menu, .weekly-options { position: relative; }
+.weekly-week-label, .weekly-options > summary { cursor: pointer; list-style: none; }
+.weekly-week-label::-webkit-details-marker, .weekly-options > summary::-webkit-details-marker { display: none; }
+.weekly-week-label { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 36px;
+  padding: 5px 8px; color: var(--text); font-weight: 600; border-radius: var(--radius); }
+.weekly-week-label:hover { background: var(--bg-hover); }
+.weekly-week-label:focus-visible, .weekly-options > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.weekly-week-control .weekly-date { font-size: 12px; margin: 4px 0 0 40px; }
+.weekly-popover { position: absolute; z-index: 12; top: calc(100% + 6px); left: 0; display: grid; gap: 12px;
+  width: max-content; max-width: min(280px, calc(100vw - 48px)); background: var(--bg-raised);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: 0 8px 24px var(--bg-sunken); }
+.weekly-popover label { display: grid; gap: 8px; min-width: 0; }
+.weekly-popover input { width: 100%; min-width: 0; }
+.weekly-options > .weekly-popover { left: auto; right: 0; }
+.weekly-popover button { text-align: left; }
+.weekly-options .weekly-updated { max-width: 25ch; font-size: 12px; }
+.weekly-filter-panel { display: grid; gap: 16px; max-width: 680px; padding: 18px; margin: 0 0 18px;
+  background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius); }
+.weekly-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.weekly-filter-fields > label, .weekly-picker { display: grid; gap: 6px; min-width: 0; }
+.weekly-field-label { font-size: 12px; color: var(--text-soft); }
+.weekly-origin { width: 100%; min-width: 0; }
+.weekly-picker { position: relative; }
+.weekly-picker-toggle { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--bg-sunken); color: var(--text); border-color: var(--line); width: 100%; text-align: left; }
+.weekly-picker-toggle > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.weekly-picker-toggle:hover { background: var(--bg-hover); border-color: var(--line); }
+.weekly-picker-panel { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; right: 0; display: grid; gap: 8px;
+  padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-raised);
+  box-shadow: 0 8px 24px var(--bg-sunken); }
+.weekly-picker-panel input { width: 100%; min-width: 0; }
+.weekly-picker-results { display: grid; gap: 2px; }
+.weekly-picker-results button { text-align: left; justify-content: flex-start; overflow-wrap: anywhere; white-space: normal; background: transparent;
+  color: var(--text); border-color: transparent; }
+.weekly-picker-results button:hover { background: var(--bg-hover); border-color: var(--line); }
+.weekly-picker-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weekly-picker-pages button { font-size: 12px; }
+.weekly-filter-done { justify-self: end; order: -1; }
+.weekly-active-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 12px; }
+.weekly-filter-value { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 2px 4px 2px 12px;
+  border: 1px solid var(--line); border-radius: 24px; background: var(--bg-hover); }
+.weekly-filter-value > span { min-width: 0; overflow-wrap: anywhere; }
+.weekly-filter-clear { flex: none; min-width: 32px; min-height: 32px; }
+.weekly-browse-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.weekly-sources-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.weekly-note:empty { display: none; }
+@media (max-width: 600px) {
+  .weekly-radar-toolbar { gap: 12px; }
+  .weekly-week-control { flex: 1 1 auto; }
+  .weekly-week-control .weekly-week { justify-content: space-between; }
+  .weekly-week-control .weekly-date { margin-left: 0; text-align: center; }
+  .weekly-tools { margin-left: auto; }
+  .weekly-week-menu .weekly-popover { left: 50%; transform: translateX(-50%); }
+  .weekly-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .weekly-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .weekly-card { padding: 8px; }
+  .weekly-card h3 { font-size: 14px; }
+  .weekly-card > span, .weekly-card p, .weekly-card .weekly-actions a { font-size: 12px; }
+  .weekly-card .weekly-actions a { white-space: normal; }
+}
+@media (max-width: 600px) and (hover: none) and (pointer: coarse) {
+  .weekly-filter-panel { position: fixed; z-index: 45; inset: auto 0 0; margin: 0; max-width: none;
+    max-height: 80dvh; overflow-y: auto; border-radius: 16px 16px 0 0; padding-bottom: max(20px, env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 30px var(--bg-sunken); }
+  .weekly-filter-panel .weekly-picker-panel { position: static; box-shadow: none; }
+  .weekly-filter-panel .weekly-filter-done { position: sticky; top: 0; z-index: 15; background: var(--bg-raised); }
+  .weekly-week-label, .weekly-week-control .icon-button, .weekly-options > summary,
+  .weekly-filter-panel button { min-height: 44px; }
+}
