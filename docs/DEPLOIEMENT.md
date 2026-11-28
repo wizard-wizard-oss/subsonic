@@ -1,5 +1,18 @@
 # Déployer le projet
 
+Publication 1.28 puis 1.28.1 le 28/11/2026 : favoris triés par date d’ajout, pagination indépendante
+et portraits ronds approuvés par l’utilisateur. La 1.28.1 rétablit les photos Last.fm renvoyées avec un
+ancien hôte par Subsonic, dans le service commun aux favoris et à la fiche artiste. Elle borne à trois
+les recherches de portraits simultanées, limite transmise par le serveur. Aucun changement de schéma.
+
+Commits applicatifs `567f04a` puis `34fda4b`, image finale `ecfdfd122442`. Vérification en production :
+Towards Rebirth de Ripper en tête des 234 albums ; photo de Red Axes renvoyée par le service réel avec
+source Subsonic. HTTPS 1.28.1, conteneur sain, schéma 32 intègre et sans clé étrangère orpheline ;
+340 fichiers applicatifs et 88 scripts/styles publics conformes. Contrôles ciblés uniquement, à la demande
+de l’utilisateur. Configuration, volumes et favoris conservés ; aucune étoile modifiée pour les vérifications.
+Sauvegardes code/configuration/SQLite : `../pimedia-backups/pre-1.28-20261128T134153Z/` puis
+`../pimedia-backups/pre-1.28.1-20261128T134901Z/`, images correspondantes conservées pour retour arrière.
+
 Correctif 1.27.1 publié le 28/11/2026 après retour immédiat : le menu principal démarre ouvert et garde
 sa colonne avec toutes les anciennes préférences ; les suggestions de l’accueil dédoublonnent les albums.
 Commit applicatif `3b14bf9`, image `a533827ea7d2`. Tests ciblés et contrôle visuel bureau/mobile ; aucune

@@ -3,6 +3,29 @@
 Sur téléphone, un menu cliquable donne accès aux mêmes artistes, playlists et pages sans modifier
 la navigation PC. Voir [Affichage mobile](mobile.md).
 
+## Favoris : compteurs et portraits · 1.28
+
+Les albums sont classés par date d’ajout aux favoris, la plus récente en premier, après réunion des deux
+listes Subsonic. La date la plus récente est conservée en cas de doublon, avec les métadonnées détaillées
+des tags. Les dates absentes ou invalides gardent leur ordre stable après les dates connues.
+
+Chaque catégorie de favoris a sa propre pagination : artistes, albums et titres. Le compteur indique combien
+sont affichés sur le total ; « Afficher plus » charge seulement la suite de la catégorie concernée et reste
+juste dessous. Il n’est plus nécessaire de parcourir tous les titres pour accéder aux albums suivants.
+L’API conserve les champs existants et ajoute `pagination.<catégorie>.total` / `hasMore`, calculés sur
+les listes réunies et dédoublonnées côté serveur avant découpage.
+
+Les artistes ont un portrait rond, leur nom et un lien vers leur fiche. Les images réutilisent le service
+`ArtistPortraits` et sa route existante ; elles se chargent à l’approche de l’écran, avec un nombre de
+requêtes simultanées borné (limite transmise par le serveur), sans qu’un portrait lent bloque les autres.
+La 1.28.1 normalise les anciennes adresses Last.fm de Subsonic vers le CDN actuel ; la même photo et le
+même service sont utilisés dans les favoris et sur la fiche artiste. Une image absente ou en erreur laisse les initiales. Les réponses d’une ancienne
+page ou d’un ancien compte sont ignorées ; les autres catégories, filtres et éléments déjà chargés restent
+à leur place.
+
+Tests ciblés : `tests/test_library_favorites.py`, `test_webapp_favorites.py` et `e2e_favorites.js`.
+Pas de migration ni de nouveau fournisseur. Les favoris enregistrés dans Subsonic ne sont pas modifiés.
+
 ## Ce que ça fait
 - **Accueil** (`#/`) : sur ordinateur, reprise et rangées de recommandations reçues, écoutes personnelles,
   suggestions, sorties de la semaine et derniers ajouts. La navigation passe à gauche ; Bibliothèque ouvre la page

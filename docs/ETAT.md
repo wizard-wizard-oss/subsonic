@@ -1,5 +1,38 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Favoris 1.28.1 publiée et vérifiée (28/11/2026)
+
+Retour utilisateur après la 1.27.1 : albums difficiles à retrouver et souhait de portraits ronds pour les
+artistes. Diagnostic en lecture seule du compte concerné : Subsonic renvoie 225 albums favoris par dossiers,
+11 par tags et 794 titres ; la pagination commune était placée après les titres. Chaque catégorie reçoit
+sa pagination indépendante, son compteur et son bouton local ; les portraits utilisent le service existant
+avec chargement à l’approche de l’écran et initiales de repli. Aucun favori du compte réel modifié.
+L’exemple a été identifié après précision : `Towards Rebirth` de Ripper, favori ID3 récent que la fusion
+repoussait après les anciens favoris par dossiers. Les albums sont désormais triés par date d’ajout,
+la plus récente en premier, avec date maximale et métadonnées des tags en cas de doublon.
+Vérification en lecture seule sur les réponses réelles du compte avec le code candidat chargé en mémoire :
+`Towards Rebirth` (Ripper) est le premier album de la première page ; 234 albums réunis, 70 artistes et
+794 titres disponibles. Aucun favori réel modifié. 26 tests Python ciblés et le parcours jsdom Favoris
+passent ; portraits, pagination indépendante et réponses tardives couverts. Aperçu de la vraie page avec
+données et images d’illustration ; composant des portraits vérifié à 390 px sans débordement.
+Validation visuelle et publication autorisées par l’utilisateur le 28/11/2026. La 1.28 est publiée :
+commit applicatif `567f04a`, image `be152dc7a1dc`, HTTPS 1.28 et conteneur sain, schéma 32 intègre,
+340 fichiers applicatifs et 88 ressources publiques conformes. Le code publié place Ripper en premier.
+Sauvegarde `../pimedia-backups/pre-1.28-20261128T134153Z/`.
+
+Retour utilisateur sur les photos : reprise du service commun déjà utilisé sur la fiche artiste, sans
+second mécanisme. Exemple confirmé : Red Axes, URL Last.fm HTTPS `lastfm-img2.akamaized.net` rejetée
+et inaccessible, même image disponible sur le CDN Fastly existant. Normalisation étroite des anciens
+liens dans LastFm, réutilisée par ArtistPortraits, sans élargissement des origines CSP ni acceptation d’URL arbitraires.
+La liste de favoris reçoit du serveur la limite de recherches parallèles pour qu’un portrait lent ne
+bloque plus les autres. Aucun nouveau fournisseur, aucune migration, aucun favori réel modifié.
+Publication vérifiée du correctif : commit applicatif `34fda4b`, image `ecfdfd122442`, HTTPS 1.28.1 et
+conteneur sain, schéma 32 intègre, 340 fichiers applicatifs et 88 ressources publiques conformes.
+Le service réel `ArtistPortraits.get` renvoie bien la photo Subsonic de Red Axes sur le CDN actuel.
+36 tests fournisseurs/portraits et le parcours jsdom de parallélisme passent, avec contrôles de sécurité.
+Sauvegarde `../pimedia-backups/pre-1.28.1-20261128T134901Z/`, image de retour arrière
+`pimedia-web:pre-1.28.1-20261128T134901Z`. Aucun nouvel appel de recherche spécifique aux favoris.
+
 ## Publication 1.27.1 vérifiée (28/11/2026)
 
 La livraison regroupée est publiée : accueil personnel, navigation, favoris, sorties et playlists.

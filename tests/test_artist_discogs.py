@@ -148,6 +148,33 @@ class ArtistDiscogsTest(WebAppTestCase):
             result = self.bob.get("/api/artist/image?id=ar1").json()
             self.assertEqual(result["source"], "subsonic")
 
+    def test_subsonic_legacy_lastfm_image_uses_current_cdn_without_wikipedia(self):
+        path = "/i/u/174s/5fb141ffcc4a42be9fb3a2bb838df5f2.png"
+        legacy = "https://lastfm-img2.akamaized.net" + path
+        original = self.app.subsonic.call
+        def call(credentials, method, params=(), **options):
+            if method == "getArtistInfo2":
+                return {"artistInfo2": {"largeImageUrl": legacy}}
+            return original(credentials, method, params, **options)
+        with patch.object(self.app.subsonic, "call", side_effect=call), \
+             patch.object(self.app.facts.wikipedia, "artist_page", return_value={}) as wikipedia:
+            result = self.bob.get("/api/artist/image?id=ar1").json()
+            self.assertEqual(result["imageUrl"], "https://lastfm.freetls.fastly.net" + path)
+            self.assertEqual(result["source"], "subsonic")
+            wikipedia.assert_not_called()
+
+    def test_legacy_cdn_mapping_preserves_image_path_and_rejects_unsafe_urls(self):
+        path = "/i/u/174s/5fb141ffcc4a42be9fb3a2bb838df5f2.png"
+        origin = "https://lastfm-img2.akamaized.net"
+        self.assertEqual(public_image(origin + path), "https://lastfm.freetls.fastly.net" + path)
+        for url in ("http://lastfm-img2.akamaized.net" + path, origin + path + "?token=secret",
+                    origin + path + "#fragment", "https://secret@lastfm-img2.akamaized.net" + path,
+                    "https://lastfm-img2.akamaized.net:8443" + path,
+                    "https://lastfm-img2.akamaized.net.evil.test" + path,
+                    origin + "/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"):
+            with self.subTest(url=url):
+                self.assertEqual(public_image(url), "")
+
     def test_migration_preserves_existing_rows_and_deletes_links_with_user(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "migration.db")

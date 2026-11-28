@@ -2,6 +2,7 @@
 proches (radar des sorties)."""
 from dataclasses import asdict, dataclass
 from typing import Optional
+import urllib.parse
 
 from ...shared.external import query_url
 from ...shared.providers.metadata import PublicMetadata
@@ -47,6 +48,8 @@ class LastFm(PublicMetadata):
     prefix = "lastfm:"
     interval = 0.25
     base = "https://ws.audioscrobbler.com/2.0/"
+    image_host = "lastfm.freetls.fastly.net"
+    legacy_image_hosts = frozenset(("lastfm-img2.akamaized.net",))
 
     def __init__(self, store, api_key, http=None, **options):
         super().__init__(store, http, **options)
@@ -55,6 +58,20 @@ class LastFm(PublicMetadata):
     @property
     def enabled(self):
         return bool(self.api_key)
+
+    @staticmethod
+    def canonical_image_url(value):
+        """L'ancien CDN HTTPS donne les mêmes fichiers Last.fm ; seul son hôte a changé."""
+        try:
+            parts = urllib.parse.urlsplit(value)
+            if parts.hostname not in LastFm.legacy_image_hosts:
+                return value
+            if parts.scheme != "https" or parts.username or parts.password or parts.port is not None \
+                    or parts.query or parts.fragment or not parts.path.startswith("/i/u/"):
+                return ""
+        except ValueError:
+            return ""
+        return urllib.parse.urlunsplit(("https", LastFm.image_host, parts.path, "", ""))
 
     def _call(self, name, params, project=lambda raw: raw):
         params = dict(params, format="json")

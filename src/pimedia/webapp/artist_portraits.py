@@ -2,22 +2,25 @@
 import urllib.parse
 
 from .artist_entities import ArtistImage
-from .providers.lastfm import LASTFM_BLANK
+from .providers.lastfm import LASTFM_BLANK, LastFm
 from .library.cache import TtlCache
 from ..shared.providers.metadata import ProviderUnavailable
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
-IMAGE_HOSTS = frozenset(("lastfm-img.freetls.fastly.net", "lastfm.freetls.fastly.net",
+IMAGE_HOSTS = frozenset(("lastfm-img.freetls.fastly.net", LastFm.image_host,
                          "upload.wikimedia.org", "thumb.wikimedia.org"))
 
 
 def public_image(value):
     value = str(value or "")
+    if len(value) > 4096:
+        return ""
+    value = LastFm.canonical_image_url(value)
     try:
         parsed = urllib.parse.urlsplit(value)
     except ValueError:
         return ""
-    return value if (len(value) <= 4096 and parsed.scheme == "https" and parsed.hostname in IMAGE_HOSTS
+    return value if (parsed.scheme == "https" and parsed.hostname in IMAGE_HOSTS
                      and not parsed.username and not parsed.password and not parsed.query and not parsed.fragment
                      and LASTFM_BLANK not in value) else ""
 

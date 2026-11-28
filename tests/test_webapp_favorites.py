@@ -38,6 +38,9 @@ class FavoritesTest(WebAppTestCase):
         pages = [self.bob.get("/api/starred?page=" + str(page)).json() for page in range(3)]
         self.assertEqual([len(p["albums"]) for p in pages], [40, 40, 5])
         self.assertEqual([p["hasMore"] for p in pages], [True, True, False])
+        self.assertEqual([p["pagination"]["albums"] for p in pages], [
+            {"total": 85, "hasMore": True}, {"total": 85, "hasMore": True}, {"total": 85, "hasMore": False}])
+        self.assertTrue(all(p["pagination"]["artists"] == {"total": 0, "hasMore": False} for p in pages))
         self.assertEqual([a["id"] for p in pages for a in p["albums"]], [str(i) for i in range(85)])
         self.assertEqual(self.bob.get("/api/starred?page=-1").status, 400)
 

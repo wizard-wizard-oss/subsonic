@@ -6,6 +6,21 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.28.1"
+  date: 2026-11-28
+  title: "Les photos d’artistes retrouvent leur place"
+  changes:
+    - "Les anciennes adresses de photos Last.fm renvoyées par Subsonic sont reconnues et conservent la même image sur son adresse actuelle. Le service est commun aux favoris et aux fiches artistes."
+    - "Une recherche de portrait lente ne bloque plus toutes les autres photos visibles."
+
+- version: "1.28"
+  date: 2026-11-28
+  title: "Des favoris plus faciles à retrouver"
+  changes:
+    - "Vos derniers albums ajoutés aux favoris apparaissent en premier, quelle que soit leur origine dans Subsonic."
+    - "Artistes, albums et titres favoris ont chacun leur compteur et leur bouton « Afficher plus » : les albums suivants sont accessibles directement sous les albums."
+    - "Les artistes favoris s’affichent avec un portrait rond et leur nom. Quand la photo manque, leurs initiales gardent la place."
+
 - version: "1.27.1"
   date: 2026-11-28
   title: "Menu visible et suggestions sans doublons"

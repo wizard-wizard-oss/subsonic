@@ -237,6 +237,19 @@ button.more { display: block; margin: 22px auto; }
 .ext-cover img { width: 40px; height: 40px; border-radius: 4px; display: block; }
 .ext-source { font-size: 12px; white-space: nowrap; }
 .ext-favorites { margin-top: 28px; }
+.favorites-library .favorite-artists { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 22px 16px; margin: 16px 0; }
+.favorites-library .favorite-artist { display: grid; justify-items: center; align-content: start; gap: 10px;
+  min-width: 0; text-align: center; color: var(--text); }
+.favorites-library .favorite-artist-portrait { display: grid; place-items: center; position: relative;
+  width: min(112px, 100%); aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: var(--bg-hover); }
+.favorites-library .favorite-artist-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.favorites-library .favorite-artist-initials { color: var(--text-soft); font-size: 32px; font-weight: 500; }
+.favorites-library .favorite-artist-name { font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.favorites-library .favorite-artist:hover .favorite-artist-name { color: var(--accent-strong); }
+.favorites-library .favorite-artist:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: var(--radius); }
+.favorites-library .favorites-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.favorites-library .favorites-count { font-size: 12px; }
 .ext-link-form { display: flex; gap: 8px; margin: 12px 0 4px; max-width: 640px; }
 .ext-link { flex: 1; min-width: 0; }
 .ext-link-help { font-size: 12px; max-width: 640px; margin: 0 0 12px; }
