@@ -2,9 +2,17 @@
 
 ## Ce que ça fait
 Page **« Actualités »** (`#/news`, lien **Webzines** dans le menu gauche sur ordinateur) : les derniers articles des webzines suivis par le site,
-du plus récent au plus ancien, 40 par page avec « Afficher plus ». Pour chaque article : titre (lien vers le webzine,
-nouvel onglet), webzine, date, début du résumé (280 caractères, sans HTML). **Le site ne montre que des liens** :
-l'article se lit chez le webzine ; ni image ni contenu copié.
+du plus récent au plus ancien, 40 par page avec « Afficher plus ». Depuis la 1.29, chaque article est une carte :
+image du flux au format paysage, webzine, date, titre et deux lignes de résumé. Toute la carte ouvre l'article
+chez le webzine dans un nouvel onglet. Image absente ou cassée : le nom du journal conserve sa place.
+La même carte, plus compacte, accompagne la section « Dans la presse » des artistes.
+
+Les images sont extraites de Media RSS, des pièces jointes image et du HTML RSS/Atom, sans visiter les articles.
+Elles passent par un relais authentifié lié à l'identifiant de l'article, sans URL arbitraire fournie au navigateur
+ni élargissement de la CSP. HTTP commun : adresses publiques et redirections contrôlées, formats JPEG/PNG/WebP/GIF
+reconnus par leurs octets, 4 Mio au plus par image, cache mémoire de 16 Mio / 64 images pendant une heure et chargement paresseux.
+La migration 33 ajoute seulement `image_url`. La prochaine lecture enrichit les articles encore présents dans leurs
+flux sans changer leur identifiant ni leur date. Les articles plus anciens gardent le repli textuel.
 
 La 1.25 sépare Webzines et Sorties (`#/news/releases`) dans le menu de gauche. Les deux onglets de la page sont
 masqués sur ordinateur ; l’accueil montre aussi une rangée du radar des sorties existant. `e2e_desktop_page.js`
@@ -35,17 +43,23 @@ conserve son lien Actualités et les deux onglets.
   après redirection, 6 Mo au plus, pas d'entités XML).
 
 ## Où
-`pimedia/webapp/news.py` (lecture des flux, recherche du flux d'un site, service), `storage/news.py`,
-`controllers/news.py`, entités `NewsFeed` / `NewsArticle`, migration 10 (`news_feeds`, `news_articles`, `news_hidden_feeds`) ; réutilise
-`server/podcasts/feeds.py` (`FeedFetcher`, dates) et `server/podcasts/relevance.py` (`normalize`).
-Page : `web-pc/static/js/news.js` (page et section « Dans la presse », appelée par `views.js`), styles dans `views.css`.
+`pimedia/webapp/news/` : lecture XML dans `parsing.py`, extraction d'image dans `images.py`, entités dans `entities.py`
+et règles de compte dans `service.py`. SQL dans `storage/news.py`, HTTP dans `controllers/news.py`.
+Transport RSS et images unique dans `shared/providers/feeds.py`, partagé avec les podcasts ; dates/texte dans
+`server/podcasts/feeds.py` et recherche par mots dans `server/podcasts/relevance.py`.
+Page : `web-pc/static/js/news.js` et `css/news.css`. Masquer un flux ne reconstruit que les articles ; commandes,
+filtre et nombre de pages déjà chargées sont conservés. Les comptes sont obtenus en une agrégation par flux.
 Routes : `GET /api/news[?feed=&beforeDate=&beforeId=]`, `GET /api/news/feeds`, `GET /api/news/artist?name=`,
 `POST /api/news/feed/add {address}`, `POST /api/news/feed/show {id, shown}`, `POST /api/news/feed/remove {id}`.
+`GET /api/news/image?id=` relaie uniquement l'image d'un article enregistré, après contrôle de session.
 **Édition web seulement** : le Pi ne s'en sert pas.
 
 ## Tests
 `tests/test_webapp_news.py` (faux sites : RSS WordPress, Atom, page qui annonce son flux), `tests/e2e_webapp.js`
 (parcours : ajout d'un site, liens, « déjà suivi », flux décoché puis recoché, « Dans la presse », retrait).
+`test_news_images.py` couvre les formats de flux, les adresses refusées, le relais authentifié, le cache borné,
+la reprise des articles existants et la migration depuis une base 32 remplie. `e2e_news_cards.js` couvre les images
+cassées, les textes sûrs, la pagination et le maintien des commandes lors du masquage d'un flux.
 
 ## N'existe pas / pas vérifié
 - Pas de recherche dans les archives des webzines (API WordPress `wp-json/wp/v2/posts?search=`, recherche en RSS

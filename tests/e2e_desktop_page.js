@@ -61,7 +61,9 @@ async function session(username, password) {
     assert.equal($(".home-rail-all"),null);
     assert.ok($(".personal-resume").textContent.includes("0:42"));
     assert.ok($("#sidebar>.topnav"));
-    assert.ok($(".topbar .desktop-guide img"));
+    assert.ok($(".topbar .desktop-guide svg"));
+    assert.ok($(".desktop-top-start .desktop-brand-icon"));
+    assert.equal($(".desktop-top-start .brand").closest("a,button"),null);
     assert.ok($(".account-menu-panel #version-tag"));
     assert.equal($(".topbar>.version-tag"),null);
     assert.equal($("#sidebar a[href='#/albums/newest']").textContent,"Bibliothèque");

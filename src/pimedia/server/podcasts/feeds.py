@@ -1,22 +1,15 @@
 """Lecture des flux RSS de podcasts (réseau protégé, XML sans entités, résultat limité)."""
 import hashlib
-import ipaddress
 import re
-import socket
 import time
-import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 
+from ...shared.providers.feeds import FeedError, FeedFetcher, check_feed_url, is_public_host, MAX_FEED_BYTES
+
 ITUNES_NS = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 USER_AGENT = "PiMediaStation/1.0 (lecteur personnel)"
-MAX_FEED_BYTES = 6 * 1024 * 1024
 MAX_EPISODES = 300
-
-
-class FeedError(Exception):
-    """Flux illisible ou refusé : le message peut être montré à l'utilisateur."""
 
 
 # ---------- fonctions pures ----------
@@ -96,43 +89,6 @@ def parse_feed(data):
 
 
 # ---------- réseau ----------
-def is_public_host(host):
-    """Faux pour une adresse locale ou privée (on ne va pas lire le réseau de la maison à la demande d'une page)."""
-    try:
-        addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
-    except OSError:
-        return False
-    return bool(addresses) and all(not _private(a) for a in addresses)
-
-
-def _private(address):
-    ip = ipaddress.ip_address(address.split("%")[0])
-    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
-
-
-def check_feed_url(url):
-    parts = urllib.parse.urlsplit(url or "")
-    if parts.scheme not in ("http", "https") or not parts.hostname:
-        raise FeedError("Adresse de flux invalide")
-    if not is_public_host(parts.hostname):
-        raise FeedError("Adresse de flux refusée")
-
-
-class FeedFetcher:
-    def fetch(self, url, timeout=15):
-        check_feed_url(url)
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/rss+xml, */*"})
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                check_feed_url(response.geturl())          # une redirection ne doit pas mener ailleurs
-                data = response.read(MAX_FEED_BYTES + 1)
-        except OSError as error:
-            raise FeedError("Flux injoignable (%s)" % getattr(error, "reason", error))
-        if len(data) > MAX_FEED_BYTES:
-            raise FeedError("Flux trop volumineux")
-        return data
-
-
 class TtlCache:
     """Petit cache en mémoire ; une valeur périmée reste utilisable si le réseau est en panne."""
 

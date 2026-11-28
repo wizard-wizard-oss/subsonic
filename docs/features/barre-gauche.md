@@ -2,6 +2,18 @@
 
 ## Sur ordinateur · 1.25
 
+### Agrandir les playlists · 1.29
+
+Une petite icône à côté de « Playlists », avec infobulle et nom accessible, donne toute la hauteur du menu
+aux playlists. Les autres liens et leurs icônes retrouvent leur place à la réduction. Les commandes de création
+et d'import restent accessibles. Le début d'un glisser-déposer active temporairement cet agrandissement et
+ouvre le menu s'il était fermé ; dépôt ou annulation restaurent le choix précédent et la position des listes.
+Les flèches haut/bas font défiler les destinations ; pendant un glissé, approcher un bord poursuit le défilement.
+Il s'arrête au bord, à la sortie, au dépôt, à l'annulation et à la destruction de l'adaptateur ordinateur.
+Le filtre, les nœuds de playlists et les gestionnaires de dépôt restent les mêmes. Aucun réglage mobile n'est changé.
+Code : `desktop-playlists.js`, branché par `desktop-navigation.js`, styles dans `desktop-layout.css`.
+Tests : `e2e_playlist_focus.js`, `e2e_desktop_navigation.js`, `e2e_desktop_page.js` et `e2e_desktop_breakpoint.js`.
+
 Le menu principal remplace la liste permanente des artistes. Le bouton ☰ ou A le replie ; les playlists existantes
 et leurs cibles de dépôt restent sous les liens. Compilations et les autres dossiers épinglés figurent dans les filtres
 de la page Bibliothèque, après Nouveaux, via `library-shortcuts.js`. Les artistes se retrouvent par la recherche.

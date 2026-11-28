@@ -672,4 +672,8 @@ MIGRATIONS = [
     );
     CREATE INDEX listening_history_user_target ON listening_history (user_id, target_id, id DESC)
     """,
+    # 33 : adresse de l'image fournie par le flux, sans recopier le contenu des articles.
+    """
+    ALTER TABLE news_articles ADD COLUMN image_url TEXT NOT NULL DEFAULT ''
+    """,
 ]

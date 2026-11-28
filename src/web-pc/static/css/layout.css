@@ -54,14 +54,14 @@ body[data-density="compact"] .playlist-row { padding: 2px 8px; }
 .playlist-row .artist-name { flex: 1; min-width: 0; }
 .playlist-row .count, .badge-community { flex: none; }
 .playlist-row:hover { background: var(--bg-hover); color: var(--text); }
-.playlist-row.current { background: var(--accent); color: var(--accent-text); }
+.playlist-row.current { background: var(--button-bg); color: var(--accent-text); }
 .playlist-row.current .count { color: inherit; }
 .badge-community { font-size: 11px; color: var(--accent); }
 .playlist-row.current .badge-community { color: inherit; }
 /* glisser-déposer : les playlists où l'on peut déposer s'éclairent, les autres s'éteignent */
 body.dragging-songs .playlist-row:not(.no-drop), body.dragging-songs #playlist-new { outline: 1px dashed var(--accent); }
 body.dragging-songs .playlist-row.no-drop { opacity: 0.4; }
-.playlist-row.drop-over, #playlist-new.drop-over { background: var(--accent); color: var(--accent-text); outline-style: solid; }
+.playlist-row.drop-over, #playlist-new.drop-over { background: var(--button-bg); color: var(--accent-text); outline-style: solid; }
 body.dragging-songs .sidebar-tab:not(.active) { outline: 1px dashed var(--accent); }
 .sidebar-filter { margin: 0 10px; }
 /* dossiers épinglés (« Compilations ») au-dessus du filtre */
@@ -69,7 +69,7 @@ body.dragging-songs .sidebar-tab:not(.active) { outline: 1px dashed var(--accent
 .artist-shortcuts[hidden] { display: none; }
 .artist-shortcut { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; color: var(--text-soft); font-weight: 600; }
 .artist-shortcut:hover { background: var(--bg-hover); color: var(--text); }
-.artist-shortcut.current { background: var(--accent); color: var(--accent-text); }
+.artist-shortcut.current { background: var(--button-bg); color: var(--accent-text); }
 .letters { display: flex; flex-wrap: wrap; gap: 1px; padding: 0 8px; }
 .letter { background: none; border: none; padding: 1px 4px; font-size: 11px; color: var(--text-dim); }
 .letter:hover { color: var(--accent-strong); }
@@ -80,7 +80,7 @@ body.dragging-songs .sidebar-tab:not(.active) { outline: 1px dashed var(--accent
 .artist { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 6px; color: var(--text-soft); }
 body[data-density="compact"] .artist { padding: 2px 8px; }
 .artist:hover { background: var(--bg-hover); color: var(--text); }
-.artist.current { background: var(--accent); color: var(--accent-text); }
+.artist.current { background: var(--button-bg); color: var(--accent-text); }
 .artist-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .count { color: var(--text-dim); font-size: 12px; }
 .artist.current .count { color: inherit; }

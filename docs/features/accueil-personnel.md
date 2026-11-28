@@ -14,10 +14,15 @@ Compilations apparaît dans les filtres de la page Bibliothèque, juste après N
 existants. Un échec de chargement propose de réessayer sur place. La liste permanente des artistes disparaît sur
 ordinateur ; les recherches et fiches restent disponibles.
 
-La barre du haut conserve la recherche et le salon, fermé à chaque activation du bureau. Le sous-marin jaune ouvre
-la page Help existante sans libellé visible, avec un nom accessible « À bord ». Les réglages, raccourcis et versions
+La barre du haut conserve la recherche et le salon, fermé à chaque activation du bureau. Le bouton point
+d'interrogation ouvre la page Help existante. Les réglages, raccourcis et versions
 se trouvent dans le menu du compte. La recherche mesure au plus 480 px, avec une hauteur de 42 px et des bords arrondis.
 Les adaptateurs déplacent puis rendent les mêmes nœuds lors des changements de disposition.
+
+Depuis la 1.29, le sous-marin est décoratif entre ☰ et le libellé Musique, lui aussi non cliquable.
+Les accents verts sont retirés :
+les fonds actifs et les survols utilisent la marque `#220022`, les textes et les indicateurs une teinte lisible
+de cette même couleur selon le thème. Les couleurs de danger et de notation conservent leur rôle.
 
 Chaque rangée se parcourt au doigt ou au pavé tactile, avec inertie native et défilement fluide ; ses flèches restent
 disponibles. L’historique et le radar chargent la page suivante à leur extrémité. Les pochettes mesurent de 150 à 180 px,

@@ -1,5 +1,6 @@
 """Entités de l'édition PC. Les dépôts les renvoient ; to_api() donne le JSON envoyé à la page."""
 import json
+from .news.entities import NewsArticle, NewsFeed  # compatibilité des imports existants
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -187,51 +188,6 @@ class ArtistIndex:
     artists: list                # [{"letter", "artists": [{"id", "name", "albumCount"}]}]
     since: int                   # date Subsonic (ms) à comparer au dernier scan (getIndexes ifModifiedSince)
     built_at: int
-
-
-@dataclass
-class NewsFeed:
-    """Flux RSS ou Atom d'un webzine, suivi par tout le site (page Actualité, articles d'un artiste)."""
-    id: int
-    url: str
-    title: str
-    site_url: str
-    added_by: Optional[int]
-    added_at: int
-    checked_at: Optional[int] = None
-    error: str = ""                  # dernier problème de lecture (vide si le flux a été lu)
-    articles: int = 0
-
-    @classmethod
-    def from_row(cls, row):
-        return cls(row["id"], row["url"], row["title"], row["site_url"], row["added_by"], row["added_at"],
-                   row["checked_at"], row["error"], row["articles"])
-
-    def to_api(self, can_remove=False, shown=True):
-        return {"id": self.id, "url": self.url, "title": self.title, "siteUrl": self.site_url,
-                "checkedAt": self.checked_at, "error": self.error, "articles": self.articles, "canRemove": can_remove,
-                "shown": shown}
-
-
-@dataclass
-class NewsArticle:
-    """Un article d'un flux : seulement de quoi faire un lien (rien n'est copié à part le début du résumé)."""
-    id: int
-    feed_id: int
-    feed_title: str
-    link: str
-    title: str
-    summary: str
-    published_at: int
-
-    @classmethod
-    def from_row(cls, row):
-        return cls(row["id"], row["feed_id"], row["feed_title"], row["link"], row["title"], row["summary"],
-                   row["published_at"])
-
-    def to_api(self):
-        return {"id": self.id, "feedId": self.feed_id, "feed": self.feed_title, "link": self.link, "title": self.title,
-                "summary": self.summary, "publishedAt": self.published_at}
 
 
 @dataclass

@@ -51,6 +51,7 @@ GET /api/mix/genres read right=None limit=None MixController.genres
 GET /api/news read right=None limit=None NewsController.latest
 GET /api/news/artist read right=None limit=None NewsController.about
 GET /api/news/feeds read right=None limit=None NewsController.feeds
+GET /api/news/image read right=None limit=None NewsController.image
 GET /api/news/releases read right=None limit=None WeeklyReleasesController.week
 GET /api/news/releases/around read right=None limit=None WeeklyReleasesController.around
 GET /api/news/releases/genres read right=None limit=None WeeklyReleasesController.genres

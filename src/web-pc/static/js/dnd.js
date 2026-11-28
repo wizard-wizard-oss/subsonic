@@ -11,6 +11,7 @@ const Dnd = (() => {
     if (!current) return;
     current = null;
     document.body.classList.remove("dragging-songs");
+    document.querySelectorAll(".drop-over").forEach(node => node.classList.remove("drop-over"));
     App.bus.emit("dnd", false);
   }
 

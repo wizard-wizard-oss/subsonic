@@ -6,6 +6,14 @@
 #   version : « majeure.mineure » ou « majeure.mineure.correction », toujours plus grande que la précédente ;
 #   date : jour de la mise en ligne.
 
+- version: "1.29"
+  date: 2026-11-28
+  title: "La presse en images et des playlists plus accessibles"
+  changes:
+    - "Les articles des webzines s’affichent en cartes avec l’image de leur flux, leur source, leur date et un résumé court. Quand l’image manque, le nom du journal garde sa place."
+    - "Une petite icône agrandit les playlists sur toute la hauteur du menu. Le glisser-déposer les agrandit aussi temporairement et fait défiler la liste près de ses bords. Vos filtres, votre position et les icônes du menu sont conservés."
+    - "La couleur #220022 s’applique aux sélections et aux survols du site à la place du vert. Le sous-marin décore le bandeau entre le menu et Musique ; le point d’interrogation ouvre Help."
+
 - version: "1.28.1"
   date: 2026-11-28
   title: "Les photos d’artistes retrouvent leur place"

@@ -4,27 +4,18 @@ import base64
 import hashlib
 import re
 
+from ..shared.images import image_type
 from ..shared.providers.http import TooLarge
 from .library.cache import TtlCache
 from .providers.gravatar import Gravatar, GravatarUnreachable
 from .subsonic import Credentials, SubsonicError, SubsonicUnreachable
 
 MAX_BYTES = 300 * 1024
-SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"RIFF", "image/webp"),
-              (b"GIF87a", "image/gif"), (b"GIF89a", "image/gif"))
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class InvalidAvatar(ValueError):
     pass
-
-
-def image_type(data):
-    """Type d'image d'après ses premiers octets (jamais d'après ce que dit le navigateur)."""
-    for signature, mime in SIGNATURES:
-        if data.startswith(signature) and (mime != "image/webp" or data[8:12] == b"WEBP"):
-            return mime
-    return None
 
 
 class Avatars:

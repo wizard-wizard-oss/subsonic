@@ -9,9 +9,9 @@
   --text: #e8eaed;
   --text-soft: #a7adb7;
   --text-dim: #737b87;
-  --accent: #4fb477;
-  --accent-strong: #63cf8c;
-  --accent-text: #08130c;
+  --accent: color-mix(in srgb, var(--button-bg) 30%, var(--text));
+  --accent-strong: var(--text);
+  --accent-text: var(--button-text);
   --button-bg: #220022;
   --button-hover: color-mix(in srgb, var(--button-bg) 85%, white);
   --button-line: color-mix(in srgb, var(--button-bg) 60%, white);
@@ -30,8 +30,8 @@
 }
 :root[data-theme="light"] {
     --bg: #f6f7f9; --bg-raised: #ffffff; --bg-sunken: #eceef2; --bg-hover: #e8ebf0; --line: #dadde3;
-    --text: #1d2127; --text-soft: #4f5763; --text-dim: #7c8490; --accent: #2f8f57; --accent-strong: #237446;
-    --accent-text: #ffffff; --star: #d99a06; --mention-bg: rgba(217, 154, 6, 0.12);
+    --text: #1d2127; --text-soft: #4f5763; --text-dim: #7c8490; --accent: var(--button-bg); --accent-strong: var(--button-bg);
+    --accent-text: var(--button-text); --star: #d99a06; --mention-bg: rgba(217, 154, 6, 0.12);
     color-scheme: light;
 }
 

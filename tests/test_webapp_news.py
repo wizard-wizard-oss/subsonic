@@ -66,7 +66,7 @@ class FeedReadingTest(unittest.TestCase):
         feed = parse_articles(ATOM)
         self.assertEqual((feed["title"], feed["site"]), ("Blog Atom", "https://atom.example/"))
         self.assertEqual(feed["articles"], [{"title": "Chronique : Björk, Post", "link": "https://atom.example/post",
-                                             "summary": "Un classique.", "date": 1792483200}])
+                                             "summary": "Un classique.", "date": 1792483200, "image": ""}])
 
     def test_what_is_not_a_feed_is_refused(self):
         for data in (PAGE, b"pas du xml", b"<html><body/></html>",

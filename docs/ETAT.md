@@ -1,5 +1,17 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
+## Interface 1.29 en livraison (28/11/2026)
+
+Rendus validés avec de vrais flux RSS puis une liste de playlists fictive : cartes avec image, source et date,
+repli par journal ; marque `#220022` à la place du vert ; petite icône pour agrandir les playlists, défilement
+aux bords pendant un dépôt, restauration après dépôt/annulation. Icônes du menu conservées. Sous-marin
+décoratif entre ☰ et Musique, Help avec point d'interrogation, conformément au dernier retour utilisateur.
+Migration 33 additive pour l'adresse d'image ; client de flux déplacé dans le socle commun, sans second transport,
+images relayées par le serveur sans élargir la CSP. Conservation depuis une base 32 remplie couverte.
+Les nouveaux tests Python et jsdom ont été écrits et vus en échec avant l'implémentation. Vérifications ciblées
+uniquement : l'utilisateur a explicitement demandé de ne pas relancer la suite complète avant cette livraison.
+Commit, PR et publication autorisés ; contrôles de livraison encore en cours.
+
 ## Favoris 1.28.1 publiée et vérifiée (28/11/2026)
 
 Retour utilisateur après la 1.27.1 : albums difficiles à retrouver et souhait de portraits ronds pour les

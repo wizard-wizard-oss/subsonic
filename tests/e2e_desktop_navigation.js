@@ -16,7 +16,7 @@ const load = name => run(fs.readFileSync(path.join(root,"static/js/"+name+".js")
     App.user={id:1,roles:["stream","upload"]};App.preferences={chat_panel:"open"};App.live={on(){return ()=>{};}};
     App.music={route:null,main:document.getElementById("main"),navigate(){}};
     App.translate();App.placeIcons();`);
-  load("desktop-navigation");
+  load("desktop-playlists");load("desktop-navigation");
   const links = [...d.querySelectorAll(".topnav a")];
   const search=d.getElementById("search");
   const playlist = d.getElementById("panel-playlists"), settings=d.getElementById("open-settings");
@@ -30,7 +30,14 @@ const load = name => run(fs.readFileSync(path.join(root,"static/js/"+name+".js")
   assert.ok(d.querySelector(".desktop-top-start #toggle-sidebar"));
   assert.equal(d.querySelector(".account-menu-panel #open-settings"),settings);
   assert.equal(d.querySelector(".account-menu-panel #version-tag"),version);
-  assert.equal(d.querySelector(".topbar .desktop-guide img").getAttribute("src").split("?")[0],"/static/favicon.svg");
+  const brandIcon=d.querySelector(".desktop-top-start .desktop-brand-icon");
+  assert.ok(brandIcon, "le sous-marin est placé avec la marque");
+  assert.equal(brandIcon.getAttribute("src").split("?")[0],"/static/favicon.svg");
+  assert.equal(brandIcon.closest("a,button"),null,"le sous-marin est décoratif");
+  assert.equal(brandIcon.previousElementSibling.id,"toggle-sidebar");
+  assert.equal(brandIcon.nextElementSibling.className,"brand");
+  assert.ok(d.querySelector(".topbar .desktop-guide svg"),"Help utilise un point d'interrogation");
+  assert.equal(d.querySelector(".topbar .desktop-guide img"),null);
   assert.equal(d.body.dataset.chat,"closed");
   const menuButton=d.getElementById("toggle-sidebar");
   menuButton.click();
@@ -45,7 +52,7 @@ const load = name => run(fs.readFileSync(path.join(root,"static/js/"+name+".js")
   assert.ok(d.querySelector('#sidebar a[href="#/news/releases"]').classList.contains("active"));
   assert.ok(!d.querySelector('#sidebar a[href="#/news"]').classList.contains("active"));
   assert.equal(d.getElementById("panel-playlists"),playlist);
-  assert.equal(d.querySelectorAll(".desktop-playlist-actions button, .desktop-playlist-actions .icon-button").length,2);
+  assert.equal(d.querySelectorAll(".desktop-playlist-actions button, .desktop-playlist-actions .icon-button").length,3);
   assert.ok(d.querySelector('.desktop-playlist-heading .playlist-see-all[href="#/playlists"]'));
   assert.equal(shortcuts.parentElement.id,"panel-artists");
   assert.equal(d.querySelector('#panel-artists #artist-shortcuts a'),compilation);
