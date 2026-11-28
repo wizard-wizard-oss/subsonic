@@ -18,7 +18,7 @@ function check(width,touch,expected){
   for(const file of ["core","icons"])run(fs.readFileSync(path.join(root,"static/js/"+file+".js"),"utf8"));
   run('App.user={id:1,roles:[]};App.preferences={};App.music={route:null};class MobileNavigation{destroy(){}}');
   d.getElementById("app").hidden=false;
-  for(const file of ["desktop-navigation","mobile/bootstrap"])run(fs.readFileSync(path.join(root,"static/js/"+file+".js"),"utf8"));
+  for(const file of ["desktop-playlists","desktop-navigation","mobile/bootstrap"])run(fs.readFileSync(path.join(root,"static/js/"+file+".js"),"utf8"));
   assert.equal(run("App.layout"),expected,`${width}px, tactile=${touch}`);
   if(expected==="desktop"){
     assert.ok(d.querySelector("#sidebar>.topnav"));

@@ -67,8 +67,8 @@
 .help-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
 .help-page .whatsnew-link { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--accent-strong); font-size: 13px; font-weight: 600; line-height: 1.5; }
 .help-page .whatsnew-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-.help-page .help-action { justify-content: center; background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-size: 13px; font-weight: 600; padding: 9px 13px; }
-.help-page .help-action:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-text); }
+.help-page .help-action { justify-content: center; background: var(--button-bg); border-color: var(--button-line); color: var(--accent-text); font-size: 13px; font-weight: 600; padding: 9px 13px; }
+.help-page .help-action:hover { background: var(--button-hover); border-color: var(--accent-strong); color: var(--accent-text); }
 .help-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 13px; line-height: 1.6; }
 
 @container help-content (max-width: 1000px) {

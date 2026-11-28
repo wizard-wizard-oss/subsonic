@@ -13,6 +13,7 @@ class DesktopNavigation {
     document.body.dataset.desktopLayout = "true";
     this.moveTopbar();
     this.moveNavigation();
+    this.playlists = new DesktopPlaylists(this.sidebar, this.playlistHeading, () => this.applyMenu());
     this.offRoute = App.bus.on("route", route => this.highlightNews(route));
     this.highlightNews(App.music.route);
     this.moveAccountTools();
@@ -51,6 +52,8 @@ class DesktopNavigation {
     this.topStart = App.el("div.desktop-top-start");
     bar.prepend(this.topStart);
     this.move(this.button, this.topStart);
+    this.brandIcon = App.el("img.desktop-brand-icon", {src: "/static/favicon.svg", alt: "", "aria-hidden": "true", width: 28, height: 28});
+    this.topStart.append(this.brandIcon);
     this.move(document.querySelector(".brand"), this.topStart);
     this.searchBox = App.el("label.desktop-search", {}, App.icon("search", 17),
       App.el("span.sr-only", {text: App.t("nav.search")}));
@@ -88,7 +91,7 @@ class DesktopNavigation {
     this.guide.classList.add("desktop-guide", "icon-button");
     this.guide.setAttribute("aria-label", App.t("nav.guide"));
     this.guide.title = App.t("nav.guide");
-    this.guide.replaceChildren(App.el("img", {src: "/static/favicon.svg", alt: "", width: 30, height: 30}));
+    this.guide.replaceChildren(App.icon("help", 22));
     this.move(this.guide, document.querySelector(".topbar-right"), document.getElementById("account-menu"));
     this.move(nav, this.sidebar, this.sidebar.firstChild);
     const tools = App.el("div.desktop-playlist-actions");
@@ -149,14 +152,15 @@ class DesktopNavigation {
   toggle() { this.opened = !this.opened; this.applyMenu(); }
 
   applyMenu() {
-    document.body.dataset.desktopMenu = this.opened ? "open" : "closed";
-    this.button.dataset.tTitle = this.opened ? "nav.hide_menu" : "nav.show_menu";
+    const opened = this.opened || !!this.playlists?.dragging;
+    document.body.dataset.desktopMenu = opened ? "open" : "closed";
+    this.button.dataset.tTitle = opened ? "nav.hide_menu" : "nav.show_menu";
     this.button.title = App.t(this.button.dataset.tTitle);
     this.button.setAttribute("aria-label", this.button.title);
     this.button.setAttribute("aria-controls", "sidebar");
-    this.button.setAttribute("aria-expanded", String(this.opened));
-    this.sidebar.inert = !this.opened;
-    if (!this.opened && this.sidebar.contains(document.activeElement)) this.button.focus();
+    this.button.setAttribute("aria-expanded", String(opened));
+    this.sidebar.inert = !opened;
+    if (!opened && this.sidebar.contains(document.activeElement)) this.button.focus();
   }
 
   refreshOwner() {
@@ -164,6 +168,7 @@ class DesktopNavigation {
     this.owner = App.user.id;
     this.chatOpen = false;
     this.opened = true;
+    this.playlists.reset();
     if (App.music.sidebar && App.music.sidebar.owner !== this.owner) App.music.sidebar.load(true);
     this.applyMenu();
     if (App.chatPanel) App.chatPanel.applyOpen();
@@ -172,6 +177,7 @@ class DesktopNavigation {
   destroy() {
     this.offPreferences();
     this.offRoute();
+    this.playlists.destroy();
     this.button.removeEventListener("click", this.click, true);
     if (this.oldSidebarToggle) App.music.sidebar.toggle = this.oldSidebarToggle;
     if (this.oldChatToggle) {

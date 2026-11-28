@@ -7,7 +7,7 @@
   </defs>
   <g transform="translate(0 3.5)">
   <!-- périscope -->
-  <rect x="17" y="6" width="6" height="16" rx="3" fill="#4fb477"/>
+  <rect x="17" y="6" width="6" height="16" rx="3" fill="#220022"/>
   <!-- tourelle -->
   <rect x="14" y="17" width="24" height="12" rx="6" fill="url(#hull)" stroke="#f28a12" stroke-width="2.5"/>
   <!-- gouvernail -->

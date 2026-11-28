@@ -2,11 +2,12 @@
 import time
 
 from ...server.podcasts.relevance import normalize
-from ..entities import NewsArticle, NewsFeed
+from ..news.entities import NewsArticle, NewsFeed
 
-FEED_COLUMNS = ("f.*, (SELECT COUNT(*) FROM news_articles a WHERE a.feed_id = f.id) AS articles "
-                "FROM news_feeds f")
-ARTICLE_COLUMNS = ("a.id, a.feed_id, f.title AS feed_title, a.link, a.title, a.summary, a.published_at "
+FEED_COLUMNS = ("f.*, COALESCE(counts.articles, 0) AS articles FROM news_feeds f LEFT JOIN "
+                "(SELECT feed_id, COUNT(*) AS articles FROM news_articles GROUP BY feed_id) counts "
+                "ON counts.feed_id = f.id")
+ARTICLE_COLUMNS = ("a.id, a.feed_id, f.title AS feed_title, a.link, a.title, a.summary, a.published_at, a.image_url "
                    "FROM news_articles a JOIN news_feeds f ON f.id = a.feed_id")
 
 HIDDEN_EXCLUDED = "a.feed_id NOT IN (SELECT feed_id FROM news_hidden_feeds WHERE user_id = ?)"
@@ -63,11 +64,19 @@ class NewsRepository:
         with self.db.transaction() as conn:
             for a in articles:
                 cursor = conn.execute(
-                    "INSERT OR IGNORE INTO news_articles (feed_id, link, title, summary, published_at, words) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (feed_id, a["link"], a["title"], a["summary"], int(a["date"] or self.clock()), normalize(a["title"])))
+                    "INSERT OR IGNORE INTO news_articles (feed_id, link, title, summary, published_at, words, image_url) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (feed_id, a["link"], a["title"], a["summary"], int(a["date"] or self.clock()),
+                     normalize(a["title"]), a.get("image", "")))
                 added += cursor.rowcount
+                if not cursor.rowcount and a.get("image"):
+                    conn.execute("UPDATE news_articles SET image_url = ? WHERE feed_id = ? AND link = ?",
+                                 (a["image"], feed_id, a["link"]))
         return added
+
+    def article(self, article_id):
+        row = self.db.one("SELECT " + ARTICLE_COLUMNS + " WHERE a.id = ?", (article_id,))
+        return NewsArticle.from_row(row) if row else None
 
     def latest(self, user_id, feed_id=None, before=None, limit=40):
         """Les plus récents d'abord ; before : (date, id) du dernier article déjà affiché (pour « Afficher plus »).

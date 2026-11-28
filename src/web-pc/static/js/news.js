@@ -11,12 +11,26 @@ const News = (() => {
     return new Date(epoch * 1000).toLocaleDateString("fr-FR", {day: "numeric", month: "long", year: "numeric"});
   }
 
-  /** Un article : titre (lien vers le webzine, nouvel onglet), webzine et date, début du résumé. */
+  function imageFallback(article) {
+    return el("span.news-image-fallback", {text: t("news.image_missing", {source: article.feed})});
+  }
+
+  function articleImage(article) {
+    const frame = el("div.news-image");
+    frame.appendChild(article.imageUrl ? el("img", {src: article.imageUrl, alt: "", loading: "lazy", decoding: "async",
+      onerror: () => frame.replaceChildren(imageFallback(article))}) : imageFallback(article));
+    return frame;
+  }
+
+  /** Une seule carte pour la page presse et les articles d'un artiste. */
   function articleRow(article, showFeed) {
-    return el("li.news-article", {},
-      el("a.news-title", {href: article.link, target: "_blank", rel: "noopener noreferrer", text: article.title}),
-      el("div.news-meta.muted", {text: (showFeed ? article.feed + " · " : "") + articleDate(article.publishedAt)}),
-      article.summary ? el("p.news-summary", {text: article.summary}) : null);
+    return el("li.news-article", {dataset: {id: article.id, feedId: article.feedId}},
+      el("a.news-link", {href: article.link, target: "_blank", rel: "noopener noreferrer"}, articleImage(article),
+        el("div.news-body", {},
+          el("div.news-meta", {text: (showFeed ? article.feed + " · " : "") + articleDate(article.publishedAt)}),
+          el("h3.news-title", {text: article.title}),
+          article.summary ? el("p.news-summary", {text: article.summary}) : null,
+          el("div.news-read", {}, el("span", {text: t("news.read")}), el("span", {text: "↗", "aria-hidden": "true"})))));
   }
 
   /** Section « Dans la presse » de la page d'un artiste : rien si aucun article ne cite son nom. */
@@ -36,6 +50,8 @@ const News = (() => {
       main = body;
       App.clear(main).appendChild(el("div.loading", {text: "…"}));
       this.feedId = Number(route.id) || null;
+      this.route = route;
+      this.pages = 1;
       this.last = null;
       let feeds, page;
       try {
@@ -48,9 +64,9 @@ const News = (() => {
       this.list = el("ul.news-list");
       this.more = el("button.link-button.news-more", {type: "button", text: t("news.more"), onclick: () => this.loadMore()});
       App.append(App.clear(main), [
-        el("header.page-head", {}, el("h1", {text: t("news.title")})),
+        el("header.page-head.news-heading", {}, el("h1", {text: t("news.title")}),
+          el("details.news-management", {}, el("summary", {text: t("news.manage")}), this.addForm())),
         el("p.muted", {text: t("news.intro")}),
-        this.addForm(),
         this.feedChips(feeds.feeds),
         this.list, this.more]);
       this.show(page);
@@ -71,16 +87,39 @@ const News = (() => {
     },
 
     async loadMore() {
+      const list = this.list, route = this.route;
       this.more.disabled = true;
-      try { this.show(await this.fetch(this.last)); } catch (error) { App.toast(App.errorText(error), "error"); }
-      this.more.disabled = false;
+      try {
+        const page = await this.fetch(this.last);
+        if (this.list !== list || route.stale) return;
+        this.pages++;
+        this.show(page);
+      } catch (error) { App.toast(App.errorText(error), "error"); }
+      if (this.list === list) this.more.disabled = false;
+    },
+
+    async refreshArticles() {
+      const list = this.list, route = this.route, refresh = this.refreshId = (this.refreshId || 0) + 1;
+      const articles = new Map();
+      let page, before;
+      for (let index = 0; index < this.pages; index++) {
+        page = await this.fetch(before);
+        page.articles.forEach(article => articles.set(article.id, article));
+        before = page.articles[page.articles.length - 1];
+        if (!page.more || !before) break;
+      }
+      if (this.list !== list || route.stale || this.refreshId !== refresh) return;
+      list.replaceChildren();
+      this.last = null;
+      this.show({articles: [...articles.values()], more: page.more});
     },
 
     /** « Tout », puis un bouton par webzine : case « afficher » (décochée : masqué pour soi), nombre d'articles gardés,
         ⚠ si la dernière lecture a échoué, × pour retirer. */
     feedChips(feeds) {
       const chip = (href, label, on, before, extra, hidden) =>
-        el("span.chip.toggle.news-feed" + (on ? ".on" : "") + (hidden ? ".news-hidden" : ""), {},
+        el("span.chip.toggle.news-feed" + (on ? ".on" : "") + (hidden ? ".news-hidden" : ""),
+           {dataset: {feedId: href.split("/").pop()}},
            before, el("a", {href, text: label}), extra);
       return el("div.chips.news-feeds", {},
         chip("#/news", t("news.all"), !this.feedId),
@@ -115,8 +154,15 @@ const News = (() => {
     async setShown(feed, shown) {
       try {
         await App.api.post("/api/news/feed/show", {id: feed.id, shown});
-        App.music.navigate();                                    // pastilles et liste « Tout » suivent le choix
-      } catch (error) { App.toast(App.errorText(error), "error"); }
+        feed.shown = shown;
+        const chip = this.list.parentElement.querySelector('.news-feed[data-feed-id="' + feed.id + '"]');
+        if (chip) chip.classList.toggle("news-hidden", !shown);
+        if (!this.feedId) await this.refreshArticles();
+      } catch (error) {
+        const input = this.list.parentElement.querySelector('.news-feed[data-feed-id="' + feed.id + '"] input');
+        if (input) input.checked = feed.shown;
+        App.toast(App.errorText(error), "error");
+      }
     },
 
     async remove(feed) {

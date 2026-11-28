@@ -46,7 +46,7 @@ def main():
     jsdom = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("JSDOM_PATH", "jsdom")
     failed = []
     for script in ("e2e_mobile.js", "e2e_weekly_releases.js", "e2e_weekly_radar.js", "e2e_weekly_filters.js", "e2e_personal_home.js",
-                   "e2e_desktop_home.js", "e2e_desktop_navigation.js", "e2e_desktop_breakpoint.js",
+                   "e2e_news_cards.js", "e2e_playlist_focus.js", "e2e_desktop_home.js", "e2e_desktop_navigation.js", "e2e_desktop_breakpoint.js",
                    "e2e_library_shortcuts.js", "e2e_song_actions.js", "e2e_favorites.js", "e2e_playlist_gallery.js"):
         result = subprocess.run(["node", os.path.join("tests", script), jsdom], cwd=ROOT, timeout=TIMEOUT)
         if result.returncode:

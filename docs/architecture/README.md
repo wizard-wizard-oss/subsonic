@@ -63,6 +63,12 @@ n'embarque que sa zone + le partagé, et que le Dockerfile du site puisse ne plu
    échouer) ; une fonction fait une seule tâche bien définie. `tests/test_webapp_routes.py` fige la table des routes.
 
 ## Services externes (remise à plat du 27/11/2026)
+
+Depuis la 1.29, le client RSS/Atom `FeedFetcher` vit dans `shared/providers/feeds.py` : podcasts Pi et presse web
+partagent le transport HTTP public, la vérification de chaque redirection et les limites de taille.
+Le client relaie aussi les images des articles avec un cache borné. `server/podcasts/feeds.py` réexporte les
+anciens noms ; sa lecture XML et son cache de podcasts restent côté Pi. Les signatures d'images sont dans
+`shared/images.py`, réutilisées par les avatars. La fonctionnalité presse a son paquet `webapp/news/`.
 - Socle commun dans `shared/providers/` : `http.py` (seul transport, adresses publiques vérifiées), `cache.py` et
   `metadata.py` (`PublicMetadata` : cache par préfixe, cadence par service, une reprise, copie de moins de 30 jours servie
   pendant une panne, jamais pour un rafraîchissement demandé ni pour une entité supprimée).

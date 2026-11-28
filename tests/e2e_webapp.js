@@ -1225,10 +1225,10 @@ function makeEventSource(jar) {
   $(".news-add button").click();
   check("actualité : site ajouté, son flux trouvé et lu", await until(() => /^#\/news\/\d+$/.test(w.location.hash) &&
         $$(".news-article").length === 3) && $(".news-feed.on a").textContent === "Webzine");
-  const firstArticle = $(".news-article .news-title");
+  const firstArticle = $(".news-article .news-link");
   check("actualité : lien vers le webzine, nouvel onglet", firstArticle.getAttribute("href") === "https://webzine.example/fontaines" &&
         firstArticle.target === "_blank" && firstArticle.rel === "noopener noreferrer" &&
-        firstArticle.textContent === "Fontaines D.C. : nouvel album en écoute");
+        firstArticle.querySelector(".news-title").textContent === "Fontaines D.C. : nouvel album en écoute");
   check("actualité : résumé sans HTML", $(".news-summary").textContent === "Le groupe revient .");
   $(".news-address").value = "webzine.example";
   $(".news-add button").click();
