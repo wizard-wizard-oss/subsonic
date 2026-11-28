@@ -1,6 +1,6 @@
 # État du projet (à lire en premier dans une nouvelle discussion)
 
-## Publication 1.27 vérifiée · correctif 1.27.1 en cours (28/11/2026)
+## Publication 1.27.1 vérifiée (28/11/2026)
 
 La livraison regroupée est publiée : accueil personnel, navigation, favoris, sorties et playlists.
 Commit applicatif `8dface8`, PR 9. Nouvelle image `68ac4ed2e675`, conteneur sain, HTTPS 1.27,
@@ -9,9 +9,15 @@ intégrité et clés étrangères valides. Répétition sur la sauvegarde réell
 préexistantes conservées. Sauvegarde `../pimedia-backups/pre-1.27-20261128T131348Z/` ; image de retour
 arrière `pimedia-web:pre-1.27-20261128t131348z`.
 
-Retour utilisateur immédiat : ouvrir le menu principal dès l’arrivée et supprimer le chevauchement lié aux
-anciens réglages, ainsi que les albums en double dans « Vous pourriez aimer ». Correctif 1.27.1 traité
-avant finalisation de la même PR, avec tests ciblés seulement conformément à la demande utilisateur.
+Les retours utilisateur immédiats sont corrigés en 1.27.1 : menu ouvert à l’arrivée et sans chevauchement
+avec les anciens réglages ; suggestions sans doublons d’identifiant ni d’artiste/titre normalisés.
+21 tests Python ciblés et parcours de navigation/accueil verts ; contrôle Chrome des 48 combinaisons
+bureau et des trois préférences mobiles. Commit applicatif `3b14bf9`, image `a533827ea7d2`, HTTPS 1.27.1
+et conteneur sain ; 340 fichiers applicatifs et 88 ressources publiques conformes, schéma 32 intègre.
+Sauvegarde avant correctif : `../pimedia-backups/pre-1.27.1-20261128T132112Z/`, image précédente
+`pimedia-web:pre-1.27.1-20261128T132112Z`. Aucune nouvelle migration ni nouvelle suite complète.
+
+Les sections suivantes conservent les notes de préparation antérieures à cette publication.
 
 ## Livraison regroupée 1.27 · autorisée le 28/11/2026
 
